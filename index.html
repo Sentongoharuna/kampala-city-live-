@@ -1,0 +1,4197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kampala City V100</title>
+<style>
+:root{
+  --bg:#0f1728;--panel:#192844;--panel2:#111c31;--line:#2b3b5c;
+  --text:#f8f9fc;--muted:#9aa6bc;--primary:#ffd84d;--primarySoft:#332f18;
+  --green:#45d08f;--red:#ff6871;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{max-width:980px;margin:auto;padding:12px 14px 96px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.brand b{font-size:18px}.brand span{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+.topBtns{display:flex;gap:7px}
+.iconBtn{width:40px;height:40px;border-radius:13px;border:1px solid var(--line);background:var(--panel);color:#fff}
+.searchBox{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:10px;margin-bottom:14px}
+.searchRow{display:grid;grid-template-columns:1fr auto;gap:8px}
+.searchRow input{height:50px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:#fff;padding:0 13px}
+.primary{border:0;border-radius:14px;background:var(--primary);color:#111;padding:0 16px;font-size:10px;font-weight:900}
+.scope{display:flex;gap:7px;overflow:auto;padding-top:8px}
+.scope button{white-space:nowrap;border:0;border-radius:999px;background:#223252;color:#dde3ef;padding:7px 10px;font-size:8px}
+.hero{background:linear-gradient(145deg,#1e2d4d,#14203a);border:1px solid #304365;border-radius:24px;padding:17px;margin-bottom:16px}
+.eyebrow{font-size:8px;color:var(--primary);font-weight:900;letter-spacing:.7px}
+.hero h1{font-size:27px;line-height:1.04;letter-spacing:-.7px;margin:7px 0 5px}
+.hero p{font-size:10px;color:var(--muted);line-height:1.5;margin:0}
+.heroActions{display:flex;gap:8px;margin-top:14px}
+.heroActions button{border:0;border-radius:12px;padding:10px 13px;font-size:9px;font-weight:900}
+.alt{background:#263758;color:#fff}
+.sectionHead{display:flex;align-items:center;justify-content:space-between;margin:21px 0 10px}
+.sectionHead b{font-size:19px}.sectionHead button{border:0;background:none;color:var(--primary);font-size:9px;font-weight:800}
+.toolGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.tool{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px;min-height:105px}
+.tool i{width:38px;height:38px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;color:var(--primary);font-style:normal;font-size:17px}
+.tool b{display:block;font-size:10px;margin-top:10px}.tool span{display:block;font-size:8px;color:var(--muted);margin-top:3px}
+.list{background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.row{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:11px 13px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.rowIcon{width:40px;height:40px;border-radius:13px;background:var(--panel2);display:grid;place-items:center;color:var(--primary)}
+.row b{display:block;font-size:10px}.row span{display:block;font-size:8px;color:var(--muted);margin-top:2px}.row em{font-style:normal;color:#94a0b6;font-size:8px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px}
+.card b{display:block;font-size:11px}.card span{display:block;font-size:8px;color:var(--muted);margin-top:3px}.card strong{display:block;font-size:22px;color:var(--primary);margin-top:10px}
+.page{display:none}.page.on{display:block}
+.pageTop{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.back{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:#fff}
+.pageTitle b{font-size:21px}.pageTitle span{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+.productGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.product{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:10px}
+.pic{height:105px;border-radius:13px;background:var(--panel2);display:grid;place-items:center;font-size:30px;overflow:hidden}
+.pic img{width:100%;height:100%;object-fit:cover}
+.product b{display:block;font-size:10px;margin-top:8px}.product span{display:block;font-size:8px;color:var(--muted);margin-top:2px}.price{color:var(--primary)!important;font-size:10px!important;font-weight:900}
+.actionRow{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.actionRow button{border:1px solid var(--line);background:#243553;color:#fff;border-radius:11px;padding:10px;font-size:9px;font-weight:800}
+.actionRow .main{background:var(--primary);color:#111;border:0}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px}
+.form label{display:block;font-size:9px;color:var(--muted);margin:9px 0 5px}
+.form input,.form textarea,.form select{width:100%;border:1px solid var(--line);background:var(--panel2);color:#fff;border-radius:11px;padding:10px}
+.form textarea{min-height:90px}
+.chatBox{min-height:260px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px}
+.msg{max-width:80%;padding:9px 11px;border-radius:13px;background:#233553;margin:7px 0;font-size:9px}
+.msg.me{margin-left:auto;background:var(--primary);color:#111}
+.progress{height:7px;border-radius:999px;background:#31415f;overflow:hidden;margin-top:10px}.progress i{display:block;height:100%;background:var(--primary)}
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;width:min(620px,calc(100% - 18px));background:#17243d;border:1px solid #2e4062;border-radius:22px;display:grid;grid-template-columns:repeat(5,1fr);padding:6px;z-index:50}
+.dock button{border:0;background:transparent;color:#94a0b6;min-height:58px;border-radius:15px;font-size:8px;font-weight:700}
+.dock button b{display:block;font-size:18px;font-weight:500}.dock button.on{background:#243553;color:var(--primary)}.dock .center{background:var(--primary);color:#111}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:82px;background:#111827;border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:9px;display:none;z-index:99}
+@media(max-width:720px){.toolGrid{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr 1fr}}
+
+/* ===== V77 LIVE MARKET STATUS ===== */
+.liveBar{
+ display:grid;
+ grid-template-columns:auto 1fr;
+ gap:10px;
+ align-items:center;
+ background:#192844;
+ border:1px solid #2b3b5c;
+ border-radius:18px;
+ padding:10px 12px;
+ margin:10px 0 14px;
+}
+.liveBadge{
+ display:flex;
+ align-items:center;
+ gap:7px;
+ font-size:9px;
+ font-weight:900;
+ color:#fff;
+}
+.liveDot{
+ width:9px;height:9px;border-radius:50%;
+ background:#ff3b30;
+ box-shadow:0 0 0 5px rgba(255,59,48,.10);
+ animation:livePulse 1.3s infinite;
+}
+@keyframes livePulse{
+ 0%,100%{transform:scale(1);opacity:1}
+ 50%{transform:scale(.78);opacity:.6}
+}
+.liveNumbers{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:7px;
+}
+.liveStat{
+ background:#111c31;
+ border:1px solid #2a3a58;
+ border-radius:13px;
+ padding:8px;
+ cursor:pointer;
+}
+.liveStat strong{
+ display:block;
+ font-size:16px;
+ line-height:1;
+ color:var(--primary);
+}
+.liveStat span{
+ display:block;
+ font-size:7px;
+ color:var(--muted);
+ margin-top:3px;
+ line-height:1.25;
+}
+.liveProgress{
+ height:5px;
+ border-radius:999px;
+ background:#2e3d5d;
+ overflow:hidden;
+ margin-top:6px;
+}
+.liveProgress i{
+ display:block;
+ height:100%;
+ border-radius:999px;
+ background:var(--primary);
+ transition:width .35s ease;
+}
+.livePanel{
+ background:#192844;
+ border:1px solid #2b3b5c;
+ border-radius:20px;
+ overflow:hidden;
+ margin-top:10px;
+}
+.livePanelRow{
+ display:grid;
+ grid-template-columns:42px 1fr auto;
+ gap:10px;
+ align-items:center;
+ padding:11px 13px;
+ border-bottom:1px solid #2a3a58;
+ cursor:pointer;
+}
+.livePanelRow:last-child{border-bottom:0}
+.livePanelIcon{
+ width:40px;height:40px;
+ border-radius:13px;
+ background:#111c31;
+ color:var(--primary);
+ display:grid;
+ place-items:center;
+ font-size:17px;
+}
+.livePanelRow b{font-size:10px;display:block}
+.livePanelRow span{font-size:8px;color:var(--muted);display:block;margin-top:2px}
+.livePanelRow em{font-style:normal;font-size:8px;color:#9ca7bc}
+.liveDelta{
+ display:inline-block;
+ padding:3px 6px;
+ border-radius:999px;
+ font-size:7px;
+ font-weight:900;
+ margin-left:5px;
+ background:rgba(69,208,143,.11);
+ color:#66d9a0;
+}
+@media(max-width:720px){
+ .liveBar{grid-template-columns:1fr}
+ .liveNumbers{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* ===== V78 LIVE CITY OPERATIONS ===== */
+.liveTicker{
+ display:flex;
+ gap:8px;
+ overflow:auto;
+ margin:9px 0 0;
+ scrollbar-width:none;
+}
+.liveTicker::-webkit-scrollbar{display:none}
+.liveTickerItem{
+ min-width:170px;
+ background:#111c31;
+ border:1px solid #2a3a58;
+ border-radius:13px;
+ padding:9px;
+ cursor:pointer;
+}
+.liveTickerItem b{display:block;font-size:9px}
+.liveTickerItem span{display:block;font-size:7px;color:var(--muted);margin-top:3px}
+.liveTickerItem em{font-style:normal;color:#ff6b64;font-size:7px;font-weight:900}
+
+.cityScoreCard{
+ background:#192844;
+ border:1px solid #2b3b5c;
+ border-radius:20px;
+ padding:12px;
+ margin:12px 0 14px;
+}
+.cityScoreHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+}
+.cityScoreHead b{font-size:11px}
+.cityScoreHead span{font-size:8px;color:var(--muted)}
+.cityScoreRing{
+ --p:0;
+ width:54px;height:54px;
+ border-radius:50%;
+ background:conic-gradient(var(--primary) calc(var(--p)*1%),#30405e 0);
+ display:grid;
+ place-items:center;
+ position:relative;
+}
+.cityScoreRing:after{
+ content:"";
+ position:absolute;
+ inset:6px;
+ border-radius:50%;
+ background:#111c31;
+}
+.cityScoreRing strong{
+ position:relative;
+ z-index:2;
+ font-size:10px;
+}
+.liveEvent{
+ display:grid;
+ grid-template-columns:32px 1fr auto;
+ gap:9px;
+ align-items:center;
+ padding:9px 0;
+ border-bottom:1px solid #2a3a58;
+}
+.liveEvent:last-child{border-bottom:0}
+.liveEventIcon{
+ width:30px;height:30px;
+ border-radius:10px;
+ background:#111c31;
+ display:grid;
+ place-items:center;
+ font-size:14px;
+}
+.liveEvent b{font-size:9px;display:block}
+.liveEvent span{font-size:7px;color:var(--muted);display:block;margin-top:2px}
+.liveEvent time{font-size:7px;color:#8f9bb1}
+.milestone{
+ background:#111c31;
+ border:1px solid #2a3a58;
+ border-radius:15px;
+ padding:10px;
+ margin-top:8px;
+}
+.milestoneTop{
+ display:flex;
+ justify-content:space-between;
+ gap:10px;
+ align-items:center;
+}
+.milestoneTop b{font-size:9px}
+.milestoneTop strong{font-size:9px;color:var(--primary)}
+.milestone span{font-size:7px;color:var(--muted);display:block;margin-top:3px}
+
+
+/* ===== V79 MODERN LIVE SIGNAL STRIP ===== */
+.cityLiveHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 12px}
+.cityLiveBrand{display:flex;align-items:center;gap:9px;min-width:0}
+.cityLiveBrand b{font-size:18px;letter-spacing:-.25px;white-space:nowrap}
+.cityLiveBadge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;background:#201f17;border:1px solid #4e4622;color:#ffe375;font-size:8px;font-weight:950;letter-spacing:.65px;white-space:nowrap}
+.signalDot{width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 4px rgba(255,255,255,.04)}
+.signalDot.red{background:#ff453a;animation:blinkRed 1.15s infinite}
+.signalDot.green{background:#30d158;animation:blinkGreen 1.5s infinite}
+.signalDot.yellow{background:#ffd60a;animation:blinkYellow 1.3s infinite}
+@keyframes blinkRed{0%,100%{opacity:1;box-shadow:0 0 0 4px rgba(255,69,58,.10)}50%{opacity:.35;box-shadow:0 0 0 7px rgba(255,69,58,.03)}}
+@keyframes blinkGreen{0%,100%{opacity:1;box-shadow:0 0 0 4px rgba(48,209,88,.10)}50%{opacity:.4;box-shadow:0 0 0 7px rgba(48,209,88,.03)}}
+@keyframes blinkYellow{0%,100%{opacity:1;box-shadow:0 0 0 4px rgba(255,214,10,.10)}50%{opacity:.38;box-shadow:0 0 0 7px rgba(255,214,10,.03)}}
+.liveSignalStrip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 14px}
+.liveSignal{background:#192844;border:1px solid #2b3b5c;border-radius:16px;padding:10px;cursor:pointer}
+.liveSignalTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.liveSignalValue{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:18px;line-height:1;font-weight:900;letter-spacing:.7px;color:#fff}
+.liveSignal label{display:block;margin-top:7px;font-size:7px;color:var(--muted);font-weight:800;letter-spacing:.45px}
+.liveSignal small{display:block;font-size:7px;color:#7f8ba2;margin-top:2px}
+.liveSignal.red{border-color:#50303b}.liveSignal.green{border-color:#28493f}.liveSignal.yellow{border-color:#514b2d}.liveSignal.blue{border-color:#30456d}
+.liveSignal.red .liveSignalValue{color:#ff8b84}.liveSignal.green .liveSignalValue{color:#78e7ae}.liveSignal.yellow .liveSignalValue{color:#ffe37a}.liveSignal.blue .liveSignalValue{color:#8db4ff}
+.liveActionLegend{display:flex;gap:7px;overflow:auto;margin:8px 0 13px;scrollbar-width:none}
+.liveActionLegend::-webkit-scrollbar{display:none}
+.legendChip{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;background:#141f35;border:1px solid #283957;border-radius:999px;padding:6px 9px;font-size:7px;color:#cbd3e1}
+.legendChip b{font-size:7px;color:#fff}
+@media(max-width:720px){.cityLiveHeader{align-items:flex-start}.cityLiveBrand{flex-wrap:wrap;gap:7px}.liveSignalStrip{grid-template-columns:repeat(2,1fr)}}
+
+
+/* ===== V80 LIVE COMMAND STRIP ===== */
+.v80Command{
+ background:linear-gradient(145deg,#182743,#121e34);
+ border:1px solid #2d3f61;
+ border-radius:19px;
+ padding:10px;
+ margin:10px 0 14px;
+}
+.v80CommandHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ margin-bottom:9px;
+}
+.v80CommandHead b{
+ font-size:10px;
+}
+.v80CommandHead span{
+ font-size:7px;
+ color:var(--muted);
+}
+.v80CommandGrid{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:7px;
+}
+.v80CommandBtn{
+ border:1px solid #2a3b5c;
+ background:#111c31;
+ color:#fff;
+ border-radius:13px;
+ padding:9px;
+ text-align:left;
+}
+.v80CommandBtn strong{
+ display:flex;
+ align-items:center;
+ gap:6px;
+ font-size:9px;
+}
+.v80CommandBtn span{
+ display:block;
+ font-size:7px;
+ color:var(--muted);
+ margin-top:3px;
+}
+.v80LiveTrail{
+ display:flex;
+ gap:6px;
+ overflow:auto;
+ padding-top:9px;
+ scrollbar-width:none;
+}
+.v80LiveTrail::-webkit-scrollbar{display:none}
+.v80TrailItem{
+ min-width:155px;
+ border:1px solid #2a3a58;
+ background:#101a2d;
+ border-radius:12px;
+ padding:8px;
+}
+.v80TrailItem b{
+ display:block;
+ font-size:8px;
+}
+.v80TrailItem span{
+ display:block;
+ font-size:7px;
+ color:var(--muted);
+ margin-top:2px;
+}
+.v80TinyPulse{
+ display:inline-block;
+ width:7px;height:7px;
+ border-radius:50%;
+ margin-right:5px;
+ vertical-align:middle;
+}
+.v80TinyPulse.green{background:#30d158}
+.v80TinyPulse.yellow{background:#ffd60a}
+.v80TinyPulse.red{background:#ff453a}
+.v80TinyPulse.blue{background:#5d8dff}
+.v80MetricDelta{
+ display:inline-block;
+ margin-left:5px;
+ font-size:6px;
+ font-weight:900;
+ color:#63dfa0;
+}
+.v80MetricDelta.zero{color:#8793aa}
+@media(max-width:720px){
+ .v80CommandGrid{grid-template-columns:1fr 1fr}
+}
+
+
+/* ===== V81 LIVE NETWORK + ACTION PROGRESS ===== */
+.v81Network{
+ background:linear-gradient(145deg,#172640,#111c31);
+ border:1px solid #2b3d5e;
+ border-radius:18px;
+ padding:10px;
+ margin:10px 0 14px;
+}
+.v81NetworkHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ margin-bottom:8px;
+}
+.v81NetworkHead b{font-size:10px}
+.v81NetworkHead span{font-size:7px;color:var(--muted)}
+.v81NetworkGrid{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:7px;
+}
+.v81Node{
+ background:#101a2d;
+ border:1px solid #2a3a58;
+ border-radius:13px;
+ padding:9px;
+ cursor:pointer;
+}
+.v81NodeTop{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:7px;
+}
+.v81Node strong{
+ font-family:"SFMono-Regular",Consolas,monospace;
+ font-size:16px;
+ letter-spacing:.6px;
+}
+.v81Node b{
+ display:block;
+ font-size:8px;
+ margin-top:7px;
+}
+.v81Node span{
+ display:block;
+ font-size:7px;
+ color:var(--muted);
+ margin-top:2px;
+}
+.v81Flow{
+ height:4px;
+ border-radius:999px;
+ background:#293955;
+ overflow:hidden;
+ margin-top:7px;
+}
+.v81Flow i{
+ display:block;
+ height:100%;
+ border-radius:999px;
+ transition:width .35s ease;
+}
+.v81Flow.green i{background:#30d158}
+.v81Flow.yellow i{background:#ffd60a}
+.v81Flow.red i{background:#ff453a}
+.v81Flow.blue i{background:#5d8dff}
+.v81ActionProgress{
+ background:#192844;
+ border:1px solid #2b3b5c;
+ border-radius:18px;
+ overflow:hidden;
+ margin:10px 0 14px;
+}
+.v81ActionHeader{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ padding:10px 12px;
+ border-bottom:1px solid #2a3a58;
+}
+.v81ActionHeader b{font-size:10px}
+.v81ActionHeader span{font-size:7px;color:var(--muted)}
+.v81ProgressRow{
+ display:grid;
+ grid-template-columns:34px 1fr auto;
+ gap:9px;
+ align-items:center;
+ padding:10px 12px;
+ border-bottom:1px solid #2a3a58;
+ cursor:pointer;
+}
+.v81ProgressRow:last-child{border-bottom:0}
+.v81ProgressIcon{
+ width:32px;height:32px;
+ border-radius:10px;
+ background:#111c31;
+ display:grid;
+ place-items:center;
+}
+.v81ProgressRow b{font-size:9px;display:block}
+.v81ProgressRow span{font-size:7px;color:var(--muted);display:block;margin-top:2px}
+.v81ProgressRow em{font-style:normal;font-size:8px;color:var(--primary)}
+.v81ProgressMini{
+ height:5px;
+ border-radius:999px;
+ background:#2a3a58;
+ overflow:hidden;
+ margin-top:6px;
+}
+.v81ProgressMini i{
+ display:block;
+ height:100%;
+ background:var(--primary);
+ border-radius:999px;
+}
+.v81PulseValue{
+ animation:v81ValueFlash .45s ease;
+}
+@keyframes v81ValueFlash{
+ 0%{transform:scale(1);filter:brightness(1)}
+ 40%{transform:scale(1.12);filter:brightness(1.8)}
+ 100%{transform:scale(1);filter:brightness(1)}
+}
+@media(max-width:720px){
+ .v81NetworkGrid{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* ===== V82 COMPACT LIVE CITY CONSOLE ===== */
+.v82CityConsole{
+ background:linear-gradient(145deg,#17243e,#101a2d);
+ border:1px solid #2b3d5e;
+ border-radius:18px;
+ padding:10px;
+ margin:10px 0 14px;
+}
+.v82ConsoleTop{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ margin-bottom:9px;
+}
+.v82ConsoleTitle{
+ display:flex;
+ align-items:center;
+ gap:7px;
+}
+.v82ConsoleTitle b{
+ font-size:10px;
+ letter-spacing:.15px;
+}
+.v82ConsoleTop span{
+ font-size:7px;
+ color:var(--muted);
+}
+.v82ConsoleGrid{
+ display:grid;
+ grid-template-columns:repeat(5,1fr);
+ gap:7px;
+}
+.v82Metric{
+ background:#0f192b;
+ border:1px solid #293a59;
+ border-radius:13px;
+ padding:9px;
+ cursor:pointer;
+}
+.v82MetricHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:7px;
+}
+.v82Metric strong{
+ font-family:"SFMono-Regular",Consolas,monospace;
+ font-size:15px;
+ line-height:1;
+ letter-spacing:.8px;
+}
+.v82Metric b{
+ display:block;
+ font-size:7px;
+ margin-top:7px;
+ letter-spacing:.35px;
+}
+.v82Metric span{
+ display:block;
+ font-size:6.5px;
+ color:var(--muted);
+ margin-top:2px;
+}
+.v82Metric.green strong{color:#77e7ad}
+.v82Metric.yellow strong{color:#ffe377}
+.v82Metric.red strong{color:#ff8c85}
+.v82Metric.blue strong{color:#8eb5ff}
+.v82Metric.purple strong{color:#c49cff}
+.v82Metric .miniTrack{
+ height:4px;
+ border-radius:999px;
+ background:#293955;
+ overflow:hidden;
+ margin-top:7px;
+}
+.v82Metric .miniTrack i{
+ display:block;
+ height:100%;
+ border-radius:999px;
+ transition:width .35s ease;
+}
+.v82Metric.green .miniTrack i{background:#30d158}
+.v82Metric.yellow .miniTrack i{background:#ffd60a}
+.v82Metric.red .miniTrack i{background:#ff453a}
+.v82Metric.blue .miniTrack i{background:#5d8dff}
+.v82Metric.purple .miniTrack i{background:#a66cff}
+
+.v82Now{
+ background:#192844;
+ border:1px solid #2b3b5c;
+ border-radius:18px;
+ overflow:hidden;
+ margin:10px 0 14px;
+}
+.v82NowHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ padding:10px 12px;
+ border-bottom:1px solid #2a3a58;
+}
+.v82NowHead b{font-size:10px}
+.v82NowHead button{
+ border:0;
+ background:none;
+ color:var(--primary);
+ font-size:8px;
+ font-weight:850;
+}
+.v82NowRow{
+ display:grid;
+ grid-template-columns:34px 1fr auto;
+ gap:9px;
+ align-items:center;
+ padding:10px 12px;
+ border-bottom:1px solid #2a3a58;
+ cursor:pointer;
+}
+.v82NowRow:last-child{border-bottom:0}
+.v82NowIcon{
+ width:32px;height:32px;
+ border-radius:10px;
+ background:#101a2d;
+ display:grid;
+ place-items:center;
+}
+.v82NowRow b{
+ display:block;
+ font-size:9px;
+}
+.v82NowRow span{
+ display:block;
+ font-size:7px;
+ color:var(--muted);
+ margin-top:2px;
+}
+.v82NowRow em{
+ font-style:normal;
+ font-family:"SFMono-Regular",Consolas,monospace;
+ font-size:8px;
+ color:#b8c3d6;
+}
+.v82LiveActionGrid{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:7px;
+ margin:10px 0 14px;
+}
+.v82LiveAction{
+ border:1px solid #2a3a58;
+ background:#111c31;
+ color:#fff;
+ border-radius:13px;
+ padding:9px;
+ text-align:left;
+}
+.v82LiveAction strong{
+ display:flex;
+ align-items:center;
+ gap:6px;
+ font-size:8px;
+}
+.v82LiveAction span{
+ display:block;
+ color:var(--muted);
+ font-size:6.5px;
+ margin-top:3px;
+}
+@media(max-width:720px){
+ .v82ConsoleGrid{grid-template-columns:repeat(2,1fr)}
+ .v82Metric:last-child{grid-column:1 / -1}
+ .v82LiveActionGrid{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* ===== V83 LIVE CITY ACTIVITY BOARD ===== */
+.v83ActivityBoard{
+ background:linear-gradient(145deg,#16243d,#101a2d);
+ border:1px solid #2b3d5e;
+ border-radius:18px;
+ padding:10px;
+ margin:10px 0 14px;
+}
+.v83BoardHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ margin-bottom:9px;
+}
+.v83BoardHead b{
+ display:flex;
+ align-items:center;
+ gap:7px;
+ font-size:10px;
+}
+.v83BoardHead span{
+ font-size:7px;
+ color:var(--muted);
+}
+.v83BoardGrid{
+ display:grid;
+ grid-template-columns:1.1fr .9fr;
+ gap:8px;
+}
+.v83MainPulse{
+ background:#0f192b;
+ border:1px solid #293a59;
+ border-radius:14px;
+ padding:10px;
+ cursor:pointer;
+}
+.v83PulseTop{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:8px;
+}
+.v83PulseTop b{
+ font-size:8px;
+ letter-spacing:.35px;
+}
+.v83BigNumber{
+ font-family:"SFMono-Regular",Consolas,monospace;
+ font-size:25px;
+ line-height:1;
+ letter-spacing:1px;
+ color:#fff;
+}
+.v83MainPulse span{
+ display:block;
+ color:var(--muted);
+ font-size:7px;
+ margin-top:4px;
+}
+.v83SideGrid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:7px;
+}
+.v83SideMetric{
+ background:#0f192b;
+ border:1px solid #293a59;
+ border-radius:13px;
+ padding:9px;
+ cursor:pointer;
+}
+.v83SideMetric strong{
+ display:block;
+ font-family:"SFMono-Regular",Consolas,monospace;
+ font-size:15px;
+ letter-spacing:.7px;
+}
+.v83SideMetric b{
+ display:block;
+ font-size:7px;
+ margin-top:6px;
+}
+.v83SideMetric span{
+ display:block;
+ color:var(--muted);
+ font-size:6.5px;
+ margin-top:2px;
+}
+.v83SideMetric.green strong{color:#75e5ab}
+.v83SideMetric.yellow strong{color:#ffe274}
+.v83SideMetric.red strong{color:#ff8a83}
+.v83SideMetric.blue strong{color:#89b1ff}
+
+.v83ActionFeed{
+ background:#192844;
+ border:1px solid #2b3b5c;
+ border-radius:18px;
+ overflow:hidden;
+ margin:10px 0 14px;
+}
+.v83FeedHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ padding:10px 12px;
+ border-bottom:1px solid #2a3a58;
+}
+.v83FeedHead b{font-size:10px}
+.v83FeedHead button{
+ border:0;
+ background:none;
+ color:var(--primary);
+ font-size:8px;
+ font-weight:850;
+}
+.v83FeedRow{
+ display:grid;
+ grid-template-columns:34px 1fr auto;
+ gap:9px;
+ align-items:center;
+ padding:10px 12px;
+ border-bottom:1px solid #2a3a58;
+ cursor:pointer;
+}
+.v83FeedRow:last-child{border-bottom:0}
+.v83FeedIcon{
+ width:32px;height:32px;
+ border-radius:10px;
+ background:#101a2d;
+ display:grid;
+ place-items:center;
+}
+.v83FeedRow b{
+ display:block;
+ font-size:9px;
+}
+.v83FeedRow span{
+ display:block;
+ font-size:7px;
+ color:var(--muted);
+ margin-top:2px;
+}
+.v83FeedRow em{
+ font-style:normal;
+ font-family:"SFMono-Regular",Consolas,monospace;
+ font-size:7px;
+ color:#aeb8ca;
+}
+.v83QuickActions{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:7px;
+ margin:10px 0 14px;
+}
+.v83QuickAction{
+ border:1px solid #2a3a58;
+ background:#111c31;
+ color:#fff;
+ border-radius:13px;
+ padding:9px;
+ text-align:left;
+}
+.v83QuickAction strong{
+ display:flex;
+ align-items:center;
+ gap:6px;
+ font-size:8px;
+}
+.v83QuickAction span{
+ display:block;
+ color:var(--muted);
+ font-size:6.5px;
+ margin-top:3px;
+}
+@media(max-width:720px){
+ .v83BoardGrid{grid-template-columns:1fr}
+ .v83QuickActions{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* ===== V84 UNIFIED LIVE DASHBOARD ===== */
+/* V84 consolidates the stacked V80–V83 live widgets into one cleaner block */
+.v80Command,.v81Network,.v81ActionProgress,.v82CityConsole,.v82LiveActionGrid,.v82Now,.v83ActivityBoard,.v83QuickActions,.v83ActionFeed{
+ display:none!important;
+}
+.v84Live{
+ background:linear-gradient(145deg,#172640,#101a2d);
+ border:1px solid #2b3d5e;
+ border-radius:20px;
+ padding:11px;
+ margin:10px 0 15px;
+}
+.v84Top{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ margin-bottom:10px;
+}
+.v84Title{
+ display:flex;
+ align-items:center;
+ gap:8px;
+ min-width:0;
+}
+.v84Title b{
+ font-size:11px;
+ letter-spacing:.1px;
+}
+.v84Title span{
+ font-size:7px;
+ color:var(--muted);
+ display:block;
+ margin-top:2px;
+}
+.v84Status{
+ display:flex;
+ align-items:center;
+ gap:6px;
+ border:1px solid #4b332f;
+ background:#241a19;
+ color:#ff9b95;
+ border-radius:999px;
+ padding:5px 8px;
+ font-size:7px;
+ font-weight:900;
+ white-space:nowrap;
+}
+.v84Metrics{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:7px;
+}
+.v84Metric{
+ background:#0f192b;
+ border:1px solid #293a59;
+ border-radius:14px;
+ padding:9px;
+ cursor:pointer;
+}
+.v84MetricHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:6px;
+}
+.v84Metric strong{
+ font-family:"SFMono-Regular",Consolas,monospace;
+ font-size:17px;
+ letter-spacing:.8px;
+ line-height:1;
+}
+.v84Metric b{
+ display:block;
+ font-size:7px;
+ margin-top:7px;
+ letter-spacing:.35px;
+}
+.v84Metric span{
+ display:block;
+ color:var(--muted);
+ font-size:6.5px;
+ margin-top:2px;
+}
+.v84Metric.green strong{color:#78e7ae}
+.v84Metric.yellow strong{color:#ffe274}
+.v84Metric.red strong{color:#ff8c85}
+.v84Metric.blue strong{color:#8eb5ff}
+.v84Metric.purple strong{color:#c59cff}
+.v84Metric.cyan strong{color:#72d9ea}
+.v84Track{
+ height:4px;
+ background:#293955;
+ border-radius:999px;
+ overflow:hidden;
+ margin-top:7px;
+}
+.v84Track i{
+ display:block;
+ height:100%;
+ border-radius:999px;
+ transition:width .35s ease;
+}
+.v84Metric.green .v84Track i{background:#30d158}
+.v84Metric.yellow .v84Track i{background:#ffd60a}
+.v84Metric.red .v84Track i{background:#ff453a}
+.v84Metric.blue .v84Track i{background:#5d8dff}
+.v84Metric.purple .v84Track i{background:#a66cff}
+.v84Metric.cyan .v84Track i{background:#64d2ff}
+
+.v84Actions{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:7px;
+ margin-top:9px;
+}
+.v84Action{
+ border:1px solid #2a3a58;
+ background:#111c31;
+ color:#fff;
+ border-radius:12px;
+ padding:8px;
+ text-align:left;
+}
+.v84Action strong{
+ display:flex;
+ align-items:center;
+ gap:6px;
+ font-size:8px;
+}
+.v84Action span{
+ display:block;
+ color:var(--muted);
+ font-size:6.5px;
+ margin-top:3px;
+}
+
+.v84Feed{
+ margin-top:9px;
+ border-top:1px solid #2a3a58;
+ padding-top:8px;
+}
+.v84FeedHead{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ margin-bottom:6px;
+}
+.v84FeedHead b{font-size:8px}
+.v84FeedHead button{
+ border:0;
+ background:none;
+ color:var(--primary);
+ font-size:7px;
+ font-weight:850;
+}
+.v84FeedRows{
+ display:grid;
+ gap:6px;
+}
+.v84FeedRow{
+ display:grid;
+ grid-template-columns:28px 1fr auto;
+ gap:8px;
+ align-items:center;
+ background:#0f192b;
+ border:1px solid #293a59;
+ border-radius:11px;
+ padding:7px 8px;
+ cursor:pointer;
+}
+.v84FeedIcon{
+ width:26px;height:26px;
+ border-radius:8px;
+ background:#17243d;
+ display:grid;
+ place-items:center;
+ font-size:12px;
+}
+.v84FeedRow b{
+ display:block;
+ font-size:7.5px;
+}
+.v84FeedRow span{
+ display:block;
+ font-size:6.5px;
+ color:var(--muted);
+ margin-top:1px;
+}
+.v84FeedRow em{
+ font-style:normal;
+ font-size:6.5px;
+ color:#aeb8c9;
+}
+@media(max-width:720px){
+ .v84Metrics{grid-template-columns:repeat(2,1fr)}
+ .v84Actions{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* ===== V85 SINGLE-ROW LIVE SIGNALS ===== */
+.v84Metrics{
+ display:flex!important;
+ gap:7px!important;
+ overflow-x:auto!important;
+ overflow-y:hidden!important;
+ flex-wrap:nowrap!important;
+ scrollbar-width:none;
+ padding-bottom:2px;
+}
+.v84Metrics::-webkit-scrollbar{display:none}
+.v84Metric{
+ flex:1 0 118px!important;
+ min-width:118px!important;
+ max-width:none!important;
+}
+.v84Metric b{
+ font-size:7px!important;
+ letter-spacing:.45px;
+}
+.v84Metric span{
+ font-size:6.5px!important;
+}
+.v84SignalMeaning{
+ display:flex;
+ align-items:center;
+ gap:5px;
+ margin-top:6px;
+ font-size:6.5px;
+ color:#aab4c7;
+}
+.v84SignalMeaning strong{
+ font-family:inherit!important;
+ font-size:6.5px!important;
+ letter-spacing:0!important;
+ color:#fff!important;
+}
+.v84Actions{
+ display:none!important;
+}
+.v85SignalLegend{
+ display:flex;
+ gap:7px;
+ overflow-x:auto;
+ flex-wrap:nowrap;
+ scrollbar-width:none;
+ margin-top:9px;
+ padding-top:8px;
+ border-top:1px solid #2a3a58;
+}
+.v85SignalLegend::-webkit-scrollbar{display:none}
+.v85LegendItem{
+ flex:0 0 auto;
+ display:flex;
+ align-items:center;
+ gap:6px;
+ background:#0f192b;
+ border:1px solid #293a59;
+ border-radius:999px;
+ padding:6px 8px;
+ font-size:6.5px;
+ color:#cbd3df;
+}
+.v85LegendItem b{
+ font-size:6.5px;
+ color:#fff;
+}
+@media(max-width:720px){
+ .v84Metrics{display:flex!important;grid-template-columns:none!important}
+ .v84Metric{flex:0 0 112px!important;min-width:112px!important}
+}
+
+
+/* ===== V86 LIVE SIGNAL RAIL ===== */
+.v84Live{
+ padding:10px!important;
+ border-radius:18px!important;
+}
+.v84Top{
+ margin-bottom:8px!important;
+}
+.v84Title b{
+ font-size:12px!important;
+}
+.v84Title span{
+ font-size:6.5px!important;
+}
+.v84Status{
+ padding:4px 7px!important;
+ font-size:6.5px!important;
+}
+.v84Metrics{
+ display:flex!important;
+ flex-wrap:nowrap!important;
+ gap:6px!important;
+ overflow-x:auto!important;
+ scroll-snap-type:x proximity;
+ scrollbar-width:none;
+ margin:0!important;
+ padding:0 0 2px!important;
+}
+.v84Metrics::-webkit-scrollbar{display:none}
+.v84Metric{
+ flex:1 0 108px!important;
+ min-width:108px!important;
+ scroll-snap-align:start;
+ padding:8px!important;
+ border-radius:13px!important;
+}
+.v84MetricHead{
+ gap:5px!important;
+}
+.v84Metric strong{
+ font-size:16px!important;
+ letter-spacing:.6px!important;
+}
+.v84Metric b{
+ font-size:6.5px!important;
+ margin-top:6px!important;
+}
+.v84Metric > span{
+ font-size:6px!important;
+}
+.v84SignalMeaning{
+ display:none!important;
+}
+.v84Track{
+ height:3px!important;
+ margin-top:6px!important;
+}
+.v85SignalLegend{
+ display:none!important;
+}
+
+/* signal = meaning + action */
+.v86SignalCaption{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:4px;
+ margin-top:5px;
+}
+.v86SignalCaption span{
+ font-size:6px;
+ color:#9aa6bb;
+}
+.v86SignalCaption em{
+ font-style:normal;
+ font-size:6px;
+ font-weight:900;
+ color:#fff;
+}
+.v86SignalAction{
+ display:inline-flex;
+ align-items:center;
+ gap:4px;
+ margin-top:5px;
+ padding:4px 6px;
+ border-radius:999px;
+ background:#17243d;
+ border:1px solid #2a3a58;
+ font-size:5.8px;
+ font-weight:800;
+ color:#dbe3ef;
+}
+.v86SignalAction:after{
+ content:"›";
+ color:var(--primary);
+ font-size:8px;
+ margin-left:1px;
+}
+
+/* compact event strip beneath one-row signals */
+.v86EventStrip{
+ display:flex;
+ gap:6px;
+ overflow-x:auto;
+ scrollbar-width:none;
+ margin-top:8px;
+ padding-top:8px;
+ border-top:1px solid #2a3a58;
+}
+.v86EventStrip::-webkit-scrollbar{display:none}
+.v86Event{
+ flex:0 0 auto;
+ min-width:145px;
+ background:#0f192b;
+ border:1px solid #293a59;
+ border-radius:10px;
+ padding:7px;
+ cursor:pointer;
+}
+.v86Event b{
+ display:block;
+ font-size:6.8px;
+}
+.v86Event span{
+ display:block;
+ color:var(--muted);
+ font-size:5.9px;
+ margin-top:2px;
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
+}
+.v86Event time{
+ display:block;
+ color:#8894aa;
+ font-size:5.6px;
+ margin-top:4px;
+}
+
+/* keep only the unified V86 live area on home */
+.liveSignalStrip,.liveActionLegend,.liveTicker,.v81Network,.v81ActionProgress,
+.v82CityConsole,.v82LiveActionGrid,.v82Now,.v83ActivityBoard,.v83QuickActions,
+.v83ActionFeed,.v80Command{
+ display:none!important;
+}
+
+@media(max-width:720px){
+ .v84Metric{
+  flex:0 0 102px!important;
+  min-width:102px!important;
+ }
+}
+
+
+/* ===== V87 CLEAN HEADER + SINGLE LIVE SECTION ===== */
+.cityLiveHeader{
+  margin:6px 0 14px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+}
+.cityLiveBrand{display:block!important}
+.cityLiveBrand>b{
+  font-size:20px!important;
+  letter-spacing:-.45px!important;
+  white-space:nowrap!important;
+}
+.cityLiveBrand .cityLiveBadge{display:none!important}
+.topBtns{display:none!important}
+
+/* Dynamic-island-like LIVE pill at opposite edge */
+.v87LivePill{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  background:#080d16;
+  border:1px solid #3b4658;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+  border-radius:999px;
+  padding:7px 12px;
+  color:#ff5d55;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.55px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.v87LivePill .signalDot{width:8px;height:8px}
+
+/* Only one live block on home */
+.v84Live{
+  padding:10px!important;
+  margin:8px 0 14px!important;
+  background:linear-gradient(145deg,#14233b,#0d1728)!important;
+  border-color:#2a3d5c!important;
+}
+.v84Title b{font-size:10px!important}
+.v84Title span{font-size:6.3px!important}
+.v84Status{display:none!important}
+
+/* one horizontal rail */
+.v84Metrics{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  overflow-x:auto!important;
+  gap:6px!important;
+  scrollbar-width:none!important;
+}
+.v84Metrics::-webkit-scrollbar{display:none}
+.v84Metric{
+  flex:0 0 112px!important;
+  min-width:112px!important;
+  padding:9px!important;
+}
+.v84Metric strong{font-size:17px!important}
+.v86SignalCaption,.v86SignalAction,.v84SignalMeaning{display:none!important}
+
+/* Keep compact latest activity only */
+.v86EventStrip{
+  margin-top:9px!important;
+  padding-top:8px!important;
+}
+.v86Event{min-width:170px!important}
+
+/* remove every earlier/duplicate live presentation */
+.liveSignalStrip,.liveActionLegend,.liveTicker,.v80Command,
+.v81Network,.v81ActionProgress,.v82CityConsole,.v82LiveActionGrid,.v82Now,
+.v83ActivityBoard,.v83QuickActions,.v83ActionFeed,.v85SignalLegend{
+  display:none!important;
+}
+
+
+/* ===== V88 REFINED HEADER + SIGNAL RAIL ===== */
+.cityLiveHeader{
+  min-height:46px;
+  padding:2px 1px;
+  margin:4px 0 12px!important;
+}
+.cityLiveBrand>b{
+  font-size:21px!important;
+  font-weight:900!important;
+  letter-spacing:-.65px!important;
+}
+.v87LivePill{
+  min-width:74px;
+  justify-content:center;
+  padding:8px 13px!important;
+  background:#070b12!important;
+  border-color:#424c5e!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.22),inset 0 0 0 1px rgba(255,255,255,.025)!important;
+}
+.v87LivePill:active{transform:scale(.97)}
+.v87LivePill .signalDot{
+  width:9px!important;height:9px!important;
+}
+
+/* Cleaner single live module */
+.v84Live{
+  border-radius:19px!important;
+  padding:11px!important;
+  box-shadow:0 8px 26px rgba(0,0,0,.10);
+}
+.v84Top{
+  margin-bottom:9px!important;
+}
+.v84Title{
+  gap:7px!important;
+}
+.v84Title>.signalDot{display:none!important}
+.v84Title b{
+  font-size:11px!important;
+  font-weight:900!important;
+}
+.v84Title span{
+  font-size:6.5px!important;
+  color:#8794aa!important;
+}
+
+/* One uninterrupted rail, cards read as instruments */
+.v84Metrics{
+  gap:0!important;
+  border:1px solid #293b59;
+  border-radius:15px;
+  background:#0c1626;
+  overflow-x:auto!important;
+}
+.v84Metric{
+  flex:0 0 116px!important;
+  min-width:116px!important;
+  border:0!important;
+  border-right:1px solid #263752!important;
+  border-radius:0!important;
+  background:transparent!important;
+  padding:10px!important;
+}
+.v84Metric:last-child{border-right:0!important}
+.v84MetricHead .signalDot{
+  width:8px!important;height:8px!important;
+}
+.v84Metric strong{
+  font-size:18px!important;
+  font-variant-numeric:tabular-nums;
+}
+.v84Metric b{
+  margin-top:8px!important;
+  font-size:6.8px!important;
+}
+.v84Metric>span{
+  font-size:6px!important;
+}
+.v84Track{
+  height:3px!important;
+  margin-top:8px!important;
+  opacity:.95;
+}
+
+/* Latest activity becomes a slim operational strip */
+.v86EventStrip{
+  border-top:0!important;
+  margin-top:8px!important;
+  padding-top:0!important;
+}
+.v86Event{
+  min-width:180px!important;
+  border-radius:11px!important;
+  padding:8px!important;
+  background:#0d1728!important;
+}
+.v86Event b{font-size:7px!important}
+.v86Event span{font-size:6px!important}
+
+/* Hide legacy top signal/ticker artifacts permanently */
+.liveBar,.liveSignalStrip,.liveActionLegend,.liveTicker,.v80Command,
+.v81Network,.v81ActionProgress,.v82CityConsole,.v82LiveActionGrid,.v82Now,
+.v83ActivityBoard,.v83QuickActions,.v83ActionFeed,.v85SignalLegend{
+ display:none!important;
+}
+
+
+/* ===== V89 POLISHED LIVE MARKET HEADER ===== */
+.cityLiveHeader{
+  padding:4px 2px!important;
+  margin:3px 0 11px!important;
+}
+.cityLiveBrand>b{
+  font-size:22px!important;
+  font-weight:950!important;
+  letter-spacing:-.8px!important;
+}
+.v87LivePill{
+  min-width:82px!important;
+  height:36px;
+  padding:0 14px!important;
+  border-radius:999px!important;
+  font-size:8px!important;
+  letter-spacing:.65px!important;
+}
+.v87LivePill:after{
+  content:"";
+  width:18px;
+  height:7px;
+  margin-left:2px;
+  background:
+    linear-gradient(90deg,transparent 0 12%,#ff4d45 12% 22%,transparent 22% 34%,#ff4d45 34% 48%,transparent 48% 60%,#ff4d45 60% 72%,transparent 72%);
+  opacity:.9;
+}
+
+/* Stronger single live rail */
+.v84Live{
+  background:linear-gradient(145deg,#14243d,#0d1727)!important;
+  border:1px solid #2d405f!important;
+  border-radius:18px!important;
+  padding:10px!important;
+  margin:7px 0 13px!important;
+}
+.v84Top{
+  min-height:28px;
+  margin-bottom:7px!important;
+}
+.v84Title b{
+  font-size:10px!important;
+  letter-spacing:.1px;
+}
+.v84Title span{
+  font-size:6.2px!important;
+}
+.v84Metrics{
+  border-radius:14px!important;
+  border-color:#2a3d5c!important;
+  background:#0b1525!important;
+}
+.v84Metric{
+  flex:0 0 112px!important;
+  min-width:112px!important;
+  padding:9px 10px!important;
+}
+.v84Metric strong{
+  font-size:19px!important;
+  letter-spacing:1px!important;
+  text-shadow:0 0 10px currentColor;
+}
+.v84MetricHead .signalDot{
+  width:9px!important;
+  height:9px!important;
+}
+.v84Metric b{
+  font-size:6.7px!important;
+  letter-spacing:.5px!important;
+}
+.v84Metric>span{
+  font-size:5.9px!important;
+}
+.v84Track{
+  height:3px!important;
+  margin-top:7px!important;
+}
+
+/* compact latest activity with clearer live state */
+.v86EventStrip{
+  display:flex!important;
+  gap:6px!important;
+  margin-top:7px!important;
+}
+.v86Event{
+  min-width:176px!important;
+  background:#0c1626!important;
+  border-color:#293b58!important;
+  padding:7px 8px!important;
+}
+.v86Event b{font-size:6.9px!important}
+.v86Event span{font-size:5.9px!important}
+.v86Event time{
+  color:#ff6b64!important;
+  font-weight:850;
+  letter-spacing:.35px;
+}
+
+/* Keep only V89 live presentation visible */
+.liveBar,.liveSignalStrip,.liveActionLegend,.liveTicker,.v80Command,
+.v81Network,.v81ActionProgress,.v82CityConsole,.v82LiveActionGrid,.v82Now,
+.v83ActivityBoard,.v83QuickActions,.v83ActionFeed,.v85SignalLegend{
+  display:none!important;
+}
+
+
+/* ===== V90 LIVE-FIRST POLISH ===== */
+.cityLiveHeader{
+  min-height:48px!important;
+  margin:2px 0 10px!important;
+}
+.cityLiveBrand>b{
+  font-size:22px!important;
+  font-weight:950!important;
+  letter-spacing:-.85px!important;
+}
+.v87LivePill{
+  height:38px!important;
+  min-width:86px!important;
+  padding:0 15px!important;
+  background:linear-gradient(180deg,#0a0e16,#06090f)!important;
+  border:1px solid #465063!important;
+  box-shadow:0 8px 20px rgba(0,0,0,.24),inset 0 0 0 1px rgba(255,255,255,.025)!important;
+}
+.v87LivePill:after{
+  width:20px!important;
+  opacity:.95!important;
+}
+
+/* one clean live module */
+.v84Live{
+  padding:10px!important;
+  border-radius:18px!important;
+  margin:6px 0 12px!important;
+}
+.v84Top{
+  min-height:26px!important;
+  margin-bottom:7px!important;
+}
+.v84Title b{
+  font-size:10.5px!important;
+}
+.v84Title span{
+  font-size:6.2px!important;
+  color:#8e9bb0!important;
+}
+.v84Metrics{
+  gap:0!important;
+  background:#091321!important;
+  border-color:#293b59!important;
+}
+.v84Metric{
+  flex:0 0 114px!important;
+  min-width:114px!important;
+  padding:10px!important;
+}
+.v84Metric strong{
+  font-size:19px!important;
+  letter-spacing:1px!important;
+}
+.v84Metric b{
+  font-size:6.8px!important;
+  margin-top:8px!important;
+}
+.v84Metric>span{
+  font-size:5.9px!important;
+}
+.v84Track{
+  margin-top:7px!important;
+}
+
+/* distinguish meaning with icon-like signal dots only */
+.v84MetricHead .signalDot{
+  box-shadow:0 0 0 4px rgba(255,255,255,.025),0 0 10px currentColor!important;
+}
+
+/* more compact activity strip */
+.v86EventStrip{
+  margin-top:7px!important;
+  gap:6px!important;
+}
+.v86Event{
+  min-width:168px!important;
+  padding:7px 8px!important;
+  border-radius:10px!important;
+}
+.v86Event time{
+  font-size:5.8px!important;
+}
+
+/* sharpen general interface around the live system */
+.searchBox{
+  margin-top:10px!important;
+  border-radius:18px!important;
+}
+.hero{
+  border-radius:21px!important;
+}
+.tool,.card,.product{
+  border-radius:16px!important;
+}
+.dock{
+  border-radius:20px!important;
+}
+
+/* permanently suppress legacy live layers */
+.liveBar,.liveSignalStrip,.liveActionLegend,.liveTicker,.v80Command,
+.v81Network,.v81ActionProgress,.v82CityConsole,.v82LiveActionGrid,.v82Now,
+.v83ActivityBoard,.v83QuickActions,.v83ActionFeed,.v85SignalLegend{
+  display:none!important;
+}
+
+
+/* ===== V91 PURPOSE-DRIVEN MARKETPLACE ===== */
+.v91Purpose{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin:12px 0 16px;
+}
+.v91PurposeCard{
+  background:#192844;
+  border:1px solid #2b3b5c;
+  border-radius:16px;
+  padding:11px;
+  cursor:pointer;
+}
+.v91PurposeCard i{
+  width:36px;height:36px;
+  border-radius:11px;
+  background:#0f192b;
+  display:grid;place-items:center;
+  font-style:normal;
+  font-size:16px;
+  color:var(--primary);
+}
+.v91PurposeCard b{
+  display:block;
+  font-size:9px;
+  margin-top:9px;
+}
+.v91PurposeCard span{
+  display:block;
+  font-size:7px;
+  color:var(--muted);
+  margin-top:3px;
+  line-height:1.35;
+}
+.v91TaskPanel{
+  background:#192844;
+  border:1px solid #2b3b5c;
+  border-radius:18px;
+  overflow:hidden;
+  margin:10px 0 16px;
+}
+.v91TaskHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid #2a3a58;
+}
+.v91TaskHead b{font-size:10px}
+.v91TaskHead span{font-size:7px;color:var(--muted)}
+.v91TaskRow{
+  display:grid;
+  grid-template-columns:34px 1fr auto;
+  gap:9px;
+  align-items:center;
+  padding:10px 12px;
+  border-bottom:1px solid #2a3a58;
+  cursor:pointer;
+}
+.v91TaskRow:last-child{border-bottom:0}
+.v91TaskIcon{
+  width:32px;height:32px;
+  border-radius:10px;
+  background:#101a2d;
+  display:grid;place-items:center;
+}
+.v91TaskRow b{display:block;font-size:8.5px}
+.v91TaskRow span{display:block;font-size:7px;color:var(--muted);margin-top:2px}
+.v91TaskRow em{font-style:normal;font-size:7px;color:var(--primary);font-weight:800}
+.v91Progress{
+  height:4px;
+  background:#293955;
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:6px;
+}
+.v91Progress i{
+  display:block;
+  height:100%;
+  background:var(--primary);
+  border-radius:999px;
+}
+.v91PrimaryCta{
+  width:100%;
+  min-height:44px;
+  border:0;
+  border-radius:12px;
+  background:var(--primary);
+  color:#111;
+  font-size:9px;
+  font-weight:900;
+  margin-top:10px;
+}
+.v91MiniActions{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+  margin-top:10px;
+}
+.v91MiniActions button{
+  min-height:42px;
+  border:1px solid #2a3a58;
+  border-radius:11px;
+  background:#111c31;
+  color:#fff;
+  font-size:8px;
+  font-weight:800;
+}
+.v91OrderStep{
+  background:#192844;
+  border:1px solid #2b3b5c;
+  border-radius:15px;
+  padding:10px;
+  margin:8px 0;
+}
+.v91OrderStep b{display:block;font-size:9px}
+.v91OrderStep span{display:block;font-size:7px;color:var(--muted);margin-top:2px}
+.v91OrderControls{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:7px;
+  margin-top:8px;
+}
+.v91OrderControls button{
+  min-height:38px;
+  border:1px solid #2a3a58;
+  background:#111c31;
+  color:#fff;
+  border-radius:10px;
+  font-size:7px;
+  font-weight:800;
+}
+.v91OrderControls .next{
+  background:var(--primary);
+  color:#111;
+  border:0;
+}
+@media(max-width:720px){
+  .v91Purpose{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* ===== V92 TRANSACTION-FIRST MARKETPLACE ===== */
+.v92Flow{
+ background:#192844;border:1px solid #2b3b5c;border-radius:18px;
+ padding:11px;margin:10px 0 15px;
+}
+.v92FlowHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+.v92FlowHead b{font-size:10px}.v92FlowHead span{font-size:7px;color:var(--muted)}
+.v92FlowSteps{display:flex;align-items:center;overflow-x:auto;scrollbar-width:none}
+.v92FlowSteps::-webkit-scrollbar{display:none}
+.v92Step{flex:0 0 82px;text-align:center;cursor:pointer}
+.v92StepIcon{
+ width:31px;height:31px;margin:auto;border-radius:50%;display:grid;place-items:center;
+ background:#101a2d;border:1px solid #30415e;font-size:12px
+}
+.v92Step b{display:block;font-size:6.8px;margin-top:5px}
+.v92Step span{display:block;font-size:5.8px;color:var(--muted);margin-top:1px}
+.v92Connector{height:2px;background:#30415e;min-width:20px;flex:1}
+.v92Connector.active{background:var(--primary)}
+.v92Step.active .v92StepIcon{background:var(--primary);color:#111;border-color:var(--primary)}
+.v92Step.done .v92StepIcon{border-color:#30d158;color:#30d158}
+.v92Seller{
+ background:#192844;border:1px solid #2b3b5c;border-radius:15px;padding:10px;margin:8px 0
+}
+.v92SellerTop{display:grid;grid-template-columns:38px 1fr auto;gap:9px;align-items:center}
+.v92SellerIcon{width:36px;height:36px;border-radius:11px;background:#101a2d;display:grid;place-items:center}
+.v92Seller b{font-size:9px;display:block}.v92Seller span{font-size:7px;color:var(--muted);display:block;margin-top:2px}
+.v92Seller em{font-style:normal;font-size:7px;color:#30d158;font-weight:850}
+.v92SellerActions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.v92SellerActions button{
+ min-height:36px;border:1px solid #2a3a58;background:#111c31;color:#fff;border-radius:9px;font-size:7px;font-weight:800
+}
+.v92SellerActions button.primary{background:var(--primary);color:#111;border:0}
+.v92Trust{display:flex;gap:6px;overflow:auto;margin-top:8px;scrollbar-width:none}
+.v92Trust span{white-space:nowrap;background:#101a2d;border:1px solid #293a58;border-radius:999px;padding:5px 7px;font-size:6px!important}
+.v92CartSummary{
+ background:#192844;border:1px solid #2b3b5c;border-radius:16px;padding:11px;margin-top:10px
+}
+.v92CartLine{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #2a3a58;font-size:8px}
+.v92CartLine:last-of-type{border-bottom:0}
+.v92CartTotal{font-weight:900;font-size:11px!important}
+.v92LocationBox{
+ background:#101a2d;border:1px solid #293a58;border-radius:12px;padding:9px;margin-top:8px
+}
+.v92LocationBox b{font-size:8px;display:block}.v92LocationBox span{font-size:7px;color:var(--muted);display:block;margin-top:3px}
+.v92Empty{padding:16px;text-align:center;color:var(--muted);font-size:8px}
+
+
+/* ===== V93 BUYER-FIRST CITY MARKETPLACE ===== */
+.v93IntentBar{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  margin:10px 0 14px;
+}
+.v93IntentBar::-webkit-scrollbar{display:none}
+.v93Intent{
+  flex:0 0 auto;
+  border:1px solid #2a3a58;
+  background:#111c31;
+  color:#fff;
+  border-radius:999px;
+  padding:8px 11px;
+  font-size:7px;
+  font-weight:800;
+}
+.v93Intent.primary{
+  background:var(--primary);
+  color:#111;
+  border:0;
+}
+
+.v93Nearby{
+  background:#192844;
+  border:1px solid #2b3b5c;
+  border-radius:18px;
+  overflow:hidden;
+  margin:10px 0 16px;
+}
+.v93NearbyHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid #2a3a58;
+}
+.v93NearbyHead b{font-size:10px}
+.v93NearbyHead button{
+  border:0;
+  background:none;
+  color:var(--primary);
+  font-size:7px;
+  font-weight:850;
+}
+.v93NearbyRow{
+  display:grid;
+  grid-template-columns:36px 1fr auto;
+  gap:9px;
+  align-items:center;
+  padding:10px 12px;
+  border-bottom:1px solid #2a3a58;
+  cursor:pointer;
+}
+.v93NearbyRow:last-child{border-bottom:0}
+.v93NearbyIcon{
+  width:34px;height:34px;
+  border-radius:10px;
+  background:#101a2d;
+  display:grid;place-items:center;
+}
+.v93NearbyRow b{display:block;font-size:8.5px}
+.v93NearbyRow span{display:block;font-size:6.7px;color:var(--muted);margin-top:2px}
+.v93NearbyRow em{
+  font-style:normal;
+  font-size:6.5px;
+  color:#30d158;
+  font-weight:850;
+}
+
+.v93Compare{
+  display:grid;
+  gap:8px;
+}
+.v93CompareCard{
+  background:#192844;
+  border:1px solid #2b3b5c;
+  border-radius:16px;
+  padding:10px;
+}
+.v93CompareTop{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:start;
+}
+.v93CompareCard b{font-size:9px;display:block}
+.v93CompareCard span{font-size:6.7px;color:var(--muted);display:block;margin-top:2px}
+.v93ComparePrice{
+  font-size:10px!important;
+  color:var(--primary)!important;
+  font-weight:900!important;
+  white-space:nowrap;
+}
+.v93CompareActions{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+  margin-top:8px;
+}
+.v93CompareActions button{
+  min-height:34px;
+  border:1px solid #2a3a58;
+  border-radius:9px;
+  background:#111c31;
+  color:#fff;
+  font-size:6.5px;
+  font-weight:800;
+}
+.v93CompareActions .buy{
+  background:var(--primary);
+  color:#111;
+  border:0;
+}
+
+.v93LocationCard{
+  background:#192844;
+  border:1px solid #2b3b5c;
+  border-radius:16px;
+  padding:11px;
+}
+.v93LocationCard h3{
+  margin:0 0 8px;
+  font-size:11px;
+}
+.v93LocationSteps{
+  display:grid;
+  gap:7px;
+}
+.v93LocationStep{
+  display:grid;
+  grid-template-columns:28px 1fr;
+  gap:8px;
+  align-items:center;
+  background:#101a2d;
+  border:1px solid #293a58;
+  border-radius:10px;
+  padding:8px;
+}
+.v93LocationStep strong{
+  width:26px;height:26px;
+  border-radius:8px;
+  display:grid;place-items:center;
+  background:#17243d;
+  color:var(--primary);
+  font-size:8px;
+}
+.v93LocationStep b{font-size:7.5px;display:block}
+.v93LocationStep span{font-size:6.3px;color:var(--muted);display:block;margin-top:1px}
+
+.v93SellerBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:1px solid #285041;
+  background:#10241d;
+  color:#71e1a7;
+  border-radius:999px;
+  padding:4px 7px;
+  font-size:6px;
+  font-weight:850;
+  margin-top:6px;
+}
+
+
+/* ===== V94 CLEAN PURPOSE-FIRST HOME ===== */
+#home .hero{
+  margin-top:10px;
+  margin-bottom:14px;
+  padding:15px;
+}
+#home .hero h1{
+  font-size:24px;
+  max-width:660px;
+}
+#home .hero p{
+  max-width:720px;
+}
+.v93IntentBar{
+  margin:9px 0 11px!important;
+}
+.v92Flow{
+  margin:12px 0 15px!important;
+}
+.v93Nearby{
+  margin:8px 0 15px!important;
+}
+.v91TaskPanel{
+  margin:8px 0 15px!important;
+}
+#home .sectionHead{
+  margin:17px 0 8px;
+}
+.v94HomeNote{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:#111c31;
+  border:1px solid #293a58;
+  border-radius:13px;
+  padding:9px 10px;
+  margin:8px 0 12px;
+}
+.v94HomeNote b{
+  font-size:8px;
+}
+.v94HomeNote span{
+  font-size:6.5px;
+  color:var(--muted);
+}
+.v94HomeNote button{
+  border:0;
+  background:var(--primary);
+  color:#111;
+  border-radius:9px;
+  padding:7px 9px;
+  font-size:6.5px;
+  font-weight:900;
+  white-space:nowrap;
+}
+/* old hidden live generations no longer participate in layout */
+.liveSignalStrip,.liveActionLegend,.liveTicker,.v80Command,
+.v81Network,.v81ActionProgress,.v82CityConsole,.v82LiveActionGrid,.v82Now,
+.v83ActivityBoard,.v83QuickActions,.v83ActionFeed,.v85SignalLegend,
+.v84Actions,.v84Status{
+  display:none!important;
+}
+
+
+/* ===== V95 MASTER INTERFACE ===== */
+:root{
+  --v95-bg:#07111f;
+  --v95-panel:#0b1728;
+  --v95-panel2:#0d1b2f;
+  --v95-line:#243650;
+  --v95-text:#f7f9fc;
+  --v95-muted:#97a4b8;
+  --v95-yellow:#ffd21f;
+  --v95-green:#34e06f;
+  --v95-red:#ff4b45;
+  --v95-blue:#1688ff;
+  --v95-cyan:#27d4e8;
+}
+body{background:var(--v95-bg)!important}
+.app{background:transparent!important}
+#home>*{display:none!important}
+#home>.v95Home{display:block!important}
+
+.v95Home{
+  max-width:1100px;
+  margin:0 auto;
+  padding:10px 10px 92px;
+}
+.v95Header{
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:10px;
+  align-items:center;
+  margin:2px 0 14px;
+}
+.v95Brand{
+  font-size:24px;
+  font-weight:950;
+  letter-spacing:-.8px;
+  color:#fff;
+  white-space:nowrap;
+}
+.v95LivePill,
+.v95Pull{
+  height:42px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:0 16px;
+  font-size:9px;
+  font-weight:950;
+  cursor:pointer;
+}
+.v95LivePill{
+  background:#090d15;
+  border:1px solid #3c4658;
+  color:#ff5b55;
+}
+.v95Pull{
+  background:#12150a;
+  border:1px solid #bba515;
+  color:var(--v95-yellow);
+}
+.v95Pull span{font-size:14px;line-height:1}
+
+.v95LivePanel{
+  background:linear-gradient(145deg,#0d1b2e,#091424);
+  border:1px solid var(--v95-line);
+  border-radius:22px;
+  padding:14px;
+  margin-bottom:14px;
+}
+.v95PanelHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+.v95PanelHead b{
+  font-size:19px;
+  letter-spacing:-.3px;
+}
+.v95PanelHead span{
+  font-size:8px;
+  color:var(--v95-muted);
+}
+.v95SignalRail{
+  display:flex;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  scrollbar-width:none;
+  border:1px solid var(--v95-line);
+  border-radius:18px;
+  background:#081321;
+}
+.v95SignalRail::-webkit-scrollbar{display:none}
+.v95Signal{
+  flex:1 0 168px;
+  min-width:168px;
+  padding:16px 14px 14px;
+  border-right:1px solid var(--v95-line);
+  cursor:pointer;
+}
+.v95Signal:last-child{border-right:0}
+.v95SignalTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.v95Orb{
+  width:50px;height:50px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:21px;
+  color:#fff;
+  border:1px solid currentColor;
+  box-shadow:0 0 22px currentColor;
+}
+.v95Digits{
+  font-family:"SFMono-Regular",Consolas,monospace;
+  font-size:32px;
+  font-weight:900;
+  letter-spacing:1.5px;
+  line-height:1;
+  text-shadow:0 0 12px currentColor;
+}
+.v95Signal b{
+  display:block;
+  font-size:12px;
+  margin-top:14px;
+}
+.v95Signal small{
+  display:block;
+  font-size:9px;
+  color:var(--v95-muted);
+  margin-top:4px;
+}
+.v95Track{
+  height:6px;
+  border-radius:999px;
+  background:#20314a;
+  overflow:hidden;
+  margin-top:13px;
+}
+.v95Track i{
+  display:block;
+  height:100%;
+  border-radius:999px;
+}
+.v95Signal.green{color:var(--v95-green)}
+.v95Signal.yellow{color:var(--v95-yellow)}
+.v95Signal.red{color:var(--v95-red)}
+.v95Signal.blue{color:var(--v95-blue)}
+.v95Signal.cyan{color:var(--v95-cyan)}
+.v95Signal b,.v95Signal small{color:#fff}
+.v95Signal small{color:var(--v95-muted)}
+.v95Signal.green .v95Track i{background:var(--v95-green)}
+.v95Signal.yellow .v95Track i{background:var(--v95-yellow)}
+.v95Signal.red .v95Track i{background:var(--v95-red)}
+.v95Signal.blue .v95Track i{background:var(--v95-blue)}
+.v95Signal.cyan .v95Track i{background:var(--v95-cyan)}
+
+.v95Legend{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  margin-top:12px;
+  border:1px solid var(--v95-line);
+  border-radius:15px;
+  padding:9px 10px;
+  background:#0a1626;
+}
+.v95Legend::-webkit-scrollbar{display:none}
+.v95LegendItem{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:4px 10px;
+  border-right:1px solid var(--v95-line);
+  font-size:8px;
+  color:#d7deea;
+}
+.v95LegendItem:last-child{border-right:0}
+.v95LegendDot{width:10px;height:10px;border-radius:50%}
+.v95LegendItem b{font-size:8px;color:#fff}
+
+.v95Activity{
+  background:linear-gradient(145deg,#0d1b2e,#091424);
+  border:1px solid var(--v95-line);
+  border-radius:22px;
+  padding:14px;
+  margin-bottom:14px;
+}
+.v95ActivityHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+.v95ActivityHead b{font-size:17px}
+.v95ActivityHead button{
+  border:0;
+  background:none;
+  color:var(--v95-yellow);
+  font-size:9px;
+  font-weight:900;
+}
+.v95ActivityRow{
+  display:grid;
+  grid-template-columns:52px 1fr auto;
+  gap:12px;
+  align-items:center;
+  background:#081321;
+  border:1px solid var(--v95-line);
+  border-radius:17px;
+  padding:12px;
+  cursor:pointer;
+}
+.v95ActivityIcon{
+  width:50px;height:50px;border-radius:14px;
+  background:#103827;
+  color:var(--v95-green);
+  display:grid;place-items:center;
+  font-size:22px;
+}
+.v95ActivityRow b{
+  display:block;
+  font-size:12px;
+  color:var(--v95-green);
+}
+.v95ActivityRow span{
+  display:block;
+  font-size:9px;
+  color:var(--v95-muted);
+  margin-top:3px;
+}
+.v95ActivityRow em{
+  font-style:normal;
+  color:var(--v95-green);
+  font-size:9px;
+  font-weight:900;
+}
+
+.v95Dock{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:8px;
+  z-index:300;
+  width:min(1080px,calc(100% - 18px));
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  background:#091525;
+  border:1px solid var(--v95-line);
+  border-radius:21px;
+  padding:5px;
+  box-shadow:0 18px 45px rgba(0,0,0,.35);
+}
+.v95Dock button{
+  border:0;
+  background:transparent;
+  color:#a2adbe;
+  min-height:62px;
+  border-radius:16px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  font-size:8px;
+  font-weight:800;
+}
+.v95Dock button strong{font-size:19px;font-weight:500}
+.v95Dock button.on{
+  background:#102a20;
+  color:var(--v95-green);
+  border:1px solid #28553d;
+}
+
+@media(max-width:760px){
+  .v95Header{grid-template-columns:1fr auto auto}
+  .v95Brand{font-size:19px}
+  .v95LivePill,.v95Pull{height:38px;padding:0 11px;font-size:8px}
+  .v95Pull small{display:none}
+  .v95PanelHead{align-items:flex-start;flex-direction:column}
+  .v95Signal{flex:0 0 144px;min-width:144px}
+  .v95Digits{font-size:27px}
+  .v95Orb{width:44px;height:44px}
+}
+
+
+/* ===== V96 MASTER UI REFINEMENT ===== */
+.v95Home{
+  padding-top:8px!important;
+}
+.v95Header{
+  margin-bottom:12px!important;
+}
+.v95Brand{
+  font-size:25px!important;
+  letter-spacing:-1px!important;
+}
+.v95LivePill,
+.v95Pull{
+  height:40px!important;
+}
+.v95LivePill{
+  min-width:84px;
+  background:linear-gradient(180deg,#0a0f18,#060a10)!important;
+  border-color:#434d60!important;
+}
+.v95Pull{
+  min-width:104px;
+  background:linear-gradient(180deg,#17180a,#101207)!important;
+  border-color:#d0b619!important;
+}
+.v95LivePanel{
+  padding:13px!important;
+  border-radius:21px!important;
+}
+.v95PanelHead{
+  margin-bottom:10px!important;
+}
+.v95PanelHead b{
+  font-size:18px!important;
+}
+.v95PanelHead span{
+  font-size:7.5px!important;
+}
+.v95SignalRail{
+  border-radius:17px!important;
+}
+.v95Signal{
+  flex-basis:160px!important;
+  min-width:160px!important;
+  padding:15px 13px 13px!important;
+}
+.v95Orb{
+  width:48px!important;
+  height:48px!important;
+  font-size:19px!important;
+}
+.v95Digits{
+  font-size:30px!important;
+}
+.v95Signal b{
+  font-size:11px!important;
+  margin-top:12px!important;
+}
+.v95Signal small{
+  font-size:8.5px!important;
+}
+.v95Track{
+  margin-top:11px!important;
+  height:5px!important;
+}
+.v95Legend{
+  margin-top:10px!important;
+  padding:8px 9px!important;
+}
+.v95Activity{
+  padding:13px!important;
+}
+.v95ActivityHead b{
+  font-size:16px!important;
+}
+.v95ActivityRow{
+  grid-template-columns:48px 1fr auto!important;
+  gap:11px!important;
+  padding:11px!important;
+}
+.v95ActivityIcon{
+  width:46px!important;
+  height:46px!important;
+}
+.v95ActivityRow b{
+  font-size:11px!important;
+}
+.v95ActivityRow span{
+  font-size:8.5px!important;
+}
+.v95Dock{
+  border-radius:20px!important;
+  padding:5px!important;
+}
+.v95Dock button{
+  min-height:60px!important;
+}
+.v95Dock button.on{
+  background:linear-gradient(180deg,#123122,#0f261b)!important;
+}
+
+/* signal counters feel more "live" without animation clutter */
+.v96SignalPulse{
+  animation:v96Pulse .55s ease;
+}
+@keyframes v96Pulse{
+  0%{transform:scale(1);filter:brightness(1)}
+  45%{transform:scale(1.08);filter:brightness(1.6)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+
+/* compact pull sheet */
+.v96Sheet{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%) translateY(110%);
+  bottom:0;
+  width:min(700px,100%);
+  background:#0b1728;
+  border:1px solid #2b3b5c;
+  border-bottom:0;
+  border-radius:22px 22px 0 0;
+  padding:14px;
+  z-index:500;
+  box-shadow:0 -18px 48px rgba(0,0,0,.42);
+  transition:transform .22s ease;
+}
+.v96Sheet.on{transform:translateX(-50%) translateY(0)}
+.v96Handle{
+  width:42px;height:4px;border-radius:999px;background:#3c4c65;margin:0 auto 12px;
+}
+.v96SheetHead{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;
+}
+.v96SheetHead b{font-size:14px}
+.v96SheetHead button{border:0;background:none;color:#fff;font-size:18px}
+.v96ActionGrid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+}
+.v96Action{
+  background:#111c31;border:1px solid #2a3a58;border-radius:14px;padding:11px;color:#fff;text-align:left;
+}
+.v96Action strong{display:block;font-size:10px}
+.v96Action span{display:block;font-size:7px;color:#94a0b6;margin-top:3px}
+.v96Backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:490;display:none;
+}
+.v96Backdrop.on{display:block}
+@media(max-width:720px){
+  .v95Brand{font-size:20px!important}
+  .v95Pull{min-width:88px}
+  .v96ActionGrid{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* ===== V97 ACTION-FIRST LIVE MARKET ===== */
+.v95PanelHead{
+  align-items:flex-start!important;
+}
+.v95PanelHead span{
+  max-width:520px;
+  line-height:1.35;
+}
+.v97SignalHint{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:8px;
+  color:#8290a6;
+  font-size:6.5px;
+}
+.v97SignalHint strong{
+  color:#fff;
+  font-size:6.5px;
+}
+.v97SignalHint em{
+  font-style:normal;
+  color:var(--v95-yellow);
+  font-size:8px;
+}
+.v97ActivityMeta{
+  display:flex;
+  gap:6px;
+  margin-top:5px;
+  flex-wrap:wrap;
+}
+.v97Tag{
+  border:1px solid #2b3b5c;
+  background:#101a2d;
+  color:#b8c2d3;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:6px;
+  font-weight:800;
+}
+.v97LiveSummary{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin:0 0 13px;
+}
+.v97Summary{
+  background:#0b1728;
+  border:1px solid #243650;
+  border-radius:13px;
+  padding:9px 10px;
+  cursor:pointer;
+}
+.v97Summary b{
+  display:block;
+  font-size:9px;
+}
+.v97Summary span{
+  display:block;
+  font-size:6.5px;
+  color:#8e9aad;
+  margin-top:3px;
+}
+.v97Summary strong{
+  display:block;
+  color:var(--v95-yellow);
+  font-family:"SFMono-Regular",Consolas,monospace;
+  font-size:14px;
+  margin-top:7px;
+}
+.v97PullFooter{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid #263650;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+}
+.v97PullFooter span{
+  font-size:7px;
+  color:#8f9bb0;
+}
+.v97PullFooter button{
+  border:0;
+  background:var(--v95-yellow);
+  color:#111;
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:7px;
+  font-weight:900;
+}
+@media(max-width:720px){
+  .v97LiveSummary{grid-template-columns:1fr 1fr}
+}
+
+
+/* ===== V98 SMARTER MARKETPLACE HOME ===== */
+.v98Attention{
+  background:#0b1728;
+  border:1px solid #243650;
+  border-radius:16px;
+  margin:0 0 14px;
+  overflow:hidden;
+}
+.v98AttentionHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid #243650;
+}
+.v98AttentionHead b{font-size:10px}
+.v98AttentionHead span{font-size:6.5px;color:#8f9bad}
+.v98AttentionRow{
+  display:grid;
+  grid-template-columns:34px 1fr auto;
+  gap:9px;
+  align-items:center;
+  padding:10px 12px;
+  border-bottom:1px solid #20314a;
+  cursor:pointer;
+}
+.v98AttentionRow:last-child{border-bottom:0}
+.v98AttentionIcon{
+  width:32px;height:32px;
+  border-radius:10px;
+  display:grid;place-items:center;
+  background:#101a2d;
+}
+.v98AttentionRow b{display:block;font-size:8.5px}
+.v98AttentionRow span{display:block;font-size:6.5px;color:#8f9bad;margin-top:2px}
+.v98AttentionRow em{font-style:normal;font-size:6.5px;color:var(--v95-yellow);font-weight:900}
+
+.v98PullTop{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  background:#101a2d;
+  border:1px solid #293a58;
+  border-radius:12px;
+  padding:9px 10px;
+  margin-bottom:10px;
+}
+.v98PullTop b{font-size:8px;display:block}
+.v98PullTop span{font-size:6.5px;color:#8f9bad;display:block;margin-top:2px}
+.v98PullTop strong{
+  font-family:"SFMono-Regular",Consolas,monospace;
+  font-size:13px;
+  color:var(--v95-yellow);
+}
+
+.v98SignalState{
+  margin-top:6px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:4px 6px;
+  border-radius:999px;
+  background:#101a2d;
+  border:1px solid #263750;
+  color:#d8dfeb;
+  font-size:5.8px;
+  font-weight:800;
+}
+.v98SignalState.alert{color:#ff8a83;border-color:#4b2c31;background:#211216}
+.v98SignalState.good{color:#73e3a8;border-color:#284b3d;background:#102219}
+.v98SignalState.info{color:#8eb5ff;border-color:#2e4466;background:#101c31}
+
+.v98ActivityRow2{
+  display:grid;
+  grid-template-columns:48px 1fr auto;
+  gap:11px;
+  align-items:center;
+}
+.v98ActivityAction{
+  color:var(--v95-yellow);
+  font-size:7px;
+  font-weight:900;
+  white-space:nowrap;
+}
+
+
+/* ===== V99 LIVE DELTAS + NAV SYNC ===== */
+.v99PanelMeta{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.v99Updated{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:4px 7px;
+  border-radius:999px;
+  background:#101a2d;
+  border:1px solid #293a58;
+  color:#97a4b8;
+  font-size:6px;
+  white-space:nowrap;
+}
+.v99Updated:before{
+  content:"";
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--v95-green);
+  box-shadow:0 0 8px var(--v95-green);
+}
+.v99Delta{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  margin-top:6px;
+  padding:4px 6px;
+  border-radius:999px;
+  background:#0e1c2e;
+  border:1px solid #263750;
+  color:#8e9aad;
+  font-family:"SFMono-Regular",Consolas,monospace;
+  font-size:5.9px;
+  font-weight:900;
+}
+.v99Delta.up{
+  color:#73e3a8;
+  border-color:#28503f;
+  background:#102219;
+}
+.v99Delta.hot{
+  color:#ff8b84;
+  border-color:#4a2c31;
+  background:#211317;
+}
+.v99DockBadge{
+  position:absolute;
+  top:7px;
+  right:calc(50% - 17px);
+  min-width:15px;
+  height:15px;
+  padding:0 4px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:var(--v95-red);
+  color:#fff;
+  border:2px solid #091525;
+  font-size:5.5px;
+  font-weight:950;
+}
+.v95Dock button{
+  position:relative;
+}
+.v99QuickState{
+  display:flex;
+  gap:6px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  margin-top:9px;
+}
+.v99QuickState::-webkit-scrollbar{display:none}
+.v99StateChip{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  border:1px solid #263750;
+  background:#0d1728;
+  border-radius:999px;
+  padding:5px 8px;
+  font-size:6px;
+  color:#aeb8c9;
+  cursor:pointer;
+}
+.v99StateChip b{
+  font-size:6px;
+  color:#fff;
+}
+
+
+/* ===== V100 MILESTONE RELEASE ===== */
+.v100Version{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  margin-left:6px;
+  padding:4px 7px;
+  border-radius:999px;
+  border:1px solid #2d3d56;
+  background:#0c1625;
+  color:#8e9bb0;
+  font-size:5.8px;
+  font-weight:900;
+  vertical-align:middle;
+}
+.v100Search{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  margin:0 0 12px;
+  padding:9px;
+  border:1px solid #243650;
+  background:#0b1728;
+  border-radius:15px;
+}
+.v100Search input{
+  min-width:0;
+  height:42px;
+  margin:0!important;
+  border:1px solid #293a58!important;
+  background:#081321!important;
+  color:#fff!important;
+  border-radius:11px!important;
+  padding:0 12px!important;
+  font-size:9px!important;
+}
+.v100Search button{
+  min-width:76px;
+  border:0;
+  border-radius:11px;
+  background:var(--v95-yellow);
+  color:#111;
+  font-size:8px;
+  font-weight:950;
+}
+.v100Shortcuts{
+  display:flex;
+  gap:6px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  margin:-4px 0 12px;
+}
+.v100Shortcuts::-webkit-scrollbar{display:none}
+.v100Shortcut{
+  flex:0 0 auto;
+  border:1px solid #263750;
+  background:#0d1728;
+  color:#b7c0cf;
+  border-radius:999px;
+  padding:6px 9px;
+  font-size:6.3px;
+  font-weight:800;
+}
+.v100SignalAlert{
+  position:relative;
+}
+.v100SignalAlert:after{
+  content:"";
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:transparent;
+}
+.v100SignalAlert.hot:after{
+  background:var(--v95-red);
+  box-shadow:0 0 9px var(--v95-red);
+}
+.v100SignalAlert.good:after{
+  background:var(--v95-green);
+  box-shadow:0 0 8px var(--v95-green);
+}
+.v100ActionLine{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px solid #243650;
+}
+.v100ActionLine span{
+  font-size:6.5px;
+  color:#8f9bad;
+}
+.v100ActionLine button{
+  border:0;
+  background:none;
+  color:var(--v95-yellow);
+  font-size:6.5px;
+  font-weight:900;
+}
+.v100Kpi{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin:0 0 13px;
+}
+.v100KpiCard{
+  background:#0b1728;
+  border:1px solid #243650;
+  border-radius:13px;
+  padding:9px;
+  cursor:pointer;
+}
+.v100KpiCard b{
+  display:block;
+  font-size:7px;
+  color:#8f9bad;
+}
+.v100KpiCard strong{
+  display:block;
+  margin-top:5px;
+  font-family:"SFMono-Regular",Consolas,monospace;
+  font-size:14px;
+  color:#fff;
+}
+.v100KpiCard span{
+  display:block;
+  font-size:5.8px;
+  color:#6f7c90;
+  margin-top:2px;
+}
+.v100KpiCard.primary strong{color:var(--v95-yellow)}
+.v100KpiCard.good strong{color:var(--v95-green)}
+.v100KpiCard.alert strong{color:var(--v95-red)}
+.v100KpiCard.info strong{color:var(--v95-blue)}
+
+@media(max-width:720px){
+  .v100Kpi{grid-template-columns:repeat(2,1fr)}
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="home" class="page on">
+<div class="v95Home">
+  <div class="v95Header">
+    <div class="v95Brand">KAMPALA CITY <span class="v100Version">V100</span></div>
+    <div class="v95LivePill" onclick="openPage('live')"><span class="signalDot red"></span>LIVE</div>
+    <div class="v95Pull" onclick="openV96Sheet()"><span>↓</span><div>PULL<small style="display:block;font-size:6px;font-weight:700">for actions</small></div></div>
+  </div>
+
+  <div class="v100Search">
+    <input id="v100SearchInput" placeholder="Search product, shop or building..." onkeydown="if(event.key==='Enter')v100RunSearch()">
+    <button onclick="v100RunSearch()">SEARCH</button>
+  </div>
+  <div class="v100Shortcuts">
+    <button class="v100Shortcut" onclick="openPage('products')">All products</button>
+    <button class="v100Shortcut" onclick="openPage('prices')">Best prices</button>
+    <button class="v100Shortcut" onclick="openPage('shops')">Live shops</button>
+    <button class="v100Shortcut" onclick="openPage('buildings')">Buildings</button>
+    <button class="v100Shortcut" onclick="openPage('request')">Ask sellers</button>
+  </div>
+
+  <div class="v95LivePanel">
+    <div class="v95PanelHead">
+      <b>Kampala City Live Signals</b>
+      <div class="v99PanelMeta">
+        <span>Each signal opens the activity it represents</span>
+        <div class="v99Updated" id="v99Updated">LIVE NOW</div>
+      </div>
+    </div>
+
+    <div class="v95SignalRail">
+      <div class="v95Signal green v100SignalAlert" id="v100ShopSignal" onclick="openPage('shops')">
+        <div class="v95SignalTop"><div class="v95Orb">🏪</div><div><div class="v95Digits" id="v95Shops">000</div><div class="v99Delta" id="v99ShopsDelta">0 today</div></div></div>
+        <b>SHOPS LIVE</b><small>shops active</small><div class="v97SignalHint"><strong>OPEN STOREFRONTS</strong><em>›</em></div><div class="v98SignalState good" id="v98ShopState">ACTIVE NETWORK</div><div class="v95Track"><i id="v95ShopsBar"></i></div>
+      </div>
+      <div class="v95Signal yellow v100SignalAlert" id="v100GoodsSignal" onclick="openPage('products')">
+        <div class="v95SignalTop"><div class="v95Orb">◇</div><div><div class="v95Digits" id="v95Goods">000</div><div class="v99Delta" id="v99GoodsDelta">0 today</div></div></div>
+        <b>GOODS LIVE</b><small>goods added</small><div class="v97SignalHint"><strong>AVAILABLE STOCK</strong><em>›</em></div><div class="v98SignalState good" id="v98GoodsState">STOCK AVAILABLE</div><div class="v95Track"><i id="v95GoodsBar"></i></div>
+      </div>
+      <div class="v95Signal red v100SignalAlert" id="v100DemandSignal" onclick="openPage('request')">
+        <div class="v95SignalTop"><div class="v95Orb">◎</div><div><div class="v95Digits" id="v95Demand">000</div><div class="v99Delta" id="v99DemandDelta">0 open</div></div></div>
+        <b>DEMAND LIVE</b><small>buyer demand</small><div class="v97SignalHint"><strong>REQUESTS NEEDING SELLERS</strong><em>›</em></div><div class="v98SignalState alert" id="v98DemandState">CHECK REQUESTS</div><div class="v95Track"><i id="v95DemandBar"></i></div>
+      </div>
+      <div class="v95Signal blue v100SignalAlert" id="v100OrderSignal" onclick="openPage('orders')">
+        <div class="v95SignalTop"><div class="v95Orb">🛒</div><div><div class="v95Digits" id="v95Orders">000</div><div class="v99Delta" id="v99OrdersDelta">0 moving</div></div></div>
+        <b>ORDERS LIVE</b><small>orders moving</small><div class="v97SignalHint"><strong>FULFILMENT IN PROGRESS</strong><em>›</em></div><div class="v98SignalState info" id="v98OrderState">TRACK MOVEMENT</div><div class="v95Track"><i id="v95OrdersBar"></i></div>
+      </div>
+      <div class="v95Signal cyan v100SignalAlert" id="v100ChatSignal" onclick="openPage('messages')">
+        <div class="v95SignalTop"><div class="v95Orb">💬</div><div><div class="v95Digits" id="v95Chats">000</div><div class="v99Delta" id="v99ChatsDelta">0 active</div></div></div>
+        <b>CHATS LIVE</b><small>seller conversations</small><div class="v97SignalHint"><strong>ACTIVE SELLER CONTACT</strong><em>›</em></div><div class="v98SignalState info" id="v98ChatState">OPEN CONVERSATIONS</div><div class="v95Track"><i id="v95ChatsBar"></i></div>
+      </div>
+    </div>
+
+    <div class="v95Legend">
+      <div class="v95LegendItem"><span class="v95LegendDot" style="background:var(--v95-green)"></span><b>GREEN</b> shops active</div>
+      <div class="v95LegendItem"><span class="v95LegendDot" style="background:var(--v95-yellow)"></span><b>YELLOW</b> goods added</div>
+      <div class="v95LegendItem"><span class="v95LegendDot" style="background:var(--v95-red)"></span><b>RED</b> buyer demand</div>
+      <div class="v95LegendItem"><span class="v95LegendDot" style="background:var(--v95-blue)"></span><b>BLUE</b> orders moving</div>
+      <div class="v95LegendItem"><span class="v95LegendDot" style="background:var(--v95-cyan)"></span><b>CYAN</b> seller chats</div>
+    </div>
+  </div>
+
+  
+<div class="v97LiveSummary">
+  <div class="v97Summary" onclick="openPage('products')"><b>Ready to Buy</b><span>Products with stock now</span><strong id="v97Ready">000</strong></div>
+  <div class="v97Summary" onclick="openPage('request')"><b>Waiting for Seller</b><span>Requests with no quotes yet</span><strong id="v97Waiting">000</strong></div>
+  <div class="v97Summary" onclick="openPage('orders')"><b>Needs Progress</b><span>Orders not yet completed</span><strong id="v97Progress">000</strong></div>
+</div>
+
+
+<div class="v100Kpi">
+  <div class="v100KpiCard good" onclick="openPage('shops')"><b>OPEN SHOPS</b><strong id="v100Open">000</strong><span>active storefronts</span></div>
+  <div class="v100KpiCard primary" onclick="openPage('products')"><b>AVAILABLE GOODS</b><strong id="v100Stock">000</strong><span>products in stock</span></div>
+  <div class="v100KpiCard alert" onclick="openPage('request')"><b>UNANSWERED DEMAND</b><strong id="v100Unanswered">000</strong><span>requests without quotes</span></div>
+  <div class="v100KpiCard info" onclick="openPage('orders')"><b>IN FULFILMENT</b><strong id="v100Fulfil">000</strong><span>orders not completed</span></div>
+</div>
+<div class="v98Attention">
+  <div class="v98AttentionHead"><b>Needs Your Attention</b><span>Only active tasks appear here</span></div>
+  <div id="v98AttentionRows"></div>
+</div>
+<div class="v95Activity">
+    <div class="v95ActivityHead"><b>Latest Live Activity</b><button onclick="openPage('live')">View full live page ›</button></div>
+    <div id="v95LatestActivity"></div><div class="v100ActionLine"><span>Live events are generated by real app actions.</span><button onclick="openPage('live')">OPEN LIVE CENTER ›</button></div>
+  </div>
+</div>
+
+    <div class="cityLiveHeader">
+      <div class="cityLiveBrand">
+        <b>Kampala City</b>
+      </div>
+      <div class="v87LivePill" role="button" aria-label="Open Kampala City Live" title="Open Kampala City Live" onclick="openPage('live')"><span class="signalDot red"></span>LIVE</div>
+    </div>
+
+<div class="v84Live">
+  <div class="v84Top">
+    <div class="v84Title">
+      <span class="signalDot red"></span>
+      <div><b>Live Signals</b><span>Shops · stock · demand · orders · seller activity</span></div>
+    </div>
+    <div class="v84Status"><span class="signalDot red"></span>LIVE</div>
+  </div>
+
+  <div class="v84Metrics">
+    <div class="v84Metric green" onclick="openPage('shops')">
+      <div class="v84MetricHead"><span class="signalDot green"></span><strong id="v84Shops">000</strong></div>
+      <b>SHOPS LIVE</b><span>registered storefronts</span>
+      <div class="v86SignalCaption"><span>GREEN</span><em>ACTIVE</em></div>
+      <div class="v86SignalAction">Open shops</div>
+      <div class="v84SignalMeaning"><strong>GREEN</strong> = shops active</div>
+      <div class="v84Track"><i id="v84ShopsBar"></i></div>
+    </div>
+    <div class="v84Metric yellow" onclick="openPage('products')">
+      <div class="v84MetricHead"><span class="signalDot yellow"></span><strong id="v84Goods">000</strong></div>
+      <b>GOODS LIVE</b><span>items listed</span>
+      <div class="v86SignalCaption"><span>YELLOW</span><em>NEW STOCK</em></div>
+      <div class="v86SignalAction">Open goods</div>
+      <div class="v84SignalMeaning"><strong>YELLOW</strong> = goods added</div>
+      <div class="v84Track"><i id="v84GoodsBar"></i></div>
+    </div>
+    <div class="v84Metric red" onclick="openPage('request')">
+      <div class="v84MetricHead"><span class="signalDot red"></span><strong id="v84Demand">000</strong></div>
+      <b>DEMAND LIVE</b><span>buyer requests</span>
+      <div class="v86SignalCaption"><span>RED</span><em>NEEDS ACTION</em></div>
+      <div class="v86SignalAction">View demand</div>
+      <div class="v84SignalMeaning"><strong>RED</strong> = buyers waiting</div>
+      <div class="v84Track"><i id="v84DemandBar"></i></div>
+    </div>
+    <div class="v84Metric blue" onclick="openPage('orders')">
+      <div class="v84MetricHead"><span class="signalDot green"></span><strong id="v84Orders">000</strong></div>
+      <b>ORDERS LIVE</b><span>active fulfilment</span>
+      <div class="v86SignalCaption"><span>BLUE</span><em>IN MOTION</em></div>
+      <div class="v86SignalAction">Track orders</div>
+      <div class="v84SignalMeaning"><strong>BLUE</strong> = orders moving</div>
+      <div class="v84Track"><i id="v84OrdersBar"></i></div>
+    </div>
+    <div class="v84Metric cyan" onclick="openPage('messages')">
+      <div class="v84MetricHead"><span class="signalDot green"></span><strong id="v84Chats">000</strong></div>
+      <b>CHATS LIVE</b><span>seller conversations</span>
+      <div class="v86SignalCaption"><span>CYAN</span><em>CONNECTED</em></div>
+      <div class="v86SignalAction">Open chats</div>
+      <div class="v84SignalMeaning"><strong>CYAN</strong> = sellers talking</div>
+      <div class="v84Track"><i id="v84ChatsBar"></i></div>
+    </div>
+  </div>
+
+  <div class="v85SignalLegend">
+    <div class="v85LegendItem"><span class="signalDot green"></span><b>GREEN</b> shop online</div>
+    <div class="v85LegendItem"><span class="signalDot yellow"></span><b>YELLOW</b> goods added</div>
+    <div class="v85LegendItem"><span class="signalDot red"></span><b>RED</b> buyer demand</div>
+    <div class="v85LegendItem"><span class="signalDot green"></span><b>BLUE</b> order moving</div>
+    <div class="v85LegendItem"><span class="signalDot green"></span><b>CYAN</b> seller chat</div>
+  </div>
+
+  <div class="v84Actions">
+    <button class="v84Action" onclick="openRegisterShopForm()"><strong><span class="signalDot green"></span>Register Shop</strong><span>adds to Shops</span></button>
+    <button class="v84Action" onclick="openAddProductForm()"><strong><span class="signalDot yellow"></span>Add Goods</strong><span>adds to Goods</span></button>
+    <button class="v84Action" onclick="openPage('request')"><strong><span class="signalDot red"></span>Post Request</strong><span>adds to Demand</span></button>
+    <button class="v84Action" onclick="openPage('cart')"><strong><span class="signalDot green"></span>Checkout</strong><span>creates Order</span></button>
+  </div>
+
+  <div class="v86EventStrip" id="v86EventStrip"></div>
+</div>
+<div class="searchBox">
+      <div class="searchRow"><input id="searchInput" placeholder="Search products, shops or buildings"><button class="primary" onclick="runSearch()">Search</button></div>
+      <div class="scope"><button onclick="openPage('products')">Products</button><button onclick="openPage('shops')">Shops</button><button onclick="openPage('buildings')">Buildings</button><button onclick="openPage('services')">Services</button><button onclick="openPage('tools')">Tools</button></div>
+    </div>
+
+    
+<div class="v93IntentBar">
+  <button class="v93Intent primary" onclick="openPage('products')">Find a product</button>
+  <button class="v93Intent" onclick="openPage('prices')">Compare prices</button>
+  <button class="v93Intent" onclick="openPage('buildings')">Find a building</button>
+  <button class="v93Intent" onclick="openPage('shops')">Find a shop</button>
+  <button class="v93Intent" onclick="openPage('request')">Ask sellers</button>
+</div>
+<div class="hero">
+      <div class="eyebrow">KAMPALA CITY V100</div>
+      <h1>Find it. Compare it. Buy from the exact shop.</h1>
+      <p>Search Kampala stock, compare sellers, message them, and see the exact building, floor and shop.</p>
+      <div class="heroActions"><button class="primary" onclick="openPage('products')">Browse products</button><button class="alt" onclick="openPage('request')">Request item</button></div>
+    </div>
+
+<div class="v94HomeNote">
+  <div><b>Can’t find the item?</b><span>Post one request and let Kampala sellers respond with offers.</span></div>
+  <button onclick="openPage('request')">ASK SELLERS</button>
+</div>
+<div class="v92Flow">
+ <div class="v92FlowHead"><b>Marketplace Journey</b><span id="v92FlowStatus">Start by finding what you need</span></div>
+ <div class="v92FlowSteps">
+  <div class="v92Step active" id="v92s1" onclick="openPage('products')"><div class="v92StepIcon">⌕</div><b>FIND</b><span>goods</span></div>
+  <div class="v92Connector" id="v92c1"></div>
+  <div class="v92Step" id="v92s2" onclick="openPage('shops')"><div class="v92StepIcon">🏪</div><b>SELLER</b><span>compare</span></div>
+  <div class="v92Connector" id="v92c2"></div>
+  <div class="v92Step" id="v92s3" onclick="openPage('cart')"><div class="v92StepIcon">🛒</div><b>BUY</b><span>checkout</span></div>
+  <div class="v92Connector" id="v92c3"></div>
+  <div class="v92Step" id="v92s4" onclick="openPage('orders')"><div class="v92StepIcon">📦</div><b>TRACK</b><span>order</span></div>
+  <div class="v92Connector" id="v92c4"></div>
+  <div class="v92Step" id="v92s5" onclick="openPage('messages')"><div class="v92StepIcon">✓</div><b>COMPLETE</b><span>confirm</span></div>
+ </div>
+</div>
+
+<div class="sectionHead"><b>Useful Now</b><button onclick="openPage('shops')">All shops</button></div>
+<div class="v93Nearby">
+  <div class="v93NearbyHead"><b>Shops with goods available</b><button onclick="openPage('products')">Browse stock</button></div>
+  <div id="v93NearbyRows"></div>
+</div>
+<div class="sectionHead"><b>Continue Your Tasks</b><button onclick="openPage('orders')">Orders</button></div>
+<div class="v91TaskPanel">
+  <div class="v91TaskHead"><b>Active marketplace work</b><span>Tap to continue</span></div>
+  <div id="v91Tasks"></div>
+</div>
+
+  </section>
+
+  <section id="products" class="page"></section>
+  <section id="shops" class="page"></section>
+  <section id="buildings" class="page"></section>
+  <section id="services" class="page"></section>
+  <section id="messages" class="page"></section>
+  <section id="prices" class="page"></section>
+  <section id="deals" class="page"></section>
+  <section id="cart" class="page"></section>
+  <section id="request" class="page"></section>
+  <section id="orders" class="page"></section>
+  <section id="tools" class="page"></section>
+  <section id="inbox" class="page"></section>
+  <section id="account" class="page"></section>
+  <section id="live" class="page"></section>
+  <section id="detail" class="page"></section>
+  <section id="shopdetail" class="page"></section>
+  <section id="compare93" class="page"></section>
+  <section id="location93" class="page"></section>
+</div>
+
+<div class="dock">
+ <button class="on" data-dock="home" onclick="openPage('home',this)"><b>⌂</b>Home</button>
+ <button data-dock="products" onclick="openPage('products',this)"><b>⌕</b>Discover</button>
+ <button class="center" onclick="openPage('request',this)"><b>＋</b>Request</button>
+ <button data-dock="orders" onclick="openPage('orders',this)"><b>□</b>Orders</button>
+ <button data-dock="account" onclick="openPage('account',this)"><b>◉</b>Account</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE='kampalaCityV76';
+const demo={
+ products:[
+  {id:'p1',name:'Samsung Galaxy A55',price:1250000,shopId:'s1',stock:8,cat:'Electronics',icon:'📱'},
+  {id:'p2',name:'Portland Cement 50kg',price:39000,shopId:'s2',stock:120,cat:'Hardware',icon:'🏗'},
+  {id:'p3',name:'Men Formal Shoes',price:185000,shopId:'s3',stock:16,cat:'Fashion',icon:'👞'},
+  {id:'p4',name:'Rice 25kg Bag',price:98000,shopId:'s4',stock:45,cat:'Food',icon:'🌾'}
+ ],
+ shops:[
+  {id:'s1',name:'Kampala Phones',building:'City Centre Complex',floor:'2',unit:'A24',open:true},
+  {id:'s2',name:'Central Hardware',building:'Nakivubo Trade Centre',floor:'1',unit:'H18',open:true},
+  {id:'s3',name:'Urban Fashion',building:'Mabirizi Complex',floor:'3',unit:'F07',open:true},
+  {id:'s4',name:'Kampala Foods',building:'Nakayiza Market',floor:'G',unit:'G112',open:true}
+ ],
+ buildings:[
+  {name:'City Centre Complex',area:'Kampala CBD'},
+  {name:'Nakivubo Trade Centre',area:'Nakivubo'},
+  {name:'Mabirizi Complex',area:'Kampala Road'},
+  {name:'Nakayiza Market',area:'Kisenyi'}
+ ],
+ requests:[],orders:[],cart:[],messages:{},notifications:[]
+};
+let state=JSON.parse(localStorage.getItem(STORE)||'null')||demo;
+if(!state.liveEvents)state.liveEvents=[];
+if(!state.liveBaseline)state.liveBaseline={
+ shops:state.shops.length,
+ products:state.products.length,
+ requests:state.requests.length,
+ orders:state.orders.filter(o=>o.status!=='Completed').length
+};
+function save(){localStorage.setItem(STORE,JSON.stringify(state))}
+function addLiveEvent(icon,title,text){
+ state.liveEvents.unshift({icon,title,text,time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})});
+ state.liveEvents=state.liveEvents.slice(0,20);
+ save();
+ renderLiveStats();
+}
+function money(n){return 'UGX '+Number(n||0).toLocaleString()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',1500)}
+function pageShell(title,sub,body){return `<div class="pageTop"><button class="back" onclick="openPage('home')">←</button><div class="pageTitle"><b>${esc(title)}</b><span>${esc(sub)}</span></div></div>${body}`}
+function openPage(id,btn){
+ syncV99Dock(id);
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+ const p=document.getElementById(id);if(!p)return;p.classList.add('on');
+ document.querySelectorAll('.dock button').forEach(x=>x.classList.remove('on'));
+ if(btn)btn.classList.add('on');
+ renderPage(id);window.scrollTo(0,0)
+}
+function renderPage(id){
+ if(id==='home'){refreshHome();renderV95Home();renderLiveStats();return}
+ if(id==='products')renderProducts();
+ else if(id==='shops')renderShops();
+ else if(id==='buildings')renderBuildings();
+ else if(id==='services')renderServices();
+ else if(id==='messages')renderMessages();
+ else if(id==='prices')renderPrices();
+ else if(id==='deals')renderDeals();
+ else if(id==='cart')renderCart();
+ else if(id==='request')renderRequest();
+ else if(id==='orders')renderOrders();
+ else if(id==='tools')renderTools();
+ else if(id==='inbox')renderInbox();
+ else if(id==='account')renderAccount();
+ else if(id==='live')renderLive();
+ else if(id==='compare93')renderCompare93();
+ else if(id==='location93')renderLocation93();
+}
+
+function livePct(value,target){
+ if(!target)return 0;
+ return Math.max(4,Math.min(100,Math.round((value/target)*100)))
+}
+
+
+
+
+
+
+function renderV86Events(){
+ const el=document.getElementById('v86EventStrip');
+ if(!el)return;
+ const rows=state.liveEvents.slice(0,6);
+ if(!rows.length){
+   el.innerHTML=`<div class="v86Event" onclick="openPage('live')"><b><span class="signalDot green" style="display:inline-block;margin-right:5px"></span>Kampala City is live</b><span>Use the app and activity will appear here</span><time>LIVE</time></div>`;
+   return;
+ }
+ el.innerHTML=rows.map(e=>{
+   const action=e.icon==='🏪'?"openPage('shops')":
+                e.icon==='🛍'?"openPage('products')":
+                e.icon==='✎'?"openPage('request')":
+                e.icon==='📦'?"openPage('orders')":
+                e.icon==='💬'?"openPage('messages')":"openPage('live')";
+   const color=e.icon==='🏪'?'green':e.icon==='🛍'?'yellow':e.icon==='✎'?'red':e.icon==='📦'?'green':'green';
+   return `<div class="v86Event" onclick="${action}"><b><span class="signalDot ${color}" style="display:inline-block;margin-right:5px"></span>${esc(e.title)}</b><span>${esc(e.text)}</span><time>${esc(e.time)}</time></div>`;
+ }).join('');
+}
+function renderV84Dashboard(){
+ renderV86Events();
+ const shops=state.shops.length;
+ const goods=state.products.length;
+ const demand=state.requests.length;
+ const orders=state.orders.filter(o=>o.status!=='Completed').length;
+ const chats=Object.keys(state.messages).length;
+
+ const digital=(id,n)=>{
+   const e=document.getElementById(id);
+   if(!e)return;
+   const v=String(n).padStart(3,'0');
+   if(e.textContent!==v){
+     e.textContent=v;
+     e.classList.remove('v81PulseValue');
+     void e.offsetWidth;
+     e.classList.add('v81PulseValue');
+   }
+ };
+ digital('v84Shops',shops);
+ digital('v84Goods',goods);
+ digital('v84Demand',demand);
+ digital('v84Orders',orders);
+ digital('v84Chats',chats);
+
+ const bars=[
+  ['v84ShopsBar',livePct(shops,25)],
+  ['v84GoodsBar',livePct(goods,100)],
+  ['v84DemandBar',livePct(demand,20)],
+  ['v84OrdersBar',livePct(orders,20)],
+  ['v84ChatsBar',livePct(chats,20)]
+ ];
+ bars.forEach(([id,w])=>{const e=document.getElementById(id);if(e)e.style.width=w+'%'});
+
+ const rows=state.liveEvents.slice(0,4).map(e=>{
+   const action=e.icon==='🏪'?"openPage('shops')":
+                e.icon==='🛍'?"openPage('products')":
+                e.icon==='✎'?"openPage('request')":
+                e.icon==='📦'?"openPage('orders')":
+                e.icon==='💬'?"openPage('messages')":"openPage('live')";
+   return {icon:e.icon,title:e.title,text:e.text,time:e.time,action};
+ });
+ if(!rows.length){
+   rows.push({icon:'●',title:'Kampala City is live',text:'Use an action above to create marketplace activity',time:'LIVE',action:"openPage('live')"});
+ }
+ const el=document.getElementById('v84FeedRows');
+ if(el)el.innerHTML=rows.map(r=>`<div class="v84FeedRow" onclick="${r.action}"><div class="v84FeedIcon">${r.icon}</div><div><b>${esc(r.title)}</b><span>${esc(r.text)}</span></div><em>${esc(r.time)}</em></div>`).join('');
+}
+function renderV83Board(){
+ const shops=state.shops.length;
+ const goods=state.products.length;
+ const demand=state.requests.length;
+ const orders=state.orders.filter(o=>o.status!=='Completed').length;
+ const chats=Object.keys(state.messages).length;
+ const total=shops+goods+demand+orders+chats;
+
+ const digital=(id,n)=>{
+   const e=document.getElementById(id);
+   if(!e)return;
+   const v=String(n).padStart(3,'0');
+   if(e.textContent!==v){
+     e.textContent=v;
+     e.classList.remove('v81PulseValue');
+     void e.offsetWidth;
+     e.classList.add('v81PulseValue');
+   }
+ };
+ digital('v83ActivityTotal',total);
+ digital('v83Shops',shops);
+ digital('v83Goods',goods);
+ digital('v83Demand',demand);
+ digital('v83Orders',orders);
+
+ const bar=document.getElementById('v83TotalBar');
+ if(bar)bar.style.width=Math.min(100,Math.round(total/150*100))+'%';
+
+ const rows=[];
+ state.liveEvents.slice(0,5).forEach(e=>{
+   const action=e.icon==='🏪'?"openPage('shops')":
+                e.icon==='🛍'?"openPage('products')":
+                e.icon==='✎'?"openPage('request')":
+                e.icon==='📦'?"openPage('orders')":
+                e.icon==='💬'?"openPage('messages')":"openPage('live')";
+   rows.push({icon:e.icon,title:e.title,text:e.text,time:e.time,action});
+ });
+ if(!rows.length){
+   rows.push({icon:'●',title:'Kampala City is live',text:'Use any live action to create activity',time:'LIVE',action:"openPage('live')"});
+ }
+
+ const el=document.getElementById('v83FeedRows');
+ if(el)el.innerHTML=rows.map(r=>`<div class="v83FeedRow" onclick="${r.action}"><div class="v83FeedIcon">${r.icon}</div><div><b>${esc(r.title)}</b><span>${esc(r.text)}</span></div><em>${esc(r.time)}</em></div>`).join('');
+}
+function v82Digital(id,n){
+ const e=document.getElementById(id);
+ if(!e)return;
+ const val=String(n).padStart(3,'0');
+ if(e.textContent!==val){
+   e.textContent=val;
+   e.classList.remove('v81PulseValue');
+   void e.offsetWidth;
+   e.classList.add('v81PulseValue');
+ }
+}
+function renderV82Console(){
+ const shops=state.shops.length;
+ const goods=state.products.length;
+ const demand=state.requests.length;
+ const orders=state.orders.filter(o=>o.status!=='Completed').length;
+ const buildings=[...new Set(state.shops.map(s=>s.building).filter(Boolean))].length;
+
+ v82Digital('v82Shops',shops);
+ v82Digital('v82Goods',goods);
+ v82Digital('v82Demand',demand);
+ v82Digital('v82Orders',orders);
+ v82Digital('v82Buildings',buildings);
+
+ const bars=[
+  ['v82ShopsBar',livePct(shops,25)],
+  ['v82GoodsBar',livePct(goods,100)],
+  ['v82DemandBar',livePct(demand,20)],
+  ['v82OrdersBar',livePct(orders,20)],
+  ['v82BuildingsBar',livePct(buildings,15)]
+ ];
+ bars.forEach(([id,w])=>{const e=document.getElementById(id);if(e)e.style.width=w+'%'});
+
+ const rows=[];
+ state.liveEvents.slice(0,4).forEach(e=>rows.push({
+   icon:e.icon,title:e.title,text:e.text,time:e.time,
+   action:e.icon==='🏪'?"openPage('shops')":e.icon==='🛍'?"openPage('products')":e.icon==='✎'?"openPage('request')":e.icon==='📦'?"openPage('orders')":"openPage('live')"
+ }));
+ if(!rows.length){
+   rows.push({icon:'●',title:'Kampala City is live',text:'Use a live action to create marketplace activity',time:'LIVE',action:"openPage('live')"});
+ }
+ const el=document.getElementById('v82NowRows');
+ if(el)el.innerHTML=rows.map(r=>`<div class="v82NowRow" onclick="${r.action}"><div class="v82NowIcon">${r.icon}</div><div><b>${esc(r.title)}</b><span>${esc(r.text)}</span></div><em>${esc(r.time)}</em></div>`).join('');
+}
+function v81Set(id,value){
+ const e=document.getElementById(id);
+ if(!e)return;
+ if(e.textContent!==value){
+   e.textContent=value;
+   e.classList.remove('v81PulseValue');
+   void e.offsetWidth;
+   e.classList.add('v81PulseValue');
+ }
+}
+function renderV81Network(){
+ const shops=state.shops.length;
+ const goods=state.products.length;
+ const demand=state.requests.length;
+ const orders=state.orders.filter(o=>o.status!=='Completed').length;
+
+ v81Set('v81Shops',String(shops).padStart(3,'0'));
+ v81Set('v81Goods',String(goods).padStart(3,'0'));
+ v81Set('v81Demand',String(demand).padStart(3,'0'));
+ v81Set('v81Orders',String(orders).padStart(3,'0'));
+
+ const widths=[
+   ['v81ShopsFlow',livePct(shops,25)],
+   ['v81GoodsFlow',livePct(goods,100)],
+   ['v81DemandFlow',livePct(demand,20)],
+   ['v81OrdersFlow',livePct(orders,20)]
+ ];
+ widths.forEach(([id,w])=>{const e=document.getElementById(id);if(e)e.style.width=w+'%'});
+
+ const progress=[];
+ if(state.cart.length)progress.push({icon:'🛒',title:'Shopping Cart',text:`${state.cart.length} item(s) waiting for checkout`,pct:55,action:"openPage('cart')"});
+ const order=state.orders.find(o=>o.status!=='Completed');
+ if(order)progress.push({icon:'📦',title:'Order '+order.id,text:order.status,pct:order.status==='Completed'?100:60,action:"openPage('orders')"});
+ const req=state.requests[0];
+ if(req)progress.push({icon:'✎',title:'Buyer Request',text:`${req.item} · ${req.quotes||0} quote(s)`,pct:(req.quotes||0)>0?75:35,action:"openPage('request')"});
+ const chats=Object.keys(state.messages);
+ if(chats.length)progress.push({icon:'💬',title:'Seller Conversation',text:`${chats.length} active chat${chats.length===1?'':'s'}`,pct:50,action:"openPage('messages')"});
+ if(!progress.length){
+   progress.push({icon:'🏪',title:'Register a Shop',text:'Start a digital storefront',pct:10,action:'openRegisterShopForm()'});
+   progress.push({icon:'🛍',title:'Add Goods',text:'List the first item for sale',pct:10,action:'openAddProductForm()'});
+ }
+ const el=document.getElementById('v81ProgressRows');
+ if(el)el.innerHTML=progress.slice(0,4).map(p=>`<div class="v81ProgressRow" onclick="${p.action}"><div class="v81ProgressIcon">${p.icon}</div><div><b>${esc(p.title)}</b><span>${esc(p.text)}</span><div class="v81ProgressMini"><i style="width:${p.pct}%"></i></div></div><em>${p.pct}% ›</em></div>`).join('');
+}
+function renderLiveStats(){
+ renderV84Dashboard();
+}
+
+function renderLive(){
+ const shops=state.shops.length;
+ const products=state.products.length;
+ const requests=state.requests.length;
+ const activeOrders=state.orders.filter(o=>o.status!=='Completed').length;
+ const openShops=state.shops.filter(s=>s.open).length;
+ const chats=Object.keys(state.messages).length;
+ const avgStock=products?Math.round(state.products.reduce((n,p)=>n+(p.stock||0),0)/products):0;
+
+ const score=Math.min(100,Math.round(
+   livePct(shops,25)*.30+
+   livePct(products,100)*.30+
+   livePct(requests,20)*.15+
+   livePct(activeOrders,20)*.15+
+   livePct(chats,20)*.10
+ ));
+
+ const rows=[
+  ['🏪','Registered Shops',`${shops} total · ${openShops} open now`,shops,25,"openPage('shops')"],
+  ['🛍','Goods Added',`${products} product listings · avg stock ${avgStock}`,products,100,"openPage('products')"],
+  ['✎','Buyer Requests',`${requests} active request${requests===1?'':'s'}`,requests,20,"openPage('request')"],
+  ['📦','Active Orders',`${activeOrders} order${activeOrders===1?'':'s'} moving through fulfilment`,activeOrders,20,"openPage('orders')"],
+  ['💬','Seller Conversations',`${chats} active chat${chats===1?'':'s'}`,chats,20,"openPage('messages')"]
+ ];
+
+ const milestones=[
+  {name:'25 Registered Shops',value:shops,target:25},
+  {name:'100 Goods Listed',value:products,target:100},
+  {name:'20 Buyer Requests',value:requests,target:20},
+  {name:'20 Active Orders',value:activeOrders,target:20}
+ ];
+
+ document.getElementById('live').innerHTML=pageShell(
+   'Kampala City Live',
+   'Red, green and yellow live signals update as shops, goods, requests and orders change.',
+   `<div class="cityScoreCard">
+      <div class="cityScoreHead">
+       <div><b>City Marketplace Score</b><span>Overall activity across shops, goods, requests, orders and messages</span></div>
+       <div class="cityScoreRing" style="--p:${score}"><strong>${score}%</strong></div>
+      </div>
+    </div>
+    <div class="livePanel">
+      ${rows.map(r=>`<div class="livePanelRow" onclick="${r[5]}"><div class="livePanelIcon">${r[0]}</div><div><b>${esc(r[1])}<span class="liveDelta">LIVE</span></b><span>${esc(r[2])}</span><div class="liveProgress"><i style="width:${livePct(r[3],r[4])}%"></i></div></div><em>${r[3]} ›</em></div>`).join('')}
+    </div>
+    <div class="sectionHead"><b>Milestones</b></div>
+    ${milestones.map(m=>`<div class="milestone"><div class="milestoneTop"><b>${esc(m.name)}</b><strong>${Math.min(100,Math.round(m.value/m.target*100))}%</strong></div><span>${m.value} of ${m.target}</span><div class="liveProgress"><i style="width:${Math.min(100,Math.round(m.value/m.target*100))}%"></i></div></div>`).join('')}
+    <div class="sectionHead"><b>Live Activity Feed</b></div>
+    <div class="livePanel">${state.liveEvents.length?state.liveEvents.slice(0,10).map(e=>`<div class="liveEvent"><div class="liveEventIcon">${e.icon}</div><div><b>${esc(e.title)}</b><span>${esc(e.text)}</span></div><time>${esc(e.time)}</time></div>`).join(''):'<div class="row"><div class="rowIcon">●</div><div><b>No live events yet</b><span>Register a shop, add a product, post a request, place an order or send a message.</span></div><em>Live</em></div>'}</div>`
+ )
+}
+
+
+
+
+
+
+function openV96Sheet(){
+  document.getElementById('v96Sheet')?.classList.add('on');
+  document.getElementById('v96Backdrop')?.classList.add('on');
+}
+function closeV96Sheet(){
+  document.getElementById('v96Sheet')?.classList.remove('on');
+  document.getElementById('v96Backdrop')?.classList.remove('on');
+}
+function v95Nav(page,btn){
+  document.querySelectorAll('#v95Dock button').forEach(x=>x.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  openPage(page)
+}
+
+
+
+
+function v100RunSearch(){
+  const input=document.getElementById('v100SearchInput');
+  const q=String(input?.value||'').trim();
+  const old=document.getElementById('searchInput');
+  if(old)old.value=q;
+  runSearch();
+}
+function renderV100State(){
+  const open=state.shops.filter(s=>s.open).length;
+  const stock=state.products.filter(p=>(p.stock||0)>0).length;
+  const unanswered=state.requests.filter(r=>(r.offers||[]).length===0).length;
+  const fulfil=state.orders.filter(o=>o.status!=='Completed').length;
+  const chats=Object.keys(state.messages).length;
+
+  const set=(id,n)=>{const e=document.getElementById(id);if(e)e.textContent=String(n).padStart(3,'0')};
+  set('v100Open',open);
+  set('v100Stock',stock);
+  set('v100Unanswered',unanswered);
+  set('v100Fulfil',fulfil);
+
+  const mark=(id,hot,good)=>{
+    const e=document.getElementById(id);if(!e)return;
+    e.classList.toggle('hot',!!hot);
+    e.classList.toggle('good',!!good && !hot);
+  };
+  mark('v100ShopSignal',false,open>0);
+  mark('v100GoodsSignal',false,stock>0);
+  mark('v100DemandSignal',unanswered>0,unanswered===0);
+  mark('v100OrderSignal',fulfil>0,false);
+  mark('v100ChatSignal',chats>0,false);
+}
+function renderV99State(){
+  const shops=state.shops.filter(s=>s.open).length;
+  const goods=state.products.filter(p=>(p.stock||0)>0).length;
+  const demand=state.requests.length;
+  const orders=state.orders.filter(o=>o.status!=='Completed').length;
+  const chats=Object.keys(state.messages).length;
+
+  const base=state.liveBaseline||{shops:0,products:0,requests:0,orders:0};
+  const delta=(id,val,label,cls)=>{
+    const e=document.getElementById(id);if(!e)return;
+    e.textContent=(val>0?'+':'')+val+' '+label;
+    e.classList.toggle('up',val>0 && cls!=='hot');
+    e.classList.toggle('hot',cls==='hot' && val>0);
+  };
+  delta('v99ShopsDelta',Math.max(0,state.shops.length-(base.shops||0)),'today');
+  delta('v99GoodsDelta',Math.max(0,state.products.length-(base.products||0)),'today');
+  delta('v99DemandDelta',demand,'open','hot');
+  delta('v99OrdersDelta',orders,'moving');
+  delta('v99ChatsDelta',chats,'active');
+
+  const ready=goods;
+  const waiting=state.requests.filter(r=>(r.offers||[]).length===0).length;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+  set('v99ReadyChip',ready);
+  set('v99WaitingChip',waiting);
+  set('v99MovingChip',orders);
+  set('v99ChatChip',chats);
+
+  const updated=document.getElementById('v99Updated');
+  if(updated)updated.textContent='UPDATED '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+  const attentionCount=(waiting>0?1:0)+(orders>0?1:0)+(state.products.some(p=>(p.stock||0)>0&&(p.stock||0)<=3)?1:0)+(chats>0?1:0);
+  const badge=document.getElementById('v99MoreBadge');
+  if(badge){
+    badge.textContent=attentionCount;
+    badge.style.display=attentionCount?'grid':'none';
+  }
+}
+function syncV99Dock(page){
+  const map={home:0,shops:1,products:2,prices:2,compare93:2,orders:3,tools:4,account:4,request:4,messages:4,buildings:4,live:4};
+  const idx=map[page];
+  if(idx===undefined)return;
+  const btns=[...document.querySelectorAll('#v95Dock button')];
+  btns.forEach((b,i)=>b.classList.toggle('on',i===idx));
+}
+function renderV98Attention(){
+  const rows=[];
+  const waiting=state.requests.filter(r=>(r.offers||[]).length===0);
+  const activeOrders=state.orders.filter(o=>o.status!=='Completed');
+  const lowStock=state.products.filter(p=>(p.stock||0)>0 && (p.stock||0)<=3);
+  const chats=Object.keys(state.messages);
+
+  if(waiting.length){
+    rows.push({icon:'✎',title:`${waiting.length} buyer request${waiting.length===1?'':'s'} waiting`,text:'No seller quotes received yet',action:"openPage('request')",cta:'OPEN'});
+  }
+  if(activeOrders.length){
+    rows.push({icon:'📦',title:`${activeOrders.length} order${activeOrders.length===1?'':'s'} in progress`,text:activeOrders[0].status,action:"openPage('orders')",cta:'TRACK'});
+  }
+  if(lowStock.length){
+    rows.push({icon:'🛍',title:`${lowStock.length} low-stock item${lowStock.length===1?'':'s'}`,text:'Seller stock may need updating',action:"openPage('products')",cta:'VIEW'});
+  }
+  if(chats.length){
+    rows.push({icon:'💬',title:`${chats.length} seller conversation${chats.length===1?'':'s'}`,text:'Open direct seller contact',action:"openPage('messages')",cta:'CHAT'});
+  }
+
+  const el=document.getElementById('v98AttentionRows');
+  if(el){
+    el.innerHTML=rows.length?rows.slice(0,4).map(r=>`<div class="v98AttentionRow" onclick="${r.action}"><div class="v98AttentionIcon">${r.icon}</div><div><b>${esc(r.title)}</b><span>${esc(r.text)}</span></div><em>${r.cta} ›</em></div>`).join(''):`<div class="v98AttentionRow" onclick="openPage('products')"><div class="v98AttentionIcon">✓</div><div><b>No urgent marketplace tasks</b><span>Browse products or use PULL to create an action.</span></div><em>BROWSE ›</em></div>`;
+  }
+
+  const pull=document.getElementById('v98PullCount');
+  if(pull)pull.textContent=String(rows.length).padStart(3,'0');
+
+  const setText=(id,text,cls)=>{
+    const e=document.getElementById(id);if(!e)return;
+    e.textContent=text;
+    e.classList.remove('alert','good','info');
+    e.classList.add(cls);
+  };
+  setText('v98ShopState',state.shops.some(s=>s.open)?'ACTIVE NETWORK':'NO SHOPS LIVE',state.shops.some(s=>s.open)?'good':'alert');
+  setText('v98GoodsState',state.products.some(p=>(p.stock||0)>0)?'STOCK AVAILABLE':'NO STOCK',state.products.some(p=>(p.stock||0)>0)?'good':'alert');
+  setText('v98DemandState',waiting.length?`${waiting.length} NEED SELLERS`:'DEMAND COVERED',waiting.length?'alert':'good');
+  setText('v98OrderState',activeOrders.length?`${activeOrders.length} MOVING`:'NO ACTIVE ORDERS',activeOrders.length?'info':'good');
+  setText('v98ChatState',chats.length?`${chats.length} ACTIVE CHAT${chats.length===1?'':'S'}`:'NO ACTIVE CHATS',chats.length?'info':'good');
+}
+function renderV97Summary(){
+  const ready=state.products.filter(p=>(p.stock||0)>0).length;
+  const waiting=state.requests.filter(r=>(r.offers||[]).length===0).length;
+  const progress=state.orders.filter(o=>o.status!=='Completed').length;
+  const set=(id,n)=>{const e=document.getElementById(id);if(e)e.textContent=String(n).padStart(3,'0')};
+  set('v97Ready',ready);set('v97Waiting',waiting);set('v97Progress',progress);
+}
+function renderV95Home(){
+  renderV97Summary();
+  renderV98Attention();
+  renderV99State();
+  renderV100State();
+  const shops=state.shops.filter(s=>s.open).length;
+  const goods=state.products.filter(p=>(p.stock||0)>0).length;
+  const demand=state.requests.length;
+  const orders=state.orders.filter(o=>o.status!=='Completed').length;
+  const chats=Object.keys(state.messages).length;
+
+  const digital=(id,n)=>{
+    const e=document.getElementById(id);
+    if(!e)return;
+    const val=String(n).padStart(3,'0');
+    if(e.textContent!==val){
+      e.textContent=val;
+      e.classList.remove('v96SignalPulse');
+      void e.offsetWidth;
+      e.classList.add('v96SignalPulse');
+    }
+  };
+  digital('v95Shops',shops);
+  digital('v95Goods',goods);
+  digital('v95Demand',demand);
+  digital('v95Orders',orders);
+  digital('v95Chats',chats);
+
+  const bar=(id,n,target)=>{
+    const e=document.getElementById(id);
+    if(e)e.style.width=Math.max(4,Math.min(100,Math.round(n/target*100)))+'%';
+  };
+  bar('v95ShopsBar',shops,25);
+  bar('v95GoodsBar',goods,100);
+  bar('v95DemandBar',demand,20);
+  bar('v95OrdersBar',orders,20);
+  bar('v95ChatsBar',chats,20);
+
+  const latest=state.liveEvents?.[0];
+  const el=document.getElementById('v95LatestActivity');
+  if(!el)return;
+  if(latest){
+    const action=latest.icon==='🏪'?"openPage('shops')":
+                 latest.icon==='🛍'?"openPage('products')":
+                 latest.icon==='✎'?"openPage('request')":
+                 latest.icon==='📦'?"openPage('orders')":
+                 latest.icon==='💬'?"openPage('messages')":"openPage('live')";
+    el.innerHTML=`<div class="v95ActivityRow" onclick="${action}">
+      <div class="v95ActivityIcon">${latest.icon||'●'}</div>
+      <div><b>${esc(latest.title)}</b><span>${esc(latest.text)}</span><div class="v97ActivityMeta"><span class="v97Tag">${esc(latest.time||'Just now')}</span><span class="v97Tag">LIVE EVENT</span></div></div>
+      <em>OPEN ›</em>
+    </div>`;
+  }else{
+    el.innerHTML=`<div class="v95ActivityRow" onclick="openPage('live')">
+      <div class="v95ActivityIcon">🏪</div>
+      <div><b>Kampala City is live</b><span>Live marketplace events will appear here when shops register, goods are listed, requests arrive, orders move or sellers chat.</span></div>
+      <em>LIVE ›</em>
+    </div>`;
+  }
+}
+function renderV93Nearby(){
+ const el=document.getElementById('v93NearbyRows');if(!el)return;
+ const rows=state.shops.filter(s=>s.open).map(s=>{
+   const count=state.products.filter(p=>p.shopId===s.id && (p.stock||0)>0).length;
+   return {s,count};
+ }).filter(x=>x.count>0).slice(0,4);
+ el.innerHTML=rows.length?rows.map(({s,count})=>`
+  <div class="v93NearbyRow" onclick="openShop('${s.id}')">
+   <div class="v93NearbyIcon">🏪</div>
+   <div><b>${esc(s.name)}</b><span>${esc(s.building||'Kampala')} · Floor ${esc(s.floor||'—')} · Shop ${esc(s.unit||'—')}</span></div>
+   <em>${count} item${count===1?'':'s'}</em>
+  </div>`).join(''):`<div class="v92Empty">No open shops with stock yet.</div>`
+}
+function comparableProducts(product){
+ const words=String(product.name||'').toLowerCase().split(/\s+/).filter(x=>x.length>2);
+ const scored=state.products.map(p=>({
+   p,
+   score:words.reduce((n,w)=>n+(String(p.name||'').toLowerCase().includes(w)?1:0),0)
+ })).filter(x=>x.score>0).sort((a,b)=>b.score-a.score || Number(a.p.price)-Number(b.p.price));
+ return scored.slice(0,8).map(x=>x.p)
+}
+function openCompareProduct(productId){
+ const p=state.products.find(x=>x.id===productId);if(!p)return;
+ state.compareProductId=productId;save();
+ openPage('compare93')
+}
+function renderCompare93(){
+ const p=state.products.find(x=>x.id===state.compareProductId)||state.products[0];
+ if(!p){
+   document.getElementById('compare93').innerHTML=pageShell('Compare Sellers','Find the best seller for the same item','<div class="v92Empty">No products available.</div>');
+   return;
+ }
+ const list=comparableProducts(p);
+ document.getElementById('compare93').innerHTML=pageShell(
+   'Compare Sellers',
+   `Comparing listings related to ${p.name}`,
+   `<div class="v93Compare">${list.map(x=>{
+      const s=sellerForProduct(x);
+      return `<div class="v93CompareCard">
+       <div class="v93CompareTop"><div><b>${esc(x.name)}</b><span>${esc(s?.name||'Seller')} · ${esc(s?.building||'Kampala')}</span>${s?.open?'<div class="v93SellerBadge">● SHOP LIVE</div>':''}</div><span class="v93ComparePrice">${money(x.price)}</span></div>
+       <div class="v93CompareActions">
+        <button onclick="openSellerForProduct('${x.id}')">Seller</button>
+        <button onclick="openLocation93('${s?.id||''}')">Locate</button>
+        <button class="buy" onclick="addCart('${x.id}')">Add to cart</button>
+       </div>
+      </div>`
+   }).join('')}</div>`
+ )
+}
+function openLocation93(shopId){
+ state.locationShopId=shopId;save();openPage('location93')
+}
+function renderLocation93(){
+ const s=state.shops.find(x=>x.id===state.locationShopId)||state.shops[0];
+ if(!s){
+   document.getElementById('location93').innerHTML=pageShell('Shop Location','Building, floor and shop number','<div class="v92Empty">No shop selected.</div>');
+   return;
+ }
+ document.getElementById('location93').innerHTML=pageShell(
+  'Shop Location',
+  s.name,
+  `<div class="v93LocationCard">
+    <h3>${esc(s.name)}</h3>
+    <div class="v93SellerBadge">● ${s.open?'LIVE SHOP':'REGISTERED SHOP'}</div>
+    <div class="v93LocationSteps">
+      <div class="v93LocationStep"><strong>1</strong><div><b>Building</b><span>${esc(s.building||'Kampala')}</span></div></div>
+      <div class="v93LocationStep"><strong>2</strong><div><b>Floor</b><span>${esc(s.floor||'Not specified')}</span></div></div>
+      <div class="v93LocationStep"><strong>3</strong><div><b>Shop / Unit</b><span>${esc(s.unit||'Not specified')}</span></div></div>
+    </div>
+    <div class="v91MiniActions">
+      <button onclick="openChat('${s.id}')">Message shop</button>
+      <button onclick="openShop('${s.id}')">Open storefront</button>
+    </div>
+   </div>`
+ )
+}
+function renderV92Flow(){
+ const cart=state.cart.length>0;
+ const order=state.orders[0];
+ const completed=state.orders.some(o=>o.status==='Completed');
+ let stage=1,status='Start by finding what you need';
+ if(state.products.length) {stage=2;status='Compare sellers and locations'}
+ if(cart){stage=3;status='Cart ready — continue to checkout'}
+ if(order){stage=4;status='Order active — track fulfilment'}
+ if(completed){stage=5;status='Transaction completed'}
+ for(let i=1;i<=5;i++){
+   const e=document.getElementById('v92s'+i);
+   if(e){e.classList.toggle('done',i<stage);e.classList.toggle('active',i===stage)}
+   if(i<5){const c=document.getElementById('v92c'+i);if(c)c.classList.toggle('active',i<stage)}
+ }
+ const s=document.getElementById('v92FlowStatus');if(s)s.textContent=status
+}
+function sellerForProduct(p){
+ return state.shops.find(s=>s.id===p.shopId)||state.shops.find(s=>s.name===p.shop)||state.shops[0]||null
+}
+function openSellerForProduct(productId){
+ const p=state.products.find(x=>x.id===productId);if(!p)return;
+ const s=sellerForProduct(p);
+ const body=s?`
+  <div class="v92Seller">
+   <div class="v92SellerTop"><div class="v92SellerIcon">🏪</div><div><b>${esc(s.name)}</b><span>${esc(s.building||'Kampala')} ${s.floor?'· '+esc(s.floor):''} ${s.unit?'· '+esc(s.unit):''}</span></div><em>${s.open?'OPEN':'SHOP'}</em></div>
+   <div class="v92Trust"><span>✓ Registered shop</span><span>● Live on Kampala City</span><span>${p.stock||0} in stock</span></div>
+   <div class="v92LocationBox"><b>Physical location</b><span>${esc(s.building||'Kampala')}${s.floor?' · Floor '+esc(s.floor):''}${s.unit?' · Unit '+esc(s.unit):''}</span></div>
+   <div class="v92SellerActions"><button onclick="openPage('messages')">Message</button><button onclick="openLocation93('${s.id}')">Locate</button><button class="primary" onclick="addToCart('${p.id}')">Add to Cart</button></div>
+  </div>`:`<div class="v92Empty">Seller information is not yet available.</div>`;
+ document.getElementById('shopdetail').innerHTML=pageShell('Seller & Location',esc(p.name),body);
+ openPage('shopdetail')
+}
+function renderV92CartSummary(){
+ const el=document.getElementById('v92CartSummary');if(!el)return;
+ const items=state.cart.map(id=>state.products.find(p=>p.id===id)).filter(Boolean);
+ const total=items.reduce((n,p)=>n+(Number(p.price)||0),0);
+ el.innerHTML=items.length?`
+  <div class="v92CartSummary">
+   ${items.map(p=>`<div class="v92CartLine"><span>${esc(p.name)}</span><b>${money(p.price)}</b></div>`).join('')}
+   <div class="v92CartLine v92CartTotal"><span>Total</span><b>${money(total)}</b></div>
+   <button class="v91PrimaryCta" onclick="checkout()">CHECKOUT & CREATE ORDER</button>
+  </div>`:''
+}
+function renderV91Tasks(){
+ const tasks=[];
+ if(state.cart.length)tasks.push({icon:'🛒',title:'Cart ready',text:`${state.cart.length} item(s) waiting for checkout`,pct:55,action:"openPage('cart')"});
+ const order=state.orders.find(o=>o.status!=='Completed');
+ if(order)tasks.push({icon:'📦',title:'Order '+order.id,text:order.status,pct:orderPercent(order.status),action:"openPage('orders')"});
+ const req=state.requests[0];
+ if(req)tasks.push({icon:'✎',title:'Buyer request',text:`${req.item} · ${(req.offers||[]).length} quote(s)`,pct:(req.offers||[]).length?70:30,action:"openPage('request')"});
+ if(Object.keys(state.messages).length)tasks.push({icon:'💬',title:'Seller chats',text:`${Object.keys(state.messages).length} active conversation(s)`,pct:50,action:"openPage('messages')"});
+ if(!tasks.length)tasks.push({icon:'⌕',title:'Start shopping',text:'Search Kampala products and shops',pct:10,action:"openPage('products')"});
+ const el=document.getElementById('v91Tasks');
+ if(el)el.innerHTML=tasks.slice(0,4).map(t=>`<div class="v91TaskRow" onclick="${t.action}"><div class="v91TaskIcon">${t.icon}</div><div><b>${esc(t.title)}</b><span>${esc(t.text)}</span><div class="v91Progress"><i style="width:${t.pct}%"></i></div></div><em>${t.pct}% ›</em></div>`).join('')
+}
+function refreshHome(){
+ renderV95Home();
+ renderLiveStats();
+ renderV91Tasks();
+ renderV92Flow();
+ renderV93Nearby();
+ document.getElementById('statShops').textContent=state.shops.filter(s=>s.open).length;
+ document.getElementById('statProducts').textContent=state.products.length;
+ document.getElementById('statRequests').textContent=state.requests.length;
+ document.getElementById('statOrders').textContent=state.orders.filter(o=>o.status!=='Completed').length;
+ const rows=[];
+ if(state.orders[0])rows.push(['📦','Order '+state.orders[0].id,state.orders[0].status,"openPage('orders')"]);
+ if(state.requests[0])rows.push(['✎',state.requests[0].item,(state.requests[0].quotes||0)+' quote(s)',"openPage('request')"]);
+ if(state.cart.length)rows.push(['🛒','Cart',state.cart.length+' item(s)',"openPage('cart')"]);
+ rows.push(['⌕','Browse Kampala','Products, shops and buildings',"openPage('products')"]);
+ const activityEl=document.getElementById('activityList');if(activityEl)activityEl.innerHTML=rows.slice(0,4).map(r=>`<div class="row" onclick="${r[3]}"><div class="rowIcon">${r[0]}</div><div><b>${esc(r[1])}</b><span>${esc(r[2])}</span></div><em>›</em></div>`).join('')
+}
+function productCard(p){
+ const s=state.shops.find(x=>x.id===p.shopId);
+ return `<div class="product" onclick="openProduct('${p.id}')"><div class="pic">${p.icon}</div><b>${esc(p.name)}</b><span>${esc(s?.name||'Seller')} · ${p.stock} in stock</span><span class="price">${money(p.price)}</span></div>`
+}
+function renderProducts(){
+ const p=document.getElementById('products');
+ p.innerHTML=pageShell('Products','Available products across Kampala',`<div class="productGrid">${state.products.map(productCard).join('')}</div>`)
+}
+function renderShops(){
+ const p=document.getElementById('shops');
+ p.innerHTML=pageShell('Live Shops','Digital storefronts',`<div class="list">${state.shops.map(s=>`<div class="row" onclick="openShop('${s.id}')"><div class="rowIcon">🏪</div><div><b>${esc(s.name)}</b><span>${esc(s.building)} · Floor ${esc(s.floor)} · Shop ${esc(s.unit)}</span></div><em>›</em></div>`).join('')}</div>`)
+}
+function renderBuildings(){
+ const p=document.getElementById('buildings');
+ p.innerHTML=pageShell('Buildings','Commercial buildings and shop locations',`<div class="list">${state.buildings.map(b=>`<div class="row"><div class="rowIcon">🏢</div><div><b>${esc(b.name)}</b><span>${esc(b.area)} · ${state.shops.filter(s=>s.building===b.name).length} shop(s)</span></div><em>›</em></div>`).join('')}</div>`)
+}
+function renderServices(){
+ document.getElementById('services').innerHTML=pageShell('Services','Local service tools',`<div class="list"><div class="row"><div class="rowIcon">⚙</div><div><b>Delivery</b><span>Kampala delivery coordination</span></div><em>›</em></div><div class="row"><div class="rowIcon">🔧</div><div><b>Repairs</b><span>Find service providers</span></div><em>›</em></div></div>`)
+}
+function openProduct(id){
+ const p=state.products.find(x=>x.id===id),s=state.shops.find(x=>x.id===p.shopId);
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+ document.getElementById('detail').classList.add('on');
+ document.getElementById('detail').innerHTML=pageShell(p.name,`${s.name} · ${s.building}`,`<div class="hero"><div class="pic" style="height:180px">${p.icon}</div><h1>${esc(p.name)}</h1><p>${money(p.price)} · ${p.stock} in stock</p></div><div class="list"><div class="row"><div class="rowIcon">🏪</div><div><b>${esc(s.name)}</b><span>${esc(s.building)} · Floor ${esc(s.floor)} · Shop ${esc(s.unit)}</span></div><em>›</em></div></div><div class="actionRow"><button class="main" onclick="addCart('${p.id}')">Add to cart</button><button onclick="openChat('${s.id}')">Message seller</button><button onclick="openShop('${s.id}')">Open shop</button><button onclick="openCompareProduct('${p.id}')">Compare sellers</button></div>`)
+}
+function openShop(id){
+ const s=state.shops.find(x=>x.id===id),ps=state.products.filter(p=>p.shopId===id);
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+ document.getElementById('detail').classList.add('on');
+ document.getElementById('detail').innerHTML=pageShell(s.name,`${s.building} · Floor ${s.floor} · Shop ${s.unit}`,`<div class="hero"><div class="eyebrow">LIVE SHOP</div><h1>${esc(s.name)}</h1><p>${esc(s.building)} · Floor ${esc(s.floor)} · Shop ${esc(s.unit)}</p></div><div class="actionRow"><button class="main" onclick="openChat('${s.id}')">Direct chat</button><button onclick="openPage('buildings')">Building</button></div><div class="sectionHead"><b>Products</b></div><div class="productGrid">${ps.map(productCard).join('')}</div>`)
+}
+function addCart(id){if(!state.cart.includes(id))state.cart.push(id);save();toast('Added to cart');refreshHome();renderLiveStats()}
+function renderCart(){
+ const ps=state.cart.map(id=>state.products.find(p=>p.id===id)).filter(Boolean);
+ document.getElementById('cart').innerHTML=pageShell('Cart','Products selected from Kampala shops',ps.length?`<div class="productGrid">${ps.map(productCard).join('')}</div><div class="actionRow"><button class="main" onclick="checkout()">Checkout</button><button onclick="state.cart=[];save();renderCart();refreshHome()">Clear cart</button></div>`:`<div class="card"><b>Your cart is empty</b><span>Browse products and add items.</span></div><div id="v92CartSummary"></div>`)
+ renderV92CartSummary()
+}
+function checkout(){
+ if(!state.cart.length)return toast('Cart is empty');
+ const id='KC'+Date.now().toString().slice(-6);
+ state.orders.unshift({id,status:'Confirmed',items:[...state.cart]});state.cart=[];addLiveEvent('📦','New order created',id+' entered fulfilment');toast('Order created');renderLiveStats();openPage('orders')
+}
+
+function orderPercent(status){
+ const map={Confirmed:20,Packed:40,'Ready for Pickup':60,'Out for Delivery':80,Completed:100};
+ return map[status]||20
+}
+function advanceOrder(id){
+ const o=state.orders.find(x=>x.id===id);if(!o)return;
+ const steps=['Confirmed','Packed','Ready for Pickup','Out for Delivery','Completed'];
+ const i=steps.indexOf(o.status);
+ if(i<steps.length-1)o.status=steps[i+1];
+ addLiveEvent('📦','Order status changed',`${o.id} → ${o.status}`);
+ save();renderOrders();refreshHome()
+}
+function renderOrders(){
+ const body=state.orders.length?state.orders.map(o=>`
+  <div class="v91OrderStep">
+   <b>${esc(o.id)} · ${esc(o.status)}</b>
+   <span>${o.items?.length||0} cart item(s)${o.sourceRequest?' · from buyer request':''}</span>
+   <div class="v91Progress"><i style="width:${orderPercent(o.status)}%"></i></div>
+   <div class="v91OrderControls">
+    <button onclick="openPage('messages')">Message Seller</button>
+    <button class="next" onclick="advanceOrder('${o.id}')">${o.status==='Completed'?'Completed':'Move to Next Step'}</button>
+   </div>
+  </div>`).join(''):`<div class="card"><b>No orders yet</b><span>Your orders will appear here.</span></div>`;
+ document.getElementById('orders').innerHTML=pageShell('Orders','Track purchases from confirmation to completion',body)
+}
+
+function renderRequest(){
+ const cards=state.requests.map(r=>{
+   const offers=r.offers||[];
+   return `<div class="card" style="margin-bottom:8px">
+    <b>${esc(r.item)}</b>
+    <span>${esc(r.area)} · ${esc(r.budget||'Open budget')}</span>
+    <strong>${offers.length} quote${offers.length===1?'':'s'}</strong>
+    ${offers.length?`<div class="list" style="margin-top:8px">${offers.map(o=>`<div class="row"><div class="rowIcon">💰</div><div><b>${esc(o.shop)}</b><span>${money(o.price)} · ${esc(o.note||'Seller quote')}</span></div><em onclick="acceptQuote('${r.id}','${o.id}')">ACCEPT</em></div>`).join('')}</div>`:''}
+    <div class="v91MiniActions">
+      <button onclick="addDemoQuote('${r.id}')">Add Seller Quote</button>
+      <button onclick="openPage('messages')">Message Sellers</button>
+    </div>
+   </div>`
+ }).join('');
+ document.getElementById('request').innerHTML=pageShell('Request an Item','Tell Kampala traders what you need',`
+  <div class="form">
+   <label>Item</label><input id="reqItem" placeholder="e.g. 20 bags of cement">
+   <label>Area</label><input id="reqArea" placeholder="CBD, Nakasero, Ntinda...">
+   <label>Budget</label><input id="reqBudget" placeholder="Optional">
+   <button class="primary" style="height:44px;margin-top:12px;width:100%" onclick="saveRequest()">POST REQUEST</button>
+  </div>
+  ${state.requests.length?`<div class="sectionHead"><b>Your Requests</b></div>${cards}`:''}
+ `)
+}
+function addDemoQuote(requestId){
+ const r=state.requests.find(x=>x.id===requestId);if(!r)return;
+ if(!r.offers)r.offers=[];
+ const shop=state.shops[Math.floor(Math.random()*state.shops.length)];
+ const base=Number(String(r.budget||'').replace(/\D/g,''))||100000;
+ r.offers.push({id:'Q'+Date.now(),shop:shop?.name||'Kampala Seller',price:Math.max(1000,Math.round(base*(.85+Math.random()*.25))),note:'Available now'});
+ r.quotes=r.offers.length;
+ addLiveEvent('💰','New seller quote',`${r.item} received a quote`);
+ renderRequest();refreshHome()
+}
+function acceptQuote(requestId,quoteId){
+ const r=state.requests.find(x=>x.id===requestId);if(!r)return;
+ const o=(r.offers||[]).find(x=>x.id===quoteId);if(!o)return;
+ const id='KC'+Date.now().toString().slice(-6);
+ state.orders.unshift({id,status:'Confirmed',items:[],sourceRequest:requestId,quoteId});
+ addLiveEvent('📦','Quote accepted',`${r.item} became order ${id}`);
+ save();openPage('orders')
+}
+
+function saveRequest(){
+ const item=document.getElementById('reqItem').value.trim();if(!item)return toast('Enter an item');
+ state.requests.unshift({id:'R'+Date.now(),item,area:document.getElementById('reqArea').value||'Kampala',budget:document.getElementById('reqBudget').value,quotes:0,offers:[]});addLiveEvent('✎','New buyer request',item+' requested in '+(document.getElementById('reqArea').value||'Kampala'));toast('Request posted');renderRequest();refreshHome();renderLiveStats()
+}
+function openChat(shopId){
+ const s=state.shops.find(x=>x.id===shopId);if(!state.messages[shopId])state.messages[shopId]=[];
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));document.getElementById('detail').classList.add('on');
+ document.getElementById('detail').innerHTML=pageShell('Chat · '+s.name,s.building,`<div class="chatBox">${state.messages[shopId].length?state.messages[shopId].map(m=>`<div class="msg ${m.me?'me':''}">${esc(m.text)}</div>`).join(''):'<div class="msg">Hello, how can we help you?</div>'}</div><div class="form" style="margin-top:10px"><input id="chatText" placeholder="Type a message"><button class="primary" style="height:44px;width:100%;margin-top:8px" onclick="sendChat('${shopId}')">SEND</button></div>`)
+}
+function sendChat(id){const t=document.getElementById('chatText').value.trim();if(!t)return;state.messages[id].push({me:true,text:t});addLiveEvent('💬','Seller message sent',t);renderLiveStats();openChat(id)}
+function renderMessages(){
+ const ids=Object.keys(state.messages);
+ document.getElementById('messages').innerHTML=pageShell('Messages','Direct seller conversations',ids.length?`<div class="list">${ids.map(id=>{const s=state.shops.find(x=>x.id===id),a=state.messages[id];return `<div class="row" onclick="openChat('${id}')"><div class="rowIcon">💬</div><div><b>${esc(s?.name||'Seller')}</b><span>${esc(a[a.length-1]?.text||'Open chat')}</span></div><em>›</em></div>`}).join('')}</div>`:`<div class="card"><b>No messages yet</b><span>Open a shop and start a direct chat.</span></div>`)
+}
+function renderPrices(){
+ const ps=[...state.products].sort((a,b)=>Number(a.price)-Number(b.price));
+ document.getElementById('prices').innerHTML=pageShell('Best Prices','Compare price, seller and exact shop location',
+ `<div class="v93Compare">${ps.map(p=>{
+   const s=sellerForProduct(p);
+   return `<div class="v93CompareCard">
+    <div class="v93CompareTop"><div><b>${esc(p.name)}</b><span>${esc(s?.name||'Seller')} · ${esc(s?.building||'Kampala')}</span></div><span class="v93ComparePrice">${money(p.price)}</span></div>
+    <div class="v93CompareActions"><button onclick="openSellerForProduct('${p.id}')">Seller</button><button onclick="openLocation93('${s?.id||''}')">Location</button><button class="buy" onclick="addCart('${p.id}')">Add</button></div>
+   </div>`
+ }).join('')}</div>`)
+}
+function renderDeals(){
+ document.getElementById('deals').innerHTML=pageShell('Deals','Current promotions',`<div class="cards">${state.products.slice(0,4).map((p,i)=>`<div class="card" onclick="openProduct('${p.id}')"><b>${10+i*5}% OFF</b><span>${esc(p.name)}</span><strong>${money(Math.round(p.price*(.9-i*.05)))}</strong></div>`).join('')}</div>`)
+}
+
+function openRegisterShopForm(){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+ document.getElementById('detail').classList.add('on');
+ document.getElementById('detail').innerHTML=pageShell('Register Shop','Add a new Kampala City shop',`
+  <div class="form">
+   <label>Shop name</label><input id="newShopName" placeholder="Business name">
+   <label>Building</label><input id="newShopBuilding" placeholder="Building name">
+   <label>Floor</label><input id="newShopFloor" placeholder="Floor">
+   <label>Shop number</label><input id="newShopUnit" placeholder="Shop number">
+   <button class="primary" style="height:44px;width:100%;margin-top:12px" onclick="saveNewShop()">REGISTER SHOP</button>
+  </div>`)
+}
+function saveNewShop(){
+ const name=document.getElementById('newShopName').value.trim();
+ if(!name)return toast('Enter shop name');
+ state.shops.push({
+  id:'s'+Date.now(),
+  name,
+  building:document.getElementById('newShopBuilding').value||'Kampala Building',
+  floor:document.getElementById('newShopFloor').value||'G',
+  unit:document.getElementById('newShopUnit').value||'—',
+  open:true
+ });
+ addLiveEvent('🏪','New shop registered',name+' joined Kampala City');renderLiveStats();toast('Shop registered');openPage('live')
+}
+function openAddProductForm(){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+ document.getElementById('detail').classList.add('on');
+ document.getElementById('detail').innerHTML=pageShell('Add Product','Add a new item to Kampala City',`
+  <div class="form">
+   <label>Product name</label><input id="newProductName" placeholder="Product name">
+   <label>Price (UGX)</label><input id="newProductPrice" type="number" placeholder="0">
+   <label>Stock</label><input id="newProductStock" type="number" placeholder="1">
+   <label>Shop</label>
+   <select id="newProductShop">${state.shops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+   <button class="primary" style="height:44px;width:100%;margin-top:12px" onclick="saveNewProduct()">ADD PRODUCT</button>
+  </div>`)
+}
+function saveNewProduct(){
+ const name=document.getElementById('newProductName').value.trim();
+ if(!name)return toast('Enter product name');
+ state.products.push({
+  id:'p'+Date.now(),
+  name,
+  price:Number(document.getElementById('newProductPrice').value||0),
+  shopId:document.getElementById('newProductShop').value,
+  stock:Number(document.getElementById('newProductStock').value||1),
+  cat:'Other',
+  icon:'🛍'
+ });
+ addLiveEvent('🛍','New product added',name+' was listed for sale');renderLiveStats();toast('Product added');openPage('live')
+}
+function renderTools(){
+ const tools=[['🔴','Live Market','live'],['⌕','Find & Buy','products'],['🏢','Locate Shop','buildings'],['💰','Requests & Quotes','request'],['＋','Register Shop','registerShop'],['＋','Add Product','addProduct'],['🛍','Products','products'],['🏪','Shops','shops'],['🏢','Buildings','buildings'],['💬','Messages','messages'],['↓','Best Prices','prices'],['％','Deals','deals'],['🛒','Cart','cart'],['✎','Request Item','request'],['📦','Orders','orders'],['⚙','Services','services'],['🔔','Inbox','inbox'],['◉','Account','account']];
+ document.getElementById('tools').innerHTML=pageShell('Tool Center','All working app tools',`<div class="toolGrid">${tools.map(t=>`<div class="tool" onclick="${t[2]==='registerShop'?'openRegisterShopForm()':t[2]==='addProduct'?'openAddProductForm()':`openPage('${t[2]}')`}"><i>${t[0]}</i><b>${t[1]}</b><span>Open tool</span></div>`).join('')}</div>`)
+}
+function renderInbox(){
+ document.getElementById('inbox').innerHTML=pageShell('Inbox','Notifications and updates',`<div class="list"><div class="row"><div class="rowIcon">🔔</div><div><b>Kampala City V100</b><span>Lightweight web version is running.</span></div><em>Now</em></div></div>`)
+}
+function renderAccount(){
+ document.getElementById('account').innerHTML=pageShell('Account','Your Kampala City profile',`<div class="cards"><div class="card"><b>Cart</b><span>Saved items</span><strong>${state.cart.length}</strong></div><div class="card"><b>Orders</b><span>Purchase history</span><strong>${state.orders.length}</strong></div><div class="card"><b>Requests</b><span>Buyer requests</span><strong>${state.requests.length}</strong></div><div class="card"><b>Messages</b><span>Seller chats</span><strong>${Object.keys(state.messages).length}</strong></div></div><div class="actionRow"><button onclick="openPage('tools')">Tool Center</button><button onclick="localStorage.removeItem(STORE);location.reload()">Reset Demo</button></div>`)
+}
+function runSearch(){
+ const q=document.getElementById('searchInput').value.trim().toLowerCase();
+ if(!q)return openPage('products');
+ const matches=state.products.filter(p=>p.name.toLowerCase().includes(q));
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));document.getElementById('detail').classList.add('on');
+ document.getElementById('detail').innerHTML=pageShell('Search Results',q,matches.length?`<div class="productGrid">${matches.map(productCard).join('')}</div>`:`<div class="card"><b>No product found</b><span>Try another term or post a buyer request.</span></div><div class="actionRow"><button class="main" onclick="openPage('request')">Request item</button><button onclick="openPage('products')">Browse products</button></div>`)
+}
+refreshHome();
+</script>
+
+<div class="v95Dock" id="v95Dock">
+  <button class="on" onclick="v95Nav('home',this)"><strong>⌂</strong>Home</button>
+  <button onclick="v95Nav('shops',this)"><strong>🏪</strong>Shops</button>
+  <button onclick="v95Nav('products',this)"><strong>🛍</strong>Marketplace</button>
+  <button onclick="v95Nav('orders',this)"><strong>□</strong>Orders</button>
+  <button onclick="v95Nav('tools',this)"><strong>▦</strong>More<span class="v99DockBadge" id="v99MoreBadge" style="display:none">0</span></button>
+</div>
+
+
+<div class="v96Backdrop" id="v96Backdrop" onclick="closeV96Sheet()"></div>
+<div class="v96Sheet" id="v96Sheet">
+  <div class="v96Handle"></div>
+  <div class="v96SheetHead"><b>Quick Actions</b><button onclick="closeV96Sheet()">×</button></div>
+  
+<div class="v98PullTop">
+  <div><b>Marketplace Now</b><span>Open items requiring action</span></div>
+  <strong id="v98PullCount">000</strong>
+</div>
+<div class="v96ActionGrid">
+    <button class="v96Action" onclick="closeV96Sheet();openPage('products')"><strong>Find Product</strong><span>Search Kampala stock</span></button>
+    <button class="v96Action" onclick="closeV96Sheet();openRegisterShopForm()"><strong>Register Shop</strong><span>Create a storefront</span></button>
+    <button class="v96Action" onclick="closeV96Sheet();openAddProductForm()"><strong>Add Goods</strong><span>List a product</span></button>
+    <button class="v96Action" onclick="closeV96Sheet();openPage('request')"><strong>Post Request</strong><span>Ask sellers for quotes</span></button>
+    <button class="v96Action" onclick="closeV96Sheet();openPage('buildings')"><strong>Locate Shop</strong><span>Building, floor, unit</span></button>
+    <button class="v96Action" onclick="closeV96Sheet();openPage('messages')"><strong>Messages</strong><span>Talk to sellers</span></button>
+  </div>
+</div>
+
+</body>
+</html>
