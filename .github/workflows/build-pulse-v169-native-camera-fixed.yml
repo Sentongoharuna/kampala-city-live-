@@ -1,0 +1,1126 @@
+name: Build PULSE V169 Native Camera FIXED
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify V169 HTML exists
+        run: test -f pulse-live-news-v169.html
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Create native Android CameraX wrapper
+        shell: bash
+        run: |
+          mkdir -p app/src/main/java/com/sentongoharuna/pulse
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/assets
+
+          cp pulse-live-news-v169.html app/src/main/assets/pulse-live-news-v169.html
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = 'PULSE'
+          include ':app'
+          EOF
+
+          cat > gradle.properties <<'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.10.1' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.sentongoharuna.pulse'
+              compileSdk 36
+
+              defaultConfig {
+                  applicationId 'com.sentongoharuna.pulse'
+                  minSdk 26
+                  targetSdk 36
+                  versionCode 16910
+                  versionName '169.1-native-camera'
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.1'
+              implementation 'androidx.webkit:webkit:1.12.1'
+
+              def camerax_version = '1.4.2'
+              implementation "androidx.camera:camera-core:${camerax_version}"
+              implementation "androidx.camera:camera-camera2:${camerax_version}"
+              implementation "androidx.camera:camera-lifecycle:${camerax_version}"
+              implementation "androidx.camera:camera-video:${camerax_version}"
+              implementation "androidx.camera:camera-view:${camerax_version}"
+          }
+          EOF
+
+          cat > app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:colorAccent">#FFBD18</item>
+                  <item name="android:navigationBarColor">#000000</item>
+                  <item name="android:statusBarColor">#000000</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:windowLightNavigationBar">false</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+              <uses-feature android:name="android.hardware.camera.any" android:required="true" />
+              <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+              <application
+                  android:allowBackup="true"
+                  android:label="PULSE V169"
+                  android:theme="@style/AppTheme"
+                  android:hardwareAccelerated="true"
+                  android:usesCleartextTraffic="false">
+
+                  <activity
+                      android:name=".NativeCameraActivity"
+                      android:exported="false"
+                      android:screenOrientation="portrait" />
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="portrait">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/sentongoharuna/pulse/MainActivity.java <<'EOF'
+          package com.sentongoharuna.pulse;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.provider.MediaStore;
+          import android.provider.Settings;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.PermissionRequest;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebResourceResponse;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          import androidx.annotation.NonNull;
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.webkit.WebViewAssetLoader;
+
+          import org.json.JSONObject;
+
+          import java.util.ArrayList;
+          import java.util.List;
+
+          public class MainActivity extends AppCompatActivity {
+
+              private static final int STARTUP_PERMISSIONS = 100;
+              private static final int WEB_PERMISSIONS = 101;
+              private static final int GEO_PERMISSIONS = 102;
+              private static final int FILE_CHOOSER = 103;
+              private static final int NATIVE_CAMERA = 169;
+              private static final int SYSTEM_CAMERA_MAIN = 170;
+
+              private WebView webView;
+              private PermissionRequest pendingWebPermission;
+              private GeolocationPermissions.Callback pendingGeoCallback;
+              private String pendingGeoOrigin;
+              private ValueCallback<Uri[]> fileCallback;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+                  webView = new WebView(this);
+                  setContentView(webView);
+
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setDatabaseEnabled(true);
+                  s.setGeolocationEnabled(true);
+                  s.setMediaPlaybackRequiresUserGesture(false);
+                  s.setAllowFileAccess(true);
+                  s.setAllowContentAccess(true);
+                  s.setJavaScriptCanOpenWindowsAutomatically(true);
+
+                  final WebViewAssetLoader assetLoader =
+                      new WebViewAssetLoader.Builder()
+                          .addPathHandler("/assets/",
+                              new WebViewAssetLoader.AssetsPathHandler(this))
+                          .build();
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public WebResourceResponse shouldInterceptRequest(
+                              WebView view,
+                              WebResourceRequest request) {
+                          return assetLoader.shouldInterceptRequest(request.getUrl());
+                      }
+                  });
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onPermissionRequest(PermissionRequest request) {
+                          runOnUiThread(() -> handleWebPermissionRequest(request));
+                      }
+
+                      @Override
+                      public void onGeolocationPermissionsShowPrompt(
+                              String origin,
+                              GeolocationPermissions.Callback callback) {
+                          if (hasLocationPermission()) {
+                              callback.invoke(origin, true, false);
+                          } else {
+                              pendingGeoOrigin = origin;
+                              pendingGeoCallback = callback;
+                              requestPermissions(new String[] {
+                                  Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.ACCESS_COARSE_LOCATION
+                              }, GEO_PERMISSIONS);
+                          }
+                      }
+
+                      @Override
+                      public boolean onShowFileChooser(
+                              WebView webView,
+                              ValueCallback<Uri[]> callback,
+                              FileChooserParams fileChooserParams) {
+                          if (fileCallback != null) {
+                              fileCallback.onReceiveValue(null);
+                          }
+                          fileCallback = callback;
+                          try {
+                              startActivityForResult(
+                                  fileChooserParams.createIntent(),
+                                  FILE_CHOOSER
+                              );
+                              return true;
+                          } catch (Exception e) {
+                              fileCallback = null;
+                              return false;
+                          }
+                      }
+                  });
+
+                  webView.addJavascriptInterface(new NativeCameraBridge(), "PulseNativeCamera");
+
+                  requestStartupPermissions();
+                  webView.loadUrl(
+                      "https://appassets.androidplatform.net/assets/" +
+                      "pulse-live-news-v169.html"
+                  );
+              }
+
+              private class NativeCameraBridge {
+                  @JavascriptInterface
+                  public void openCamera(String configJson) {
+                      runOnUiThread(() -> {
+                          try {
+                              Intent i = new Intent(
+                                  MainActivity.this,
+                                  NativeCameraActivity.class
+                              );
+                              i.putExtra("pulse_config", configJson == null ? "{}" : configJson);
+                              startActivityForResult(i, NATIVE_CAMERA);
+                          } catch (Exception e) {
+                              sendCameraError("Android camera could not open: " + e.getMessage());
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public boolean isAvailable() {
+                      return getPackageManager().hasSystemFeature(
+                          PackageManager.FEATURE_CAMERA_ANY
+                      );
+                  }
+
+                  @JavascriptInterface
+                  public String getCameraStatus() {
+                      try {
+                          JSONObject o = new JSONObject();
+                          boolean hardware = getPackageManager().hasSystemFeature(
+                              PackageManager.FEATURE_CAMERA_ANY
+                          );
+                          o.put("bridge", true);
+                          o.put("cameraAvailable", hardware);
+                          o.put("cameraPermission",
+                              checkSelfPermission(Manifest.permission.CAMERA)
+                                  == PackageManager.PERMISSION_GRANTED);
+                          o.put("microphonePermission",
+                              checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                  == PackageManager.PERMISSION_GRANTED);
+                          o.put("locationPermission", hasLocationPermission());
+                          o.put("source", "Android CameraX");
+                          return o.toString();
+                      } catch (Exception e) {
+                          return "{\"bridge\":true,\"cameraAvailable\":false}";
+                      }
+                  }
+
+                  @JavascriptInterface
+                  public void openAppSettings() {
+                      runOnUiThread(() -> {
+                          try {
+                              Intent intent = new Intent(
+                                  Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                              );
+                              intent.setData(
+                                  Uri.parse("package:" + getPackageName())
+                              );
+                              startActivity(intent);
+                          } catch (Exception e) {
+                              sendCameraError("Android app settings could not open");
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void openSystemCamera() {
+                      runOnUiThread(() -> {
+                          try {
+                              Intent intent =
+                                  new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+                              intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
+                              startActivityForResult(intent, SYSTEM_CAMERA_MAIN);
+                          } catch (Exception e) {
+                              sendCameraError("System camera app is unavailable");
+                          }
+                      });
+                  }
+              }
+
+              private void requestStartupPermissions() {
+                  ArrayList<String> list = new ArrayList<>();
+
+                  if (checkSelfPermission(Manifest.permission.CAMERA)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      list.add(Manifest.permission.CAMERA);
+                  }
+
+                  if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      list.add(Manifest.permission.RECORD_AUDIO);
+                  }
+
+                  if (!hasLocationPermission()) {
+                      list.add(Manifest.permission.ACCESS_FINE_LOCATION);
+                      list.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+                  }
+
+                  if (!list.isEmpty()) {
+                      requestPermissions(list.toArray(new String[0]), STARTUP_PERMISSIONS);
+                  }
+              }
+
+              private boolean hasLocationPermission() {
+                  return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                              == PackageManager.PERMISSION_GRANTED
+                      || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                              == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private void handleWebPermissionRequest(PermissionRequest request) {
+                  List<String> allowed = new ArrayList<>();
+                  List<String> missing = new ArrayList<>();
+
+                  for (String resource : request.getResources()) {
+                      if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                          if (checkSelfPermission(Manifest.permission.CAMERA)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                              allowed.add(resource);
+                          } else {
+                              missing.add(Manifest.permission.CAMERA);
+                          }
+                      }
+
+                      if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
+                          if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                              allowed.add(resource);
+                          } else {
+                              missing.add(Manifest.permission.RECORD_AUDIO);
+                          }
+                      }
+                  }
+
+                  if (!missing.isEmpty()) {
+                      pendingWebPermission = request;
+                      requestPermissions(
+                          missing.toArray(new String[0]),
+                          WEB_PERMISSIONS
+                      );
+                  } else if (!allowed.isEmpty()) {
+                      request.grant(allowed.toArray(new String[0]));
+                  } else {
+                      request.deny();
+                  }
+              }
+
+              private void resolveWebPermission() {
+                  if (pendingWebPermission == null) return;
+
+                  List<String> allowed = new ArrayList<>();
+                  for (String resource : pendingWebPermission.getResources()) {
+                      if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)
+                              && checkSelfPermission(Manifest.permission.CAMERA)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                          allowed.add(resource);
+                      }
+
+                      if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)
+                              && checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                          allowed.add(resource);
+                      }
+                  }
+
+                  if (!allowed.isEmpty()) {
+                      pendingWebPermission.grant(allowed.toArray(new String[0]));
+                  } else {
+                      pendingWebPermission.deny();
+                  }
+
+                  pendingWebPermission = null;
+              }
+
+              @Override
+              public void onRequestPermissionsResult(
+                      int requestCode,
+                      @NonNull String[] permissions,
+                      @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+                  if (requestCode == WEB_PERMISSIONS) {
+                      resolveWebPermission();
+                  }
+
+                  if (requestCode == GEO_PERMISSIONS && pendingGeoCallback != null) {
+                      pendingGeoCallback.invoke(
+                          pendingGeoOrigin,
+                          hasLocationPermission(),
+                          false
+                      );
+                      pendingGeoCallback = null;
+                      pendingGeoOrigin = null;
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(
+                      int requestCode,
+                      int resultCode,
+                      Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+
+                  if (requestCode == FILE_CHOOSER && fileCallback != null) {
+                      Uri[] result =
+                          WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                      fileCallback.onReceiveValue(result);
+                      fileCallback = null;
+                      return;
+                  }
+
+                  if (requestCode == NATIVE_CAMERA) {
+                      if (resultCode == Activity.RESULT_OK && data != null) {
+                          Uri uri = data.getData();
+                          String meta = data.getStringExtra("pulse_meta");
+                          sendCameraResult(uri == null ? "" : uri.toString(),
+                              meta == null ? "{}" : meta);
+                      } else if (data != null && data.hasExtra("pulse_error")) {
+                          sendCameraError(data.getStringExtra("pulse_error"));
+                      }
+                      return;
+                  }
+
+                  if (requestCode == SYSTEM_CAMERA_MAIN) {
+                      if (resultCode == Activity.RESULT_OK && data != null) {
+                          Uri uri = data.getData();
+                          sendCameraResult(
+                              uri == null ? "" : uri.toString(),
+                              "{\"source\":\"system-camera-fallback\"}"
+                          );
+                      }
+                  }
+              }
+
+              private void sendCameraResult(String uri, String meta) {
+                  String js =
+                      "window.onPulseNativeCameraResult(" +
+                      JSONObject.quote(uri) + "," +
+                      JSONObject.quote(meta) + ");";
+                  webView.evaluateJavascript(js, null);
+              }
+
+              private void sendCameraError(String message) {
+                  String js =
+                      "window.onPulseNativeCameraError(" +
+                      JSONObject.quote(message == null ? "Camera error" : message) +
+                      ");";
+                  webView.evaluateJavascript(js, null);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+
+          cat > app/src/main/java/com/sentongoharuna/pulse/NativeCameraActivity.java <<'EOF'
+          package com.sentongoharuna.pulse;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.ContentValues;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.graphics.Color;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.provider.MediaStore;
+          import android.provider.Settings;
+          import android.provider.MediaStore;
+          import android.view.Gravity;
+          import android.view.ViewGroup;
+          import android.widget.Button;
+          import android.widget.FrameLayout;
+          import android.widget.LinearLayout;
+          import android.widget.TextView;
+          import android.widget.Toast;
+
+          import androidx.annotation.NonNull;
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.camera.core.Camera;
+          import androidx.camera.core.CameraSelector;
+          import androidx.camera.core.Preview;
+          import androidx.camera.lifecycle.ProcessCameraProvider;
+          import androidx.camera.video.FallbackStrategy;
+          import androidx.camera.video.FileOutputOptions;
+          import androidx.camera.video.MediaStoreOutputOptions;
+          import androidx.camera.video.PendingRecording;
+          import androidx.camera.video.Quality;
+          import androidx.camera.video.QualitySelector;
+          import androidx.camera.video.Recorder;
+          import androidx.camera.video.Recording;
+          import androidx.camera.video.VideoCapture;
+          import androidx.camera.video.VideoRecordEvent;
+          import androidx.camera.view.PreviewView;
+          import androidx.core.content.ContextCompat;
+
+          import com.google.common.util.concurrent.ListenableFuture;
+
+          import org.json.JSONObject;
+
+          import java.io.File;
+          import java.util.Arrays;
+          import java.util.List;
+          import java.util.concurrent.ExecutionException;
+
+          public class NativeCameraActivity extends AppCompatActivity {
+
+              private static final int CAMERA_PERMISSIONS = 200;
+              private static final int SYSTEM_CAMERA = 201;
+
+              private PreviewView previewView;
+              private TextView statusView;
+              private Button recButton;
+              private Button flipButton;
+              private Button torchButton;
+
+              private ProcessCameraProvider cameraProvider;
+              private Camera camera;
+              private VideoCapture<Recorder> videoCapture;
+              private Recording recording;
+
+              private boolean useFront = false;
+              private boolean torchOn = false;
+              private boolean wantMic = true;
+              private boolean returnToPreviousApp = true;
+              private String resolution = "1080p";
+              private String configJson = "{}";
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+                  configJson = getIntent().getStringExtra("pulse_config");
+                  if (configJson == null) configJson = "{}";
+                  parseConfig(configJson);
+
+                  buildUi();
+
+                  if (hasCameraPermission()) {
+                      startCamera();
+                  } else {
+                      requestPermissions(new String[] {
+                          Manifest.permission.CAMERA,
+                          Manifest.permission.RECORD_AUDIO
+                      }, CAMERA_PERMISSIONS);
+                  }
+              }
+
+              private void parseConfig(String json) {
+                  try {
+                      JSONObject o = new JSONObject(json);
+                      String lens = o.optString("lens", "Rear");
+                      useFront = "Front".equalsIgnoreCase(lens);
+                      resolution = o.optString("resolution", "1080p");
+                      wantMic = o.optBoolean("microphone", true);
+                      returnToPreviousApp =
+                          o.optBoolean("returnToPreviousApp", true);
+                  } catch (Exception ignored) {}
+              }
+
+              private void buildUi() {
+                  FrameLayout root = new FrameLayout(this);
+                  root.setBackgroundColor(Color.BLACK);
+
+                  previewView = new PreviewView(this);
+                  previewView.setImplementationMode(
+                      PreviewView.ImplementationMode.COMPATIBLE
+                  );
+                  root.addView(previewView, new FrameLayout.LayoutParams(
+                      ViewGroup.LayoutParams.MATCH_PARENT,
+                      ViewGroup.LayoutParams.MATCH_PARENT
+                  ));
+
+                  statusView = new TextView(this);
+                  statusView.setText("PULSE NATIVE CAMERA • STARTING");
+                  statusView.setTextColor(Color.WHITE);
+                  statusView.setTextSize(14);
+                  statusView.setGravity(Gravity.CENTER);
+                  statusView.setBackgroundColor(0x99000000);
+                  statusView.setPadding(18, 14, 18, 14);
+
+                  FrameLayout.LayoutParams statusParams = new FrameLayout.LayoutParams(
+                      ViewGroup.LayoutParams.MATCH_PARENT,
+                      ViewGroup.LayoutParams.WRAP_CONTENT
+                  );
+                  statusParams.gravity = Gravity.TOP;
+                  root.addView(statusView, statusParams);
+
+                  LinearLayout controls = new LinearLayout(this);
+                  controls.setOrientation(LinearLayout.HORIZONTAL);
+                  controls.setGravity(Gravity.CENTER);
+                  controls.setPadding(8, 10, 8, 18);
+                  controls.setBackgroundColor(0xB3000000);
+
+                  Button closeButton = makeButton("CLOSE");
+                  flipButton = makeButton("FLIP");
+                  torchButton = makeButton("TORCH");
+                  Button samsungButton = makeButton("SAMSUNG");
+                  recButton = makeButton("● REC");
+                  recButton.setTextColor(0xFFFF453A);
+
+                  controls.addView(closeButton, weightParams());
+                  controls.addView(flipButton, weightParams());
+                  controls.addView(torchButton, weightParams());
+                  controls.addView(samsungButton, weightParams());
+                  controls.addView(recButton, weightParams());
+
+                  FrameLayout.LayoutParams controlsParams = new FrameLayout.LayoutParams(
+                      ViewGroup.LayoutParams.MATCH_PARENT,
+                      ViewGroup.LayoutParams.WRAP_CONTENT
+                  );
+                  controlsParams.gravity = Gravity.BOTTOM;
+                  root.addView(controls, controlsParams);
+
+                  closeButton.setOnClickListener(v -> finishCamera());
+                  flipButton.setOnClickListener(v -> flipCamera());
+                  torchButton.setOnClickListener(v -> toggleTorch());
+                  samsungButton.setOnClickListener(v -> launchSamsungCamera());
+                  recButton.setOnClickListener(v -> toggleRecording());
+
+                  setContentView(root);
+              }
+
+              private Button makeButton(String text) {
+                  Button b = new Button(this);
+                  b.setText(text);
+                  b.setTextSize(10);
+                  b.setAllCaps(false);
+                  b.setTextColor(Color.WHITE);
+                  b.setBackgroundColor(Color.TRANSPARENT);
+                  return b;
+              }
+
+              private LinearLayout.LayoutParams weightParams() {
+                  return new LinearLayout.LayoutParams(
+                      0,
+                      ViewGroup.LayoutParams.WRAP_CONTENT,
+                      1f
+                  );
+              }
+
+              private boolean hasCameraPermission() {
+                  return checkSelfPermission(Manifest.permission.CAMERA)
+                      == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private boolean hasMicPermission() {
+                  return checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                      == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private void startCamera() {
+                  statusView.setText("PULSE NATIVE CAMERA • OPENING");
+
+                  ListenableFuture<ProcessCameraProvider> future =
+                      ProcessCameraProvider.getInstance(this);
+
+                  future.addListener(() -> {
+                      try {
+                          cameraProvider = future.get();
+                          bindCamera();
+                      } catch (ExecutionException | InterruptedException e) {
+                          cameraFailure("CameraX could not start");
+                      } catch (Exception e) {
+                          cameraFailure("Camera could not bind");
+                      }
+                  }, ContextCompat.getMainExecutor(this));
+              }
+
+              private QualitySelector buildQualitySelector() {
+                  List<Quality> ordered;
+
+                  if ("4K".equalsIgnoreCase(resolution)) {
+                      ordered = Arrays.asList(
+                          Quality.UHD,
+                          Quality.FHD,
+                          Quality.HD
+                      );
+                  } else if ("720p".equalsIgnoreCase(resolution)) {
+                      ordered = Arrays.asList(
+                          Quality.HD,
+                          Quality.SD
+                      );
+                  } else {
+                      ordered = Arrays.asList(
+                          Quality.FHD,
+                          Quality.HD,
+                          Quality.UHD
+                      );
+                  }
+
+                  return QualitySelector.fromOrderedList(
+                      ordered,
+                      FallbackStrategy.lowerQualityOrHigherThan(Quality.HD)
+                  );
+              }
+
+              private void bindCamera() {
+                  if (cameraProvider == null) return;
+
+                  cameraProvider.unbindAll();
+
+                  Preview preview = new Preview.Builder().build();
+                  preview.setSurfaceProvider(previewView.getSurfaceProvider());
+
+                  Recorder recorder = new Recorder.Builder()
+                      .setQualitySelector(buildQualitySelector())
+                      .build();
+
+                  videoCapture = VideoCapture.withOutput(recorder);
+
+                  CameraSelector selector = useFront
+                      ? CameraSelector.DEFAULT_FRONT_CAMERA
+                      : CameraSelector.DEFAULT_BACK_CAMERA;
+
+                  try {
+                      camera = cameraProvider.bindToLifecycle(
+                          this,
+                          selector,
+                          preview,
+                          videoCapture
+                      );
+
+                      torchOn = false;
+                      torchButton.setText("TORCH");
+
+                      statusView.setText(
+                          "PULSE NATIVE CAMERA • READY • " +
+                          resolution +
+                          (useFront ? " • FRONT" : " • REAR")
+                      );
+                  } catch (Exception e) {
+                      cameraFailure("Selected camera is unavailable");
+                  }
+              }
+
+              private void flipCamera() {
+                  if (recording != null) {
+                      Toast.makeText(
+                          this,
+                          "Stop recording before switching camera",
+                          Toast.LENGTH_SHORT
+                      ).show();
+                      return;
+                  }
+                  useFront = !useFront;
+                  bindCamera();
+              }
+
+              private void toggleTorch() {
+                  if (camera == null
+                          || !camera.getCameraInfo().hasFlashUnit()
+                          || useFront) {
+                      Toast.makeText(
+                          this,
+                          "Torch is not available on this lens",
+                          Toast.LENGTH_SHORT
+                      ).show();
+                      return;
+                  }
+
+                  torchOn = !torchOn;
+                  camera.getCameraControl().enableTorch(torchOn);
+                  torchButton.setText(torchOn ? "TORCH ON" : "TORCH");
+              }
+
+              private MediaStoreOutputOptions createMediaStoreOutputOptions() {
+                  String name = "PULSE_" + System.currentTimeMillis();
+
+                  ContentValues values = new ContentValues();
+                  values.put(
+                      MediaStore.Video.Media.DISPLAY_NAME,
+                      name
+                  );
+                  values.put(
+                      MediaStore.Video.Media.MIME_TYPE,
+                      "video/mp4"
+                  );
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                      values.put(
+                          MediaStore.Video.Media.RELATIVE_PATH,
+                          "Movies/PULSE"
+                      );
+                  }
+
+                  return new MediaStoreOutputOptions.Builder(
+                      getContentResolver(),
+                      MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                  )
+                  .setContentValues(values)
+                  .build();
+              }
+
+              private FileOutputOptions createFileOutputOptions() {
+                  String name = "PULSE_" + System.currentTimeMillis();
+                  File dir = getExternalFilesDir("PULSE");
+                  if (dir != null && !dir.exists()) dir.mkdirs();
+
+                  File file = new File(
+                      dir == null ? getFilesDir() : dir,
+                      name + ".mp4"
+                  );
+
+                  return new FileOutputOptions.Builder(file).build();
+              }
+
+              private void toggleRecording() {
+                  if (videoCapture == null) {
+                      Toast.makeText(
+                          this,
+                          "Camera is still starting",
+                          Toast.LENGTH_SHORT
+                      ).show();
+                      return;
+                  }
+
+                  if (recording != null) {
+                      recording.stop();
+                      return;
+                  }
+
+                  try {
+                      PendingRecording pending;
+
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                          pending = videoCapture.getOutput()
+                              .prepareRecording(
+                                  this,
+                                  createMediaStoreOutputOptions()
+                              );
+                      } else {
+                          pending = videoCapture.getOutput()
+                              .prepareRecording(
+                                  this,
+                                  createFileOutputOptions()
+                              );
+                      }
+
+                      if (wantMic && hasMicPermission()) {
+                          pending = pending.withAudioEnabled();
+                      }
+
+                      recording = pending.start(
+                          ContextCompat.getMainExecutor(this),
+                          event -> {
+                              if (event instanceof VideoRecordEvent.Start) {
+                                  statusView.setText(
+                                      "● REC • PULSE NATIVE CAMERA"
+                                  );
+                                  statusView.setTextColor(0xFFFF453A);
+                                  recButton.setText("■ STOP");
+                              }
+
+                              if (event instanceof VideoRecordEvent.Finalize) {
+                                  VideoRecordEvent.Finalize fin =
+                                      (VideoRecordEvent.Finalize) event;
+
+                                  recording = null;
+                                  recButton.setText("● REC");
+                                  statusView.setTextColor(Color.WHITE);
+
+                                  if (fin.hasError()) {
+                                      statusView.setText(
+                                          "RECORDING ERROR • TRY SAMSUNG"
+                                      );
+                                      Toast.makeText(
+                                          this,
+                                          "Native recording failed",
+                                          Toast.LENGTH_LONG
+                                      ).show();
+                                      return;
+                                  }
+
+                                  Uri uri =
+                                      fin.getOutputResults().getOutputUri();
+
+                                  statusView.setText(
+                                      "SAVED • PULSE NATIVE CAMERA"
+                                  );
+
+                                  Intent data = new Intent();
+                                  data.setData(uri);
+                                  data.putExtra(
+                                      "pulse_meta",
+                                      configJson
+                                  );
+                                  setResult(Activity.RESULT_OK, data);
+
+                                  if (returnToPreviousApp) {
+                                      finish();
+                                  }
+                              }
+                          }
+                      );
+                  } catch (Exception e) {
+                      cameraFailure("Recording could not start");
+                  }
+              }
+
+              private void launchSamsungCamera() {
+                  try {
+                      Intent intent =
+                          new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+                      intent.putExtra(
+                          MediaStore.EXTRA_VIDEO_QUALITY,
+                          1
+                      );
+                      startActivityForResult(intent, SYSTEM_CAMERA);
+                  } catch (Exception e) {
+                      cameraFailure("Samsung camera app is unavailable");
+                  }
+              }
+
+              private void cameraFailure(String message) {
+                  statusView.setText(
+                      message + " • OPENING SAMSUNG CAMERA"
+                  );
+                  Toast.makeText(
+                      this,
+                      message,
+                      Toast.LENGTH_LONG
+                  ).show();
+
+                  previewView.postDelayed(
+                      this::launchSamsungCamera,
+                      350
+                  );
+              }
+
+              private void finishCamera() {
+                  if (recording != null) {
+                      recording.stop();
+                  } else {
+                      finish();
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(
+                      int requestCode,
+                      int resultCode,
+                      Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+
+                  if (requestCode == SYSTEM_CAMERA) {
+                      if (resultCode == Activity.RESULT_OK) {
+                          Uri uri = data == null ? null : data.getData();
+
+                          Intent result = new Intent();
+                          result.setData(uri);
+                          result.putExtra("pulse_meta", configJson);
+                          setResult(Activity.RESULT_OK, result);
+                          finish();
+                      } else {
+                          statusView.setText(
+                              "PULSE NATIVE CAMERA • READY"
+                          );
+                      }
+                  }
+              }
+
+              @Override
+              public void onRequestPermissionsResult(
+                      int requestCode,
+                      @NonNull String[] permissions,
+                      @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(
+                      requestCode,
+                      permissions,
+                      grantResults
+                  );
+
+                  if (requestCode == CAMERA_PERMISSIONS) {
+                      if (hasCameraPermission()) {
+                          startCamera();
+                      } else {
+                          Intent result = new Intent();
+                          result.putExtra(
+                              "pulse_error",
+                              "Camera permission was denied. Allow Camera in Android Settings."
+                          );
+                          setResult(Activity.RESULT_CANCELED, result);
+                          finish();
+                      }
+                  }
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (recording != null) {
+                      try {
+                          recording.stop();
+                      } catch (Exception ignored) {}
+                      recording = null;
+                  }
+
+                  if (cameraProvider != null) {
+                      try {
+                          cameraProvider.unbindAll();
+                      } catch (Exception ignored) {}
+                  }
+
+                  super.onDestroy();
+              }
+          }
+          EOF
+
+      - name: Build native V168 APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk PULSE-V169-NATIVE-CAMERA.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: PULSE-V169-NATIVE-CAMERA
+          path: PULSE-V169-NATIVE-CAMERA.apk
+          archive: false
