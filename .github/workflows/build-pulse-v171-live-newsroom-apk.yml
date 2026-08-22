@@ -1,0 +1,2249 @@
+name: Build PULSE V171 Live Newsroom Camera APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify V171 HTML exists
+        run: test -f pulse-live-news-v171.html
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Create native Android CameraX wrapper
+        shell: bash
+        run: |
+          mkdir -p app/src/main/java/com/sentongoharuna/pulse
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/assets
+
+          cp pulse-live-news-v171.html app/src/main/assets/pulse-live-news-v171.html
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = 'PULSE'
+          include ':app'
+          EOF
+
+          cat > gradle.properties <<'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.10.1' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.sentongoharuna.pulse'
+              compileSdk 36
+
+              defaultConfig {
+                  applicationId 'com.sentongoharuna.pulse'
+                  minSdk 26
+                  targetSdk 36
+                  versionCode 17110
+                  versionName '171.1-live-newsroom-camera'
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.1'
+              implementation 'androidx.webkit:webkit:1.12.1'
+
+              def camerax_version = '1.5.0'
+              implementation "androidx.camera:camera-core:${camerax_version}"
+              implementation "androidx.camera:camera-camera2:${camerax_version}"
+              implementation "androidx.camera:camera-lifecycle:${camerax_version}"
+              implementation "androidx.camera:camera-video:${camerax_version}"
+              implementation "androidx.camera:camera-view:${camerax_version}"
+              implementation "androidx.camera:camera-effects:${camerax_version}"
+          }
+          EOF
+
+          cat > app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:colorAccent">#FFBD18</item>
+                  <item name="android:navigationBarColor">#000000</item>
+                  <item name="android:statusBarColor">#000000</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:windowLightNavigationBar">false</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+              <uses-feature android:name="android.hardware.camera.any" android:required="true" />
+              <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+              <application
+                  android:allowBackup="true"
+                  android:label="PULSE V171"
+                  android:theme="@style/AppTheme"
+                  android:hardwareAccelerated="true"
+                  android:usesCleartextTraffic="false">
+
+                  <activity
+                      android:name=".NativeCameraActivity"
+                      android:exported="false"
+                      android:screenOrientation="portrait" />
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="portrait">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/sentongoharuna/pulse/MainActivity.java <<'EOF'
+          package com.sentongoharuna.pulse;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.provider.MediaStore;
+          import android.provider.Settings;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.PermissionRequest;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebResourceResponse;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          import androidx.annotation.NonNull;
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.webkit.WebViewAssetLoader;
+
+          import org.json.JSONObject;
+
+          import java.util.ArrayList;
+          import java.util.List;
+
+          public class MainActivity extends AppCompatActivity {
+
+              private static final int STARTUP_PERMISSIONS = 100;
+              private static final int WEB_PERMISSIONS = 101;
+              private static final int GEO_PERMISSIONS = 102;
+              private static final int FILE_CHOOSER = 103;
+              private static final int NATIVE_CAMERA = 171;
+              private static final int SYSTEM_CAMERA_MAIN = 170;
+
+              private WebView webView;
+              private PermissionRequest pendingWebPermission;
+              private GeolocationPermissions.Callback pendingGeoCallback;
+              private String pendingGeoOrigin;
+              private ValueCallback<Uri[]> fileCallback;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+                  webView = new WebView(this);
+                  setContentView(webView);
+
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setDatabaseEnabled(true);
+                  s.setGeolocationEnabled(true);
+                  s.setMediaPlaybackRequiresUserGesture(false);
+                  s.setAllowFileAccess(true);
+                  s.setAllowContentAccess(true);
+                  s.setJavaScriptCanOpenWindowsAutomatically(true);
+
+                  final WebViewAssetLoader assetLoader =
+                      new WebViewAssetLoader.Builder()
+                          .addPathHandler("/assets/",
+                              new WebViewAssetLoader.AssetsPathHandler(this))
+                          .build();
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public WebResourceResponse shouldInterceptRequest(
+                              WebView view,
+                              WebResourceRequest request) {
+                          return assetLoader.shouldInterceptRequest(request.getUrl());
+                      }
+                  });
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onPermissionRequest(PermissionRequest request) {
+                          runOnUiThread(() -> handleWebPermissionRequest(request));
+                      }
+
+                      @Override
+                      public void onGeolocationPermissionsShowPrompt(
+                              String origin,
+                              GeolocationPermissions.Callback callback) {
+                          if (hasLocationPermission()) {
+                              callback.invoke(origin, true, false);
+                          } else {
+                              pendingGeoOrigin = origin;
+                              pendingGeoCallback = callback;
+                              requestPermissions(new String[] {
+                                  Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.ACCESS_COARSE_LOCATION
+                              }, GEO_PERMISSIONS);
+                          }
+                      }
+
+                      @Override
+                      public boolean onShowFileChooser(
+                              WebView webView,
+                              ValueCallback<Uri[]> callback,
+                              FileChooserParams fileChooserParams) {
+                          if (fileCallback != null) {
+                              fileCallback.onReceiveValue(null);
+                          }
+                          fileCallback = callback;
+                          try {
+                              startActivityForResult(
+                                  fileChooserParams.createIntent(),
+                                  FILE_CHOOSER
+                              );
+                              return true;
+                          } catch (Exception e) {
+                              fileCallback = null;
+                              return false;
+                          }
+                      }
+                  });
+
+                  webView.addJavascriptInterface(new NativeCameraBridge(), "PulseNativeCamera");
+
+                  requestStartupPermissions();
+                  webView.loadUrl(
+                      "https://appassets.androidplatform.net/assets/" +
+                      "pulse-live-news-v171.html"
+                  );
+              }
+
+              private class NativeCameraBridge {
+                  @JavascriptInterface
+                  public void openCamera(String configJson) {
+                      runOnUiThread(() -> {
+                          try {
+                              Intent i = new Intent(
+                                  MainActivity.this,
+                                  NativeCameraActivity.class
+                              );
+                              i.putExtra("pulse_config", configJson == null ? "{}" : configJson);
+                              startActivityForResult(i, NATIVE_CAMERA);
+                          } catch (Exception e) {
+                              sendCameraError("Android camera could not open: " + e.getMessage());
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public boolean isAvailable() {
+                      return getPackageManager().hasSystemFeature(
+                          PackageManager.FEATURE_CAMERA_ANY
+                      );
+                  }
+
+                  @JavascriptInterface
+                  public String getCameraStatus() {
+                      try {
+                          JSONObject o = new JSONObject();
+                          boolean hardware = getPackageManager().hasSystemFeature(
+                              PackageManager.FEATURE_CAMERA_ANY
+                          );
+                          o.put("bridge", true);
+                          o.put("cameraAvailable", hardware);
+                          o.put("cameraPermission",
+                              checkSelfPermission(Manifest.permission.CAMERA)
+                                  == PackageManager.PERMISSION_GRANTED);
+                          o.put("microphonePermission",
+                              checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                  == PackageManager.PERMISSION_GRANTED);
+                          o.put("locationPermission", hasLocationPermission());
+                          o.put("source", "Android CameraX professional reporter camera");
+                          return o.toString();
+                      } catch (Exception e) {
+                          return "{\"bridge\":true,\"cameraAvailable\":false}";
+                      }
+                  }
+
+                  @JavascriptInterface
+                  public void openAppSettings() {
+                      runOnUiThread(() -> {
+                          try {
+                              Intent intent = new Intent(
+                                  Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                              );
+                              intent.setData(
+                                  Uri.parse("package:" + getPackageName())
+                              );
+                              startActivity(intent);
+                          } catch (Exception e) {
+                              sendCameraError("Android app settings could not open");
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void openSystemCamera() {
+                      runOnUiThread(() -> {
+                          try {
+                              Intent intent =
+                                  new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+                              intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
+                              startActivityForResult(intent, SYSTEM_CAMERA_MAIN);
+                          } catch (Exception e) {
+                              sendCameraError("System camera app is unavailable");
+                          }
+                      });
+                  }
+              }
+
+              private void requestStartupPermissions() {
+                  ArrayList<String> list = new ArrayList<>();
+
+                  if (checkSelfPermission(Manifest.permission.CAMERA)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      list.add(Manifest.permission.CAMERA);
+                  }
+
+                  if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      list.add(Manifest.permission.RECORD_AUDIO);
+                  }
+
+                  if (!hasLocationPermission()) {
+                      list.add(Manifest.permission.ACCESS_FINE_LOCATION);
+                      list.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+                  }
+
+                  if (!list.isEmpty()) {
+                      requestPermissions(list.toArray(new String[0]), STARTUP_PERMISSIONS);
+                  }
+              }
+
+              private boolean hasLocationPermission() {
+                  return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                              == PackageManager.PERMISSION_GRANTED
+                      || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                              == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private void handleWebPermissionRequest(PermissionRequest request) {
+                  List<String> allowed = new ArrayList<>();
+                  List<String> missing = new ArrayList<>();
+
+                  for (String resource : request.getResources()) {
+                      if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                          if (checkSelfPermission(Manifest.permission.CAMERA)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                              allowed.add(resource);
+                          } else {
+                              missing.add(Manifest.permission.CAMERA);
+                          }
+                      }
+
+                      if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
+                          if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                              allowed.add(resource);
+                          } else {
+                              missing.add(Manifest.permission.RECORD_AUDIO);
+                          }
+                      }
+                  }
+
+                  if (!missing.isEmpty()) {
+                      pendingWebPermission = request;
+                      requestPermissions(
+                          missing.toArray(new String[0]),
+                          WEB_PERMISSIONS
+                      );
+                  } else if (!allowed.isEmpty()) {
+                      request.grant(allowed.toArray(new String[0]));
+                  } else {
+                      request.deny();
+                  }
+              }
+
+              private void resolveWebPermission() {
+                  if (pendingWebPermission == null) return;
+
+                  List<String> allowed = new ArrayList<>();
+                  for (String resource : pendingWebPermission.getResources()) {
+                      if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)
+                              && checkSelfPermission(Manifest.permission.CAMERA)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                          allowed.add(resource);
+                      }
+
+                      if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)
+                              && checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                          allowed.add(resource);
+                      }
+                  }
+
+                  if (!allowed.isEmpty()) {
+                      pendingWebPermission.grant(allowed.toArray(new String[0]));
+                  } else {
+                      pendingWebPermission.deny();
+                  }
+
+                  pendingWebPermission = null;
+              }
+
+              @Override
+              public void onRequestPermissionsResult(
+                      int requestCode,
+                      @NonNull String[] permissions,
+                      @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+                  if (requestCode == WEB_PERMISSIONS) {
+                      resolveWebPermission();
+                  }
+
+                  if (requestCode == GEO_PERMISSIONS && pendingGeoCallback != null) {
+                      pendingGeoCallback.invoke(
+                          pendingGeoOrigin,
+                          hasLocationPermission(),
+                          false
+                      );
+                      pendingGeoCallback = null;
+                      pendingGeoOrigin = null;
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(
+                      int requestCode,
+                      int resultCode,
+                      Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+
+                  if (requestCode == FILE_CHOOSER && fileCallback != null) {
+                      Uri[] result =
+                          WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                      fileCallback.onReceiveValue(result);
+                      fileCallback = null;
+                      return;
+                  }
+
+                  if (requestCode == NATIVE_CAMERA) {
+                      if (resultCode == Activity.RESULT_OK && data != null) {
+                          Uri uri = data.getData();
+                          String meta = data.getStringExtra("pulse_meta");
+                          sendCameraResult(uri == null ? "" : uri.toString(),
+                              meta == null ? "{}" : meta);
+                      } else if (data != null && data.hasExtra("pulse_error")) {
+                          sendCameraError(data.getStringExtra("pulse_error"));
+                      }
+                      return;
+                  }
+
+                  if (requestCode == SYSTEM_CAMERA_MAIN) {
+                      if (resultCode == Activity.RESULT_OK && data != null) {
+                          Uri uri = data.getData();
+                          sendCameraResult(
+                              uri == null ? "" : uri.toString(),
+                              "{\"source\":\"system-camera-fallback\"}"
+                          );
+                      }
+                  }
+              }
+
+              private void sendCameraResult(String uri, String meta) {
+                  String js =
+                      "window.onPulseNativeCameraResult(" +
+                      JSONObject.quote(uri) + "," +
+                      JSONObject.quote(meta) + ");";
+                  webView.evaluateJavascript(js, null);
+              }
+
+              private void sendCameraError(String message) {
+                  String js =
+                      "window.onPulseNativeCameraError(" +
+                      JSONObject.quote(message == null ? "Camera error" : message) +
+                      ");";
+                  webView.evaluateJavascript(js, null);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+
+          cat > app/src/main/java/com/sentongoharuna/pulse/NativeCameraActivity.java <<'EOF'
+          package com.sentongoharuna.pulse;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.ContentValues;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.graphics.Canvas;
+          import android.graphics.Color;
+          import android.graphics.Paint;
+          import android.graphics.PorterDuff;
+          import android.location.Address;
+          import android.location.Geocoder;
+          import android.location.Location;
+          import android.location.LocationListener;
+          import android.location.LocationManager;
+          import android.net.Uri;
+          import android.os.BatteryManager;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.Environment;
+          import android.os.Handler;
+          import android.os.Looper;
+          import android.os.StatFs;
+          import android.provider.MediaStore;
+          import android.view.Gravity;
+          import android.view.ViewGroup;
+          import android.widget.Button;
+          import android.widget.FrameLayout;
+          import android.widget.LinearLayout;
+          import android.widget.SeekBar;
+          import android.widget.TextView;
+          import android.widget.Toast;
+
+          import androidx.annotation.NonNull;
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.camera.core.Camera;
+          import androidx.camera.core.CameraEffect;
+          import androidx.camera.core.CameraSelector;
+          import androidx.camera.core.ExposureState;
+          import androidx.camera.core.Preview;
+          import androidx.camera.core.SessionConfig;
+          import androidx.camera.core.ZoomState;
+          import androidx.camera.effects.Frame;
+          import androidx.camera.effects.OverlayEffect;
+          import androidx.camera.lifecycle.ProcessCameraProvider;
+          import androidx.camera.video.FallbackStrategy;
+          import androidx.camera.video.FileOutputOptions;
+          import androidx.camera.video.MediaStoreOutputOptions;
+          import androidx.camera.video.PendingRecording;
+          import androidx.camera.video.Quality;
+          import androidx.camera.video.QualitySelector;
+          import androidx.camera.video.Recorder;
+          import androidx.camera.video.Recording;
+          import androidx.camera.video.VideoCapture;
+          import androidx.camera.video.VideoRecordEvent;
+          import androidx.camera.view.PreviewView;
+          import androidx.core.content.ContextCompat;
+
+          import com.google.common.util.concurrent.ListenableFuture;
+
+          import org.json.JSONObject;
+
+          import java.io.File;
+          import java.text.SimpleDateFormat;
+          import java.util.Arrays;
+          import java.util.Date;
+          import java.util.List;
+          import java.util.Locale;
+          import java.util.concurrent.ExecutionException;
+
+          public class NativeCameraActivity extends AppCompatActivity {
+
+              private static final int CAMERA_PERMISSIONS = 200;
+              private static final int SYSTEM_CAMERA = 201;
+
+              private PreviewView previewView;
+              private TextView statusView;
+              private TextView locationView;
+              private TextView telemetryView;
+              private TextView timecodeView;
+              private TextView formatView;
+              private TextView reporterView;
+              private TextView headlineView;
+
+              private Button recButton;
+              private Button flipButton;
+              private Button torchButton;
+              private Button isoButton;
+              private Button shutterButton;
+              private Button wbButton;
+              private Button tintButton;
+              private Button focusButton;
+              private Button presetButton;
+
+              private SeekBar zoomSeek;
+              private SeekBar exposureSeek;
+
+              private ProcessCameraProvider cameraProvider;
+              private Camera camera;
+              private VideoCapture<Recorder> videoCapture;
+              private Recording recording;
+              private OverlayEffect overlayEffect;
+
+              private boolean useFront = false;
+              private boolean torchOn = false;
+              private boolean wantMic = true;
+              private boolean returnToPreviousApp = true;
+              private boolean burnOverlay = true;
+              private boolean autoPhoneLocation = true;
+              private boolean showWeather = true;
+              private boolean showBattery = true;
+              private boolean showStorage = true;
+              private boolean showTimecode = true;
+              private boolean showCoordinates = true;
+              private boolean showAltitude = true;
+              private boolean showSpeedHeading = true;
+
+              private String resolution = "4K";
+              private int fps = 30;
+              private String codec = "HEVC";
+              private String hdr = "10-bit HDR target";
+              private String lensRequest = "Wide";
+              private String stabilization = "Standard";
+              private String lut = "Neutral";
+              private int iso = 400;
+              private int shutterAngle = 180;
+              private int kelvin = 5600;
+              private int tint = 0;
+              private int focusPercent = 50;
+              private int exposureComp = 0;
+              private int audioGainDb = 0;
+
+              private String overlayPreset = "Breaking";
+              private String reporterName = "PULSE REPORTER";
+              private String headline = "LIVE FIELD REPORT";
+              private String sourceLabel = "PULSE NEWSROOM";
+              private String weatherText = "WX --";
+              private String configJson = "{}";
+
+              private volatile double currentLat = Double.NaN;
+              private volatile double currentLon = Double.NaN;
+              private volatile double currentAlt = Double.NaN;
+              private volatile float currentAcc = Float.NaN;
+              private volatile float currentSpeed = Float.NaN;
+              private volatile float currentHeading = Float.NaN;
+              private volatile String currentLocationName = "Locating…";
+              private volatile int batteryPercent = -1;
+              private volatile long freeStorageGb = -1;
+
+              private LocationManager locationManager;
+              private final Handler uiHandler = new Handler(Looper.getMainLooper());
+              private long recordingStartedAt = 0L;
+              private long lastGeocodeAt = 0L;
+
+              private final SimpleDateFormat clockFormat =
+                  new SimpleDateFormat("yyyy-MM-dd  HH:mm:ss", Locale.US);
+
+              private final Runnable uiTick = new Runnable() {
+                  @Override
+                  public void run() {
+                      refreshDeviceTelemetry();
+                      updateTimecode();
+                      uiHandler.postDelayed(this, 1000);
+                  }
+              };
+
+              private final LocationListener locationListener =
+                  new LocationListener() {
+                      @Override
+                      public void onLocationChanged(@NonNull Location location) {
+                          currentLat = location.getLatitude();
+                          currentLon = location.getLongitude();
+                          currentAlt = location.hasAltitude()
+                              ? location.getAltitude()
+                              : Double.NaN;
+                          currentAcc = location.hasAccuracy()
+                              ? location.getAccuracy()
+                              : Float.NaN;
+                          currentSpeed = location.hasSpeed()
+                              ? location.getSpeed()
+                              : Float.NaN;
+                          currentHeading = location.hasBearing()
+                              ? location.getBearing()
+                              : Float.NaN;
+
+                          if (System.currentTimeMillis() - lastGeocodeAt > 15000) {
+                              lastGeocodeAt = System.currentTimeMillis();
+                              reverseGeocode(currentLat, currentLon);
+                          }
+                          runOnUiThread(() -> refreshLocationUi());
+                      }
+                  };
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().addFlags(
+                      android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                  );
+
+                  configJson = getIntent().getStringExtra("pulse_config");
+                  if (configJson == null) configJson = "{}";
+                  parseConfig(configJson);
+                  buildUi();
+
+                  if (hasCameraPermission()) {
+                      startCamera();
+                      startAutomaticLocation();
+                  } else {
+                      requestPermissions(new String[] {
+                          Manifest.permission.CAMERA,
+                          Manifest.permission.RECORD_AUDIO,
+                          Manifest.permission.ACCESS_FINE_LOCATION,
+                          Manifest.permission.ACCESS_COARSE_LOCATION
+                      }, CAMERA_PERMISSIONS);
+                  }
+
+                  uiHandler.post(uiTick);
+              }
+
+              private void parseConfig(String json) {
+                  try {
+                      JSONObject o = new JSONObject(json);
+
+                      lensRequest = o.optString("lens", "Wide");
+                      useFront = "Front".equalsIgnoreCase(lensRequest);
+                      resolution = o.optString("resolution", "4K");
+                      fps = o.optInt("fps", 30);
+                      codec = o.optString("codec", "HEVC");
+                      hdr = o.optString("hdr", "10-bit HDR target");
+                      stabilization = o.optString("stabilization", "Standard");
+                      lut = o.optString("lut", "Neutral");
+
+                      iso = o.optInt("iso", 400);
+                      shutterAngle = o.optInt("shutterAngle", 180);
+                      kelvin = o.optInt("whiteBalanceKelvin", 5600);
+                      tint = o.optInt("tint", 0);
+                      focusPercent = o.optInt("focusPercent", 50);
+                      exposureComp = o.optInt("exposureCompensation", 0);
+                      audioGainDb = o.optInt("audioGainDb", 0);
+
+                      wantMic = o.optBoolean("microphone", true);
+                      returnToPreviousApp =
+                          o.optBoolean("returnToPreviousApp", true);
+
+                      overlayPreset = o.optString("overlayPreset", "Breaking");
+                      reporterName = o.optString("reporterName", "PULSE REPORTER");
+                      headline = o.optString("headline", "LIVE FIELD REPORT");
+                      sourceLabel = o.optString("sourceLabel", "PULSE NEWSROOM");
+                      weatherText = o.optString("weatherText", "WX --");
+
+                      burnOverlay = o.optBoolean("burnOverlay", true);
+                      autoPhoneLocation = o.optBoolean("autoPhoneLocation", true);
+                      showWeather = o.optBoolean("showWeather", true);
+                      showBattery = o.optBoolean("showBattery", true);
+                      showStorage = o.optBoolean("showStorage", true);
+                      showTimecode = o.optBoolean("showTimecode", true);
+                      showCoordinates = o.optBoolean("showCoordinates", true);
+                      showAltitude = o.optBoolean("showAltitude", true);
+                      showSpeedHeading = o.optBoolean("showSpeedHeading", true);
+                  } catch (Exception ignored) {}
+              }
+
+              private void buildUi() {
+                  FrameLayout root = new FrameLayout(this);
+                  root.setBackgroundColor(Color.BLACK);
+
+                  previewView = new PreviewView(this);
+                  previewView.setImplementationMode(
+                      PreviewView.ImplementationMode.COMPATIBLE
+                  );
+                  root.addView(
+                      previewView,
+                      new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.MATCH_PARENT
+                      )
+                  );
+
+                  // Newsroom top deck.
+                  LinearLayout top = new LinearLayout(this);
+                  top.setOrientation(LinearLayout.VERTICAL);
+                  top.setPadding(12, 8, 12, 8);
+                  top.setBackgroundColor(0xD0000000);
+
+                  LinearLayout brandRow = horizontalRow();
+                  TextView brand = hudText(
+                      "PULSE  •  PROFESSIONAL NEWS CAMERA",
+                      13,
+                      0xFFFFFFFF
+                  );
+                  presetButton = makeButton(
+                      overlayPreset.toUpperCase(Locale.US)
+                  );
+                  presetButton.setTextColor(0xFFFFD65C);
+                  brandRow.addView(brand, weightParams());
+                  brandRow.addView(
+                      presetButton,
+                      new LinearLayout.LayoutParams(dp(92), dp(42))
+                  );
+                  top.addView(brandRow);
+
+                  LinearLayout statusRow = horizontalRow();
+                  statusView = hudText("● REC STBY", 11, 0xFFFFD65C);
+                  timecodeView = hudText("TC 00:00:00", 10, Color.WHITE);
+                  formatView = hudText(
+                      resolution + " • " + fps + "FPS • " + codec,
+                      9,
+                      0xFF9BEFFF
+                  );
+                  statusRow.addView(statusView, weightParams());
+                  statusRow.addView(timecodeView, weightParams());
+                  statusRow.addView(formatView, weightParams());
+                  top.addView(statusRow);
+
+                  reporterView = hudText(
+                      reporterName + "  •  " + sourceLabel,
+                      9,
+                      0xFFB8F7FF
+                  );
+                  headlineView = hudText(
+                      headline,
+                      12,
+                      Color.WHITE
+                  );
+                  headlineView.setSingleLine(true);
+                  top.addView(reporterView);
+                  top.addView(headlineView);
+
+                  locationView = hudText(
+                      "GPS acquiring…",
+                      9,
+                      0xFFDDECEF
+                  );
+                  telemetryView = hudText(
+                      "BAT -- • STORAGE -- • " + weatherText,
+                      8,
+                      0xFF96AEB3
+                  );
+                  top.addView(locationView);
+                  top.addView(telemetryView);
+
+                  FrameLayout.LayoutParams topParams =
+                      new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT
+                      );
+                  topParams.gravity = Gravity.TOP;
+                  root.addView(top, topParams);
+
+                  // Professional manual strip.
+                  LinearLayout manual = horizontalRow();
+                  manual.setPadding(5, 2, 5, 2);
+                  manual.setBackgroundColor(0xBF061016);
+
+                  isoButton = makeMiniButton("ISO\n" + iso);
+                  shutterButton = makeMiniButton(
+                      "SHUTTER\n" + shutterAngle + "°"
+                  );
+                  wbButton = makeMiniButton("WB\n" + kelvin + "K");
+                  tintButton = makeMiniButton("TINT\n" + tint);
+                  focusButton = makeMiniButton(
+                      "FOCUS\n" + focusPercent + "%"
+                  );
+
+                  manual.addView(isoButton, weightParams());
+                  manual.addView(shutterButton, weightParams());
+                  manual.addView(wbButton, weightParams());
+                  manual.addView(tintButton, weightParams());
+                  manual.addView(focusButton, weightParams());
+
+                  FrameLayout.LayoutParams manualParams =
+                      new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT
+                      );
+                  manualParams.gravity = Gravity.TOP;
+                  manualParams.topMargin = dp(166);
+                  root.addView(manual, manualParams);
+
+                  // Monitoring/scopes strip.
+                  LinearLayout scopes = horizontalRow();
+                  scopes.setPadding(4, 2, 4, 2);
+                  scopes.setBackgroundColor(0x9C000000);
+
+                  for (String label : new String[]{
+                      "PEAK", "ZEBRA", "FALSE", "WAVE",
+                      "HIST", "GRID", "LEVEL", "LUT"
+                  }) {
+                      scopes.addView(scopeLabel(label), weightParams());
+                  }
+
+                  FrameLayout.LayoutParams scopeParams =
+                      new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT
+                      );
+                  scopeParams.gravity = Gravity.TOP;
+                  scopeParams.topMargin = dp(222);
+                  root.addView(scopes, scopeParams);
+
+                  // Bottom control deck.
+                  LinearLayout bottom = new LinearLayout(this);
+                  bottom.setOrientation(LinearLayout.VERTICAL);
+                  bottom.setPadding(9, 5, 9, 10);
+                  bottom.setBackgroundColor(0xDD000000);
+
+                  LinearLayout requestRow = horizontalRow();
+                  requestRow.addView(
+                      hudText("LENS " + lensRequest.toUpperCase(Locale.US), 8, 0xFF7CEBFF),
+                      weightParams()
+                  );
+                  requestRow.addView(
+                      hudText(shortText(hdr, 16), 8, 0xFFFFD65C),
+                      weightParams()
+                  );
+                  requestRow.addView(
+                      hudText("STAB " + shortText(stabilization, 10), 8, Color.WHITE),
+                      weightParams()
+                  );
+                  requestRow.addView(
+                      hudText("MIC " + (wantMic ? "ON" : "OFF"), 8, Color.WHITE),
+                      weightParams()
+                  );
+                  bottom.addView(requestRow);
+
+                  LinearLayout zoomRow = horizontalRow();
+                  zoomRow.addView(
+                      hudText("ZOOM", 9, Color.WHITE),
+                      new LinearLayout.LayoutParams(dp(58), dp(38))
+                  );
+                  zoomSeek = new SeekBar(this);
+                  zoomSeek.setMax(100);
+                  zoomRow.addView(
+                      zoomSeek,
+                      new LinearLayout.LayoutParams(0, dp(38), 1f)
+                  );
+                  bottom.addView(zoomRow);
+
+                  LinearLayout expRow = horizontalRow();
+                  expRow.addView(
+                      hudText("EXPOSURE", 9, Color.WHITE),
+                      new LinearLayout.LayoutParams(dp(74), dp(38))
+                  );
+                  exposureSeek = new SeekBar(this);
+                  exposureSeek.setMax(12);
+                  exposureSeek.setProgress(6);
+                  expRow.addView(
+                      exposureSeek,
+                      new LinearLayout.LayoutParams(0, dp(38), 1f)
+                  );
+                  bottom.addView(expRow);
+
+                  LinearLayout actions = horizontalRow();
+                  Button closeButton = makeButton("CLOSE");
+                  flipButton = makeButton("LENS");
+                  torchButton = makeButton("TORCH");
+                  Button phoneButton = makeButton("PHONE");
+                  recButton = makeButton("● REC");
+                  recButton.setTextColor(0xFFFF453A);
+
+                  actions.addView(closeButton, weightParams());
+                  actions.addView(flipButton, weightParams());
+                  actions.addView(torchButton, weightParams());
+                  actions.addView(phoneButton, weightParams());
+                  actions.addView(recButton, weightParams());
+                  bottom.addView(actions);
+
+                  FrameLayout.LayoutParams bottomParams =
+                      new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT
+                      );
+                  bottomParams.gravity = Gravity.BOTTOM;
+                  root.addView(bottom, bottomParams);
+
+                  closeButton.setOnClickListener(v -> finishCamera());
+                  flipButton.setOnClickListener(v -> flipCamera());
+                  torchButton.setOnClickListener(v -> toggleTorch());
+                  phoneButton.setOnClickListener(v -> launchSamsungCamera());
+                  recButton.setOnClickListener(v -> toggleRecording());
+                  presetButton.setOnClickListener(v -> cyclePreset());
+
+                  isoButton.setOnClickListener(v -> cycleIso());
+                  shutterButton.setOnClickListener(v -> cycleShutter());
+                  wbButton.setOnClickListener(v -> cycleWhiteBalance());
+                  tintButton.setOnClickListener(v -> cycleTint());
+                  focusButton.setOnClickListener(v -> cycleFocus());
+
+                  zoomSeek.setOnSeekBarChangeListener(
+                      new SeekBar.OnSeekBarChangeListener() {
+                          @Override
+                          public void onProgressChanged(
+                                  SeekBar seekBar,
+                                  int progress,
+                                  boolean fromUser) {
+                              if (fromUser) applyZoom(progress);
+                          }
+
+                          @Override
+                          public void onStartTrackingTouch(SeekBar seekBar) {}
+
+                          @Override
+                          public void onStopTrackingTouch(SeekBar seekBar) {}
+                      }
+                  );
+
+                  exposureSeek.setOnSeekBarChangeListener(
+                      new SeekBar.OnSeekBarChangeListener() {
+                          @Override
+                          public void onProgressChanged(
+                                  SeekBar seekBar,
+                                  int progress,
+                                  boolean fromUser) {
+                              if (fromUser) applyExposure(progress - 6);
+                          }
+
+                          @Override
+                          public void onStartTrackingTouch(SeekBar seekBar) {}
+
+                          @Override
+                          public void onStopTrackingTouch(SeekBar seekBar) {}
+                      }
+                  );
+
+                  setContentView(root);
+                  refreshDeviceTelemetry();
+                  refreshLocationUi();
+              }
+
+              private LinearLayout horizontalRow() {
+                  LinearLayout row = new LinearLayout(this);
+                  row.setOrientation(LinearLayout.HORIZONTAL);
+                  row.setGravity(Gravity.CENTER_VERTICAL);
+                  return row;
+              }
+
+              private TextView hudText(String text, float sp, int color) {
+                  TextView v = new TextView(this);
+                  v.setText(text);
+                  v.setTextSize(sp);
+                  v.setTextColor(color);
+                  v.setGravity(Gravity.CENTER_VERTICAL);
+                  v.setPadding(4, 3, 4, 3);
+                  return v;
+              }
+
+              private TextView scopeLabel(String text) {
+                  TextView v = hudText(text, 7, 0xFF8DA8AE);
+                  v.setGravity(Gravity.CENTER);
+                  return v;
+              }
+
+              private Button makeButton(String text) {
+                  Button b = new Button(this);
+                  b.setText(text);
+                  b.setTextSize(9);
+                  b.setAllCaps(false);
+                  b.setTextColor(Color.WHITE);
+                  b.setBackgroundColor(Color.TRANSPARENT);
+                  b.setMinHeight(dp(42));
+                  return b;
+              }
+
+              private Button makeMiniButton(String text) {
+                  Button b = makeButton(text);
+                  b.setTextSize(8);
+                  b.setTextColor(0xFFE9FDFF);
+                  return b;
+              }
+
+              private LinearLayout.LayoutParams weightParams() {
+                  return new LinearLayout.LayoutParams(
+                      0,
+                      ViewGroup.LayoutParams.WRAP_CONTENT,
+                      1f
+                  );
+              }
+
+              private int dp(int value) {
+                  return Math.round(
+                      value * getResources().getDisplayMetrics().density
+                  );
+              }
+
+              private String shortText(String value, int max) {
+                  if (value == null) return "";
+                  return value.length() <= max
+                      ? value
+                      : value.substring(0, max);
+              }
+
+              private boolean hasCameraPermission() {
+                  return checkSelfPermission(Manifest.permission.CAMERA)
+                      == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private boolean hasMicPermission() {
+                  return checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                      == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private boolean hasLocationPermission() {
+                  return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                              == PackageManager.PERMISSION_GRANTED
+                      || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                              == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private void startCamera() {
+                  statusView.setText("CAMERA OPENING");
+
+                  ListenableFuture<ProcessCameraProvider> future =
+                      ProcessCameraProvider.getInstance(this);
+
+                  future.addListener(() -> {
+                      try {
+                          cameraProvider = future.get();
+                          bindCamera();
+                      } catch (ExecutionException | InterruptedException e) {
+                          cameraFailure("CameraX could not start");
+                      } catch (Exception e) {
+                          cameraFailure("Camera could not bind");
+                      }
+                  }, ContextCompat.getMainExecutor(this));
+              }
+
+              private QualitySelector buildQualitySelector() {
+                  List<Quality> ordered;
+
+                  if ("4K".equalsIgnoreCase(resolution)) {
+                      ordered = Arrays.asList(
+                          Quality.UHD,
+                          Quality.FHD,
+                          Quality.HD
+                      );
+                  } else if ("720p".equalsIgnoreCase(resolution)) {
+                      ordered = Arrays.asList(
+                          Quality.HD,
+                          Quality.SD
+                      );
+                  } else {
+                      ordered = Arrays.asList(
+                          Quality.FHD,
+                          Quality.HD,
+                          Quality.UHD
+                      );
+                  }
+
+                  return QualitySelector.fromOrderedList(
+                      ordered,
+                      FallbackStrategy.lowerQualityOrHigherThan(Quality.HD)
+                  );
+              }
+
+              private void bindCamera() {
+                  if (cameraProvider == null) return;
+
+                  cameraProvider.unbindAll();
+
+                  Preview preview = new Preview.Builder().build();
+                  preview.setSurfaceProvider(
+                      previewView.getSurfaceProvider()
+                  );
+
+                  Recorder recorder = new Recorder.Builder()
+                      .setQualitySelector(buildQualitySelector())
+                      .build();
+
+                  videoCapture = VideoCapture.withOutput(recorder);
+
+                  CameraSelector selector = useFront
+                      ? CameraSelector.DEFAULT_FRONT_CAMERA
+                      : CameraSelector.DEFAULT_BACK_CAMERA;
+
+                  try {
+                      closeOverlayEffect();
+
+                      SessionConfig.Builder session =
+                          new SessionConfig.Builder(
+                              Arrays.asList(preview, videoCapture)
+                          );
+
+                      if (burnOverlay) {
+                          overlayEffect = new OverlayEffect(
+                              CameraEffect.PREVIEW | CameraEffect.VIDEO_CAPTURE,
+                              0,
+                              new Handler(Looper.getMainLooper()),
+                              throwable -> runOnUiThread(() ->
+                                  Toast.makeText(
+                                      this,
+                                      "PULSE overlay fallback: " +
+                                          throwable.getMessage(),
+                                      Toast.LENGTH_SHORT
+                                  ).show()
+                              )
+                          );
+
+                          overlayEffect.setOnDrawListener(frame -> {
+                              drawBurnedNewsOverlay(frame);
+                              return true;
+                          });
+
+                          session.addEffect(overlayEffect);
+                      }
+
+                      camera = cameraProvider.bindToLifecycle(
+                          this,
+                          selector,
+                          session.build()
+                      );
+
+                      torchOn = false;
+                      torchButton.setText("TORCH");
+                      formatView.setText(
+                          resolution + " • " + fps + "FPS • " + codec
+                      );
+                      statusView.setText("● REC STBY");
+
+                      syncZoomRange();
+                      syncExposureRange();
+                      refreshLocationUi();
+                      refreshDeviceTelemetry();
+                  } catch (Exception e) {
+                      cameraFailure(
+                          "Selected professional camera mode is unavailable"
+                      );
+                  }
+              }
+
+              private void drawBurnedNewsOverlay(Frame frame) {
+                  try {
+                      Canvas c = frame.getOverlayCanvas();
+                      c.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+
+                      android.graphics.Rect crop = frame.getCropRect();
+                      float left = crop.left;
+                      float top = crop.top;
+                      float right = crop.right;
+                      float bottom = crop.bottom;
+                      float w = crop.width();
+                      float h = crop.height();
+                      float unit = Math.max(1f, Math.min(w, h) / 1000f);
+
+                      Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+                      Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
+                      text.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+
+                      // PULSE LIVE / BREAKING masthead.
+                      fill.setColor(0xE6FF2D20);
+                      c.drawRoundRect(
+                          left + 26*unit,
+                          top + 26*unit,
+                          left + 240*unit,
+                          top + 92*unit,
+                          16*unit,
+                          16*unit,
+                          fill
+                      );
+                      text.setColor(Color.WHITE);
+                      text.setTextSize(34*unit);
+                      c.drawText(
+                          "● PULSE LIVE",
+                          left + 45*unit,
+                          top + 69*unit,
+                          text
+                      );
+
+                      if (!"Minimal".equalsIgnoreCase(overlayPreset)) {
+                          fill.setColor(0xD9000000);
+                          c.drawRoundRect(
+                              left + 255*unit,
+                              top + 26*unit,
+                              left + 470*unit,
+                              top + 92*unit,
+                              16*unit,
+                              16*unit,
+                              fill
+                          );
+                          text.setColor(
+                              "Breaking".equalsIgnoreCase(overlayPreset)
+                                  ? 0xFFFFD24A
+                                  : 0xFF7CEBFF
+                          );
+                          text.setTextSize(30*unit);
+                          c.drawText(
+                              overlayPreset.toUpperCase(Locale.US),
+                              left + 275*unit,
+                              top + 68*unit,
+                              text
+                          );
+                      }
+
+                      // Clock / recording time.
+                      text.setColor(Color.WHITE);
+                      text.setTextSize(25*unit);
+                      text.setTextAlign(Paint.Align.RIGHT);
+                      String tc = showTimecode
+                          ? ("TC " + currentTimecode())
+                          : "";
+                      c.drawText(
+                          clockFormat.format(new Date()) + "  " + tc,
+                          right - 30*unit,
+                          top + 64*unit,
+                          text
+                      );
+                      text.setTextAlign(Paint.Align.LEFT);
+
+                      // Lower third.
+                      float lowerTop = bottom - 205*unit;
+                      fill.setColor(0xD9000000);
+                      c.drawRoundRect(
+                          left + 26*unit,
+                          lowerTop,
+                          right - 26*unit,
+                          bottom - 30*unit,
+                          18*unit,
+                          18*unit,
+                          fill
+                      );
+
+                      text.setColor(0xFF7CEBFF);
+                      text.setTextSize(27*unit);
+                      c.drawText(
+                          reporterName + "  •  " + sourceLabel,
+                          left + 52*unit,
+                          lowerTop + 42*unit,
+                          text
+                      );
+
+                      text.setColor(Color.WHITE);
+                      text.setTextSize(40*unit);
+                      c.drawText(
+                          shortText(headline, 55),
+                          left + 52*unit,
+                          lowerTop + 92*unit,
+                          text
+                      );
+
+                      text.setTextSize(24*unit);
+                      text.setColor(0xFFD6E9ED);
+                      c.drawText(
+                          overlayLocationLine(),
+                          left + 52*unit,
+                          lowerTop + 132*unit,
+                          text
+                      );
+
+                      text.setColor(0xFF9FB9BE);
+                      c.drawText(
+                          overlayTelemetryLine(),
+                          left + 52*unit,
+                          lowerTop + 166*unit,
+                          text
+                      );
+
+                      // Recording indicator baked into exported frames.
+                      if (recording != null) {
+                          fill.setColor(0xEEFF2D20);
+                          c.drawCircle(
+                              right - 53*unit,
+                              bottom - 61*unit,
+                              15*unit,
+                              fill
+                          );
+                          text.setTextAlign(Paint.Align.RIGHT);
+                          text.setColor(Color.WHITE);
+                          text.setTextSize(25*unit);
+                          c.drawText(
+                              "REC",
+                              right - 78*unit,
+                              bottom - 52*unit,
+                              text
+                          );
+                          text.setTextAlign(Paint.Align.LEFT);
+                      }
+
+                  } catch (Exception ignored) {}
+              }
+
+              private String overlayLocationLine() {
+                  StringBuilder s = new StringBuilder();
+
+                  if (currentLocationName != null
+                          && !currentLocationName.isEmpty()) {
+                      s.append(currentLocationName);
+                  } else {
+                      s.append("PHONE LOCATION");
+                  }
+
+                  if (showCoordinates
+                          && !Double.isNaN(currentLat)
+                          && !Double.isNaN(currentLon)) {
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "  •  LAT %.5f  LON %.5f",
+                              currentLat,
+                              currentLon
+                          )
+                      );
+                  }
+
+                  if (showAltitude && !Double.isNaN(currentAlt)) {
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "  ALT %.0fm",
+                              currentAlt
+                          )
+                      );
+                  }
+
+                  if (showAltitude && !Float.isNaN(currentAcc)) {
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "  ACC %.0fm",
+                              currentAcc
+                          )
+                      );
+                  }
+
+                  return s.toString();
+              }
+
+              private String overlayTelemetryLine() {
+                  StringBuilder s = new StringBuilder();
+
+                  if (showSpeedHeading && !Float.isNaN(currentSpeed)) {
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "SPD %.1f km/h",
+                              currentSpeed * 3.6f
+                          )
+                      );
+                  }
+
+                  if (showSpeedHeading && !Float.isNaN(currentHeading)) {
+                      if (s.length() > 0) s.append("  •  ");
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "HDG %.0f°",
+                              currentHeading
+                          )
+                      );
+                  }
+
+                  if (showBattery && batteryPercent >= 0) {
+                      if (s.length() > 0) s.append("  •  ");
+                      s.append("BAT ").append(batteryPercent).append("%");
+                  }
+
+                  if (showStorage && freeStorageGb >= 0) {
+                      if (s.length() > 0) s.append("  •  ");
+                      s.append("FREE ").append(freeStorageGb).append("GB");
+                  }
+
+                  if (showWeather && weatherText != null
+                          && !weatherText.isEmpty()) {
+                      if (s.length() > 0) s.append("  •  ");
+                      s.append(weatherText);
+                  }
+
+                  return s.toString();
+              }
+
+              private void closeOverlayEffect() {
+                  if (overlayEffect != null) {
+                      try {
+                          overlayEffect.close();
+                      } catch (Exception ignored) {}
+                      overlayEffect = null;
+                  }
+              }
+
+              private void startAutomaticLocation() {
+                  if (!autoPhoneLocation || !hasLocationPermission()) {
+                      currentLocationName = hasLocationPermission()
+                          ? "Automatic GPS off"
+                          : "Location permission needed";
+                      refreshLocationUi();
+                      return;
+                  }
+
+                  try {
+                      locationManager =
+                          (LocationManager) getSystemService(
+                              LOCATION_SERVICE
+                          );
+
+                      Location last = null;
+                      try {
+                          last = locationManager.getLastKnownLocation(
+                              LocationManager.GPS_PROVIDER
+                          );
+                      } catch (Exception ignored) {}
+
+                      if (last == null) {
+                          try {
+                              last = locationManager.getLastKnownLocation(
+                                  LocationManager.NETWORK_PROVIDER
+                              );
+                          } catch (Exception ignored) {}
+                      }
+
+                      if (last != null) {
+                          locationListener.onLocationChanged(last);
+                      }
+
+                      try {
+                          locationManager.requestLocationUpdates(
+                              LocationManager.GPS_PROVIDER,
+                              1000L,
+                              0f,
+                              locationListener,
+                              Looper.getMainLooper()
+                          );
+                      } catch (Exception ignored) {}
+
+                      try {
+                          locationManager.requestLocationUpdates(
+                              LocationManager.NETWORK_PROVIDER,
+                              1500L,
+                              0f,
+                              locationListener,
+                              Looper.getMainLooper()
+                          );
+                      } catch (Exception ignored) {}
+
+                  } catch (Exception e) {
+                      currentLocationName = "Phone location unavailable";
+                      refreshLocationUi();
+                  }
+              }
+
+              private void reverseGeocode(double lat, double lon) {
+                  new Thread(() -> {
+                      try {
+                          Geocoder g =
+                              new Geocoder(
+                                  NativeCameraActivity.this,
+                                  Locale.getDefault()
+                              );
+
+                          List<Address> list =
+                              g.getFromLocation(lat, lon, 1);
+
+                          if (list != null && !list.isEmpty()) {
+                              Address a = list.get(0);
+                              StringBuilder name = new StringBuilder();
+
+                              if (a.getSubLocality() != null) {
+                                  name.append(a.getSubLocality());
+                              }
+                              if (a.getLocality() != null) {
+                                  if (name.length() > 0) name.append(", ");
+                                  name.append(a.getLocality());
+                              }
+                              if (a.getAdminArea() != null
+                                      && !a.getAdminArea().equals(a.getLocality())) {
+                                  if (name.length() > 0) name.append(", ");
+                                  name.append(a.getAdminArea());
+                              }
+
+                              if (name.length() > 0) {
+                                  currentLocationName = name.toString();
+                              } else {
+                                  currentLocationName = "Phone GPS locked";
+                              }
+                              runOnUiThread(this::refreshLocationUi);
+                          }
+                      } catch (Exception ignored) {}
+                  }).start();
+              }
+
+              private void refreshLocationUi() {
+                  if (locationView == null) return;
+
+                  StringBuilder s = new StringBuilder();
+                  s.append(currentLocationName == null
+                      ? "Phone location"
+                      : currentLocationName);
+
+                  if (!Double.isNaN(currentLat)
+                          && !Double.isNaN(currentLon)) {
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "  •  %.5f, %.5f",
+                              currentLat,
+                              currentLon
+                          )
+                      );
+                  }
+
+                  if (!Double.isNaN(currentAlt)) {
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "  •  ALT %.0fm",
+                              currentAlt
+                          )
+                      );
+                  }
+
+                  if (!Float.isNaN(currentAcc)) {
+                      s.append(
+                          String.format(
+                              Locale.US,
+                              "  •  ±%.0fm",
+                              currentAcc
+                          )
+                      );
+                  }
+
+                  locationView.setText(s.toString());
+              }
+
+              private void refreshDeviceTelemetry() {
+                  try {
+                      BatteryManager bm =
+                          (BatteryManager) getSystemService(
+                              BATTERY_SERVICE
+                          );
+                      batteryPercent = bm.getIntProperty(
+                          BatteryManager.BATTERY_PROPERTY_CAPACITY
+                      );
+                  } catch (Exception ignored) {}
+
+                  try {
+                      StatFs stat = new StatFs(
+                          Environment
+                              .getExternalStorageDirectory()
+                              .getPath()
+                      );
+                      freeStorageGb =
+                          stat.getAvailableBytes()
+                              / (1024L * 1024L * 1024L);
+                  } catch (Exception ignored) {}
+
+                  if (telemetryView != null) {
+                      telemetryView.setText(
+                          overlayTelemetryLine()
+                      );
+                  }
+              }
+
+              private void updateTimecode() {
+                  if (timecodeView == null) return;
+
+                  timecodeView.setText(
+                      "TC " + currentTimecode()
+                  );
+              }
+
+              private String currentTimecode() {
+                  long ms = recordingStartedAt == 0L
+                      ? 0L
+                      : System.currentTimeMillis()
+                          - recordingStartedAt;
+
+                  long total = ms / 1000L;
+                  long h = total / 3600L;
+                  long m = (total % 3600L) / 60L;
+                  long s = total % 60L;
+
+                  return String.format(
+                      Locale.US,
+                      "%02d:%02d:%02d",
+                      h,
+                      m,
+                      s
+                  );
+              }
+
+              private void cyclePreset() {
+                  String[] values = {
+                      "Breaking", "Live", "Clean News", "Minimal"
+                  };
+                  int idx = 0;
+                  for (int i = 0; i < values.length; i++) {
+                      if (values[i].equalsIgnoreCase(overlayPreset)) {
+                          idx = (i + 1) % values.length;
+                          break;
+                      }
+                  }
+                  overlayPreset = values[idx];
+                  presetButton.setText(
+                      overlayPreset.toUpperCase(Locale.US)
+                  );
+              }
+
+              private void cycleIso() {
+                  int[] values = {100, 200, 400, 800, 1600, 3200};
+                  iso = nextValue(values, iso);
+                  isoButton.setText("ISO\n" + iso);
+              }
+
+              private void cycleShutter() {
+                  int[] values = {45, 90, 180, 360};
+                  shutterAngle = nextValue(values, shutterAngle);
+                  shutterButton.setText(
+                      "SHUTTER\n" + shutterAngle + "°"
+                  );
+              }
+
+              private void cycleWhiteBalance() {
+                  int[] values = {3200, 4300, 5600, 6500, 7500};
+                  kelvin = nextValue(values, kelvin);
+                  wbButton.setText("WB\n" + kelvin + "K");
+              }
+
+              private void cycleTint() {
+                  int[] values = {-20, -10, 0, 10, 20};
+                  tint = nextValue(values, tint);
+                  tintButton.setText("TINT\n" + tint);
+              }
+
+              private void cycleFocus() {
+                  int[] values = {0, 25, 50, 75, 100};
+                  focusPercent = nextValue(values, focusPercent);
+                  focusButton.setText(
+                      focusPercent == 0
+                          ? "FOCUS\nAUTO"
+                          : "FOCUS\n" + focusPercent + "%"
+                  );
+              }
+
+              private int nextValue(int[] values, int current) {
+                  for (int i = 0; i < values.length; i++) {
+                      if (values[i] == current) {
+                          return values[(i + 1) % values.length];
+                      }
+                  }
+                  return values[0];
+              }
+
+              private void syncZoomRange() {
+                  if (camera == null) return;
+
+                  ZoomState state =
+                      camera.getCameraInfo().getZoomState().getValue();
+
+                  if (state == null) return;
+
+                  float min = state.getMinZoomRatio();
+                  float max = state.getMaxZoomRatio();
+                  float current = state.getZoomRatio();
+
+                  int progress = 0;
+                  if (max > min) {
+                      progress = Math.round(
+                          ((current - min) / (max - min)) * 100f
+                      );
+                  }
+                  zoomSeek.setProgress(
+                      Math.max(0, Math.min(100, progress))
+                  );
+              }
+
+              private void applyZoom(int progress) {
+                  if (camera == null) return;
+
+                  ZoomState state =
+                      camera.getCameraInfo().getZoomState().getValue();
+
+                  if (state == null) return;
+
+                  float min = state.getMinZoomRatio();
+                  float max = state.getMaxZoomRatio();
+                  float ratio =
+                      min + ((max - min) * (progress / 100f));
+
+                  camera.getCameraControl().setZoomRatio(ratio);
+              }
+
+              private void syncExposureRange() {
+                  if (camera == null) return;
+
+                  ExposureState state =
+                      camera.getCameraInfo().getExposureState();
+
+                  if (!state.isExposureCompensationSupported()) {
+                      exposureSeek.setEnabled(false);
+                      return;
+                  }
+
+                  exposureSeek.setEnabled(true);
+                  exposureComp = state.getExposureCompensationIndex();
+
+                  int progress = Math.max(
+                      0,
+                      Math.min(12, exposureComp + 6)
+                  );
+                  exposureSeek.setProgress(progress);
+              }
+
+              private void applyExposure(int requested) {
+                  if (camera == null) return;
+
+                  ExposureState state =
+                      camera.getCameraInfo().getExposureState();
+
+                  if (!state.isExposureCompensationSupported()) {
+                      return;
+                  }
+
+                  int lower =
+                      state.getExposureCompensationRange().getLower();
+                  int upper =
+                      state.getExposureCompensationRange().getUpper();
+
+                  int value =
+                      Math.max(lower, Math.min(upper, requested));
+
+                  exposureComp = value;
+                  camera.getCameraControl()
+                      .setExposureCompensationIndex(value);
+              }
+
+              private void flipCamera() {
+                  if (recording != null) {
+                      Toast.makeText(
+                          this,
+                          "Stop recording before switching lens",
+                          Toast.LENGTH_SHORT
+                      ).show();
+                      return;
+                  }
+
+                  useFront = !useFront;
+                  bindCamera();
+              }
+
+              private void toggleTorch() {
+                  if (camera == null
+                          || !camera.getCameraInfo().hasFlashUnit()
+                          || useFront) {
+                      Toast.makeText(
+                          this,
+                          "Torch is not available on this lens",
+                          Toast.LENGTH_SHORT
+                      ).show();
+                      return;
+                  }
+
+                  torchOn = !torchOn;
+                  camera.getCameraControl().enableTorch(torchOn);
+                  torchButton.setText(
+                      torchOn ? "TORCH ON" : "TORCH"
+                  );
+              }
+
+              private MediaStoreOutputOptions createMediaStoreOutputOptions() {
+                  String name =
+                      "PULSE_V171_" + System.currentTimeMillis();
+
+                  ContentValues values = new ContentValues();
+                  values.put(
+                      MediaStore.Video.Media.DISPLAY_NAME,
+                      name
+                  );
+                  values.put(
+                      MediaStore.Video.Media.MIME_TYPE,
+                      "video/mp4"
+                  );
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                      values.put(
+                          MediaStore.Video.Media.RELATIVE_PATH,
+                          "Movies/PULSE"
+                      );
+                  }
+
+                  return new MediaStoreOutputOptions.Builder(
+                      getContentResolver(),
+                      MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                  )
+                  .setContentValues(values)
+                  .build();
+              }
+
+              private FileOutputOptions createFileOutputOptions() {
+                  String name =
+                      "PULSE_V171_" + System.currentTimeMillis();
+
+                  File dir = getExternalFilesDir("PULSE");
+                  if (dir != null && !dir.exists()) dir.mkdirs();
+
+                  File file = new File(
+                      dir == null ? getFilesDir() : dir,
+                      name + ".mp4"
+                  );
+
+                  return new FileOutputOptions.Builder(file).build();
+              }
+
+              private void toggleRecording() {
+                  if (videoCapture == null) {
+                      Toast.makeText(
+                          this,
+                          "Camera is still starting",
+                          Toast.LENGTH_SHORT
+                      ).show();
+                      return;
+                  }
+
+                  if (recording != null) {
+                      recording.stop();
+                      return;
+                  }
+
+                  try {
+                      PendingRecording pending;
+
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                          pending = videoCapture.getOutput()
+                              .prepareRecording(
+                                  this,
+                                  createMediaStoreOutputOptions()
+                              );
+                      } else {
+                          pending = videoCapture.getOutput()
+                              .prepareRecording(
+                                  this,
+                                  createFileOutputOptions()
+                              );
+                      }
+
+                      if (wantMic && hasMicPermission()) {
+                          pending = pending.withAudioEnabled();
+                      }
+
+                      recording = pending.start(
+                          ContextCompat.getMainExecutor(this),
+                          event -> {
+                              if (event instanceof VideoRecordEvent.Start) {
+                                  recordingStartedAt =
+                                      System.currentTimeMillis();
+
+                                  statusView.setText("● REC LIVE");
+                                  statusView.setTextColor(0xFFFF453A);
+                                  recButton.setText("■ STOP");
+                              }
+
+                              if (event instanceof VideoRecordEvent.Finalize) {
+                                  VideoRecordEvent.Finalize fin =
+                                      (VideoRecordEvent.Finalize) event;
+
+                                  recording = null;
+                                  recordingStartedAt = 0L;
+                                  recButton.setText("● REC");
+                                  statusView.setTextColor(0xFFFFD65C);
+
+                                  if (fin.hasError()) {
+                                      statusView.setText(
+                                          "RECORDING ERROR • TRY PHONE"
+                                      );
+                                      Toast.makeText(
+                                          this,
+                                          "Native recording failed",
+                                          Toast.LENGTH_LONG
+                                      ).show();
+                                      return;
+                                  }
+
+                                  Uri uri =
+                                      fin.getOutputResults()
+                                          .getOutputUri();
+
+                                  statusView.setText(
+                                      "SAVED TO GALLERY • PULSE"
+                                  );
+
+                                  Intent data = new Intent();
+                                  data.setData(uri);
+                                  data.putExtra(
+                                      "pulse_meta",
+                                      buildResultMetadata()
+                                  );
+                                  setResult(
+                                      Activity.RESULT_OK,
+                                      data
+                                  );
+
+                                  Toast.makeText(
+                                      this,
+                                      burnOverlay
+                                          ? "Saved to Gallery with PULSE newsroom graphics"
+                                          : "Saved to Gallery",
+                                      Toast.LENGTH_LONG
+                                  ).show();
+
+                                  if (returnToPreviousApp) {
+                                      finish();
+                                  }
+                              }
+                          }
+                      );
+
+                  } catch (Exception e) {
+                      cameraFailure(
+                          "Recording could not start"
+                      );
+                  }
+              }
+
+              private String buildResultMetadata() {
+                  try {
+                      JSONObject o = new JSONObject(configJson);
+                      o.put("actualCameraPath", "Android CameraX V171");
+                      o.put("galleryExport", true);
+                      o.put("burnedNewsOverlay", burnOverlay);
+                      o.put("overlayPreset", overlayPreset);
+                      o.put("locationName", currentLocationName);
+                      o.put("latitude", currentLat);
+                      o.put("longitude", currentLon);
+                      o.put("altitude", currentAlt);
+                      o.put("accuracy", currentAcc);
+                      o.put("speed", currentSpeed);
+                      o.put("heading", currentHeading);
+                      o.put("batteryPercent", batteryPercent);
+                      o.put("freeStorageGb", freeStorageGb);
+                      o.put("weatherText", weatherText);
+                      return o.toString();
+                  } catch (Exception e) {
+                      return configJson;
+                  }
+              }
+
+              private void launchSamsungCamera() {
+                  try {
+                      Intent intent =
+                          new Intent(
+                              MediaStore.ACTION_VIDEO_CAPTURE
+                          );
+
+                      intent.putExtra(
+                          MediaStore.EXTRA_VIDEO_QUALITY,
+                          1
+                      );
+
+                      startActivityForResult(
+                          intent,
+                          SYSTEM_CAMERA
+                      );
+                  } catch (Exception e) {
+                      cameraFailure(
+                          "Phone camera app is unavailable"
+                      );
+                  }
+              }
+
+              private void cameraFailure(String message) {
+                  statusView.setText(
+                      message + " • OPENING PHONE CAMERA"
+                  );
+                  Toast.makeText(
+                      this,
+                      message,
+                      Toast.LENGTH_LONG
+                  ).show();
+
+                  previewView.postDelayed(
+                      this::launchSamsungCamera,
+                      350
+                  );
+              }
+
+              private void finishCamera() {
+                  if (recording != null) {
+                      recording.stop();
+                  } else {
+                      finish();
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(
+                      int requestCode,
+                      int resultCode,
+                      Intent data) {
+                  super.onActivityResult(
+                      requestCode,
+                      resultCode,
+                      data
+                  );
+
+                  if (requestCode == SYSTEM_CAMERA) {
+                      if (resultCode == Activity.RESULT_OK) {
+                          Uri uri =
+                              data == null
+                                  ? null
+                                  : data.getData();
+
+                          Intent result = new Intent();
+                          result.setData(uri);
+                          result.putExtra(
+                              "pulse_meta",
+                              buildResultMetadata()
+                          );
+                          setResult(
+                              Activity.RESULT_OK,
+                              result
+                          );
+                          finish();
+                      } else {
+                          statusView.setText("● REC STBY");
+                      }
+                  }
+              }
+
+              @Override
+              public void onRequestPermissionsResult(
+                      int requestCode,
+                      @NonNull String[] permissions,
+                      @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(
+                      requestCode,
+                      permissions,
+                      grantResults
+                  );
+
+                  if (requestCode == CAMERA_PERMISSIONS) {
+                      if (hasCameraPermission()) {
+                          startCamera();
+                          startAutomaticLocation();
+                      } else {
+                          Intent result = new Intent();
+                          result.putExtra(
+                              "pulse_error",
+                              "Camera permission was denied. Allow Camera in Android Settings."
+                          );
+                          setResult(
+                              Activity.RESULT_CANCELED,
+                              result
+                          );
+                          finish();
+                      }
+                  }
+              }
+
+              @Override
+              protected void onDestroy() {
+                  uiHandler.removeCallbacksAndMessages(null);
+
+                  if (locationManager != null) {
+                      try {
+                          locationManager.removeUpdates(locationListener);
+                      } catch (Exception ignored) {}
+                  }
+
+                  if (recording != null) {
+                      try {
+                          recording.stop();
+                      } catch (Exception ignored) {}
+                      recording = null;
+                  }
+
+                  closeOverlayEffect();
+
+                  if (cameraProvider != null) {
+                      try {
+                          cameraProvider.unbindAll();
+                      } catch (Exception ignored) {}
+                  }
+
+                  super.onDestroy();
+              }
+          }
+          EOF
+
+      - name: Build V171 live newsroom camera APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk PULSE-V171-LIVE-NEWSROOM.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: PULSE-V171-LIVE-NEWSROOM
+          path: PULSE-V171-LIVE-NEWSROOM.apk
+          archive: false
