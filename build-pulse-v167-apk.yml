@@ -1,0 +1,331 @@
+name: Build PULSE V167 APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Create Android wrapper
+        shell: bash
+        run: |
+          mkdir -p app/src/main/java/com/sentongoharuna/pulse
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = 'PULSE'
+          include ':app'
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.10.1' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.sentongoharuna.pulse'
+              compileSdk 36
+
+              defaultConfig {
+                  applicationId 'com.sentongoharuna.pulse'
+                  minSdk 23
+                  targetSdk 36
+                  versionCode 167
+                  versionName '167.0'
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+              <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+              <uses-feature android:name="android.hardware.microphone" android:required="false" />
+              <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+              <application
+                  android:allowBackup="true"
+                  android:label="PULSE V167"
+                  android:theme="@android:style/Theme.Material.NoActionBar"
+                  android:hardwareAccelerated="true"
+                  android:usesCleartextTraffic="false">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="portrait">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/sentongoharuna/pulse/MainActivity.java <<'EOF'
+          package com.sentongoharuna.pulse;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.provider.Settings;
+          import android.view.WindowManager;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.PermissionRequest;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import java.util.ArrayList;
+
+          public class MainActivity extends Activity {
+
+              private static final int WEB_PERMISSION_REQUEST = 100;
+              private static final int LOCATION_REQUEST = 101;
+              private static final int FILE_REQUEST = 102;
+
+              private WebView webView;
+              private PermissionRequest pendingWebPermission;
+              private GeolocationPermissions.Callback geoCallback;
+              private String geoOrigin;
+              private ValueCallback<Uri[]> fileCallback;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+                  webView = new WebView(this);
+                  WebSettings settings = webView.getSettings();
+
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setGeolocationEnabled(true);
+                  settings.setAllowFileAccess(true);
+                  settings.setAllowContentAccess(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+                  webView.setWebViewClient(new WebViewClient());
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(() -> {
+                              ArrayList<String> permissions = new ArrayList<>();
+
+                              for (String resource : request.getResources()) {
+                                  if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource) &&
+                                      checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                                      permissions.add(Manifest.permission.CAMERA);
+                                  }
+
+                                  if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource) &&
+                                      checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                                      permissions.add(Manifest.permission.RECORD_AUDIO);
+                                  }
+                              }
+
+                              if (permissions.isEmpty()) {
+                                  request.grant(request.getResources());
+                              } else {
+                                  pendingWebPermission = request;
+                                  requestPermissions(
+                                      permissions.toArray(new String[0]),
+                                      WEB_PERMISSION_REQUEST
+                                  );
+                              }
+                          });
+                      }
+
+                      @Override
+                      public void onGeolocationPermissionsShowPrompt(
+                              String origin,
+                              GeolocationPermissions.Callback callback) {
+
+                          if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                                  == PackageManager.PERMISSION_GRANTED ||
+                              checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                                  == PackageManager.PERMISSION_GRANTED) {
+                              callback.invoke(origin, true, false);
+                          } else {
+                              geoOrigin = origin;
+                              geoCallback = callback;
+                              requestPermissions(
+                                  new String[]{
+                                      Manifest.permission.ACCESS_FINE_LOCATION,
+                                      Manifest.permission.ACCESS_COARSE_LOCATION
+                                  },
+                                  LOCATION_REQUEST
+                              );
+                          }
+                      }
+
+                      @Override
+                      public boolean onShowFileChooser(
+                              WebView webView,
+                              ValueCallback<Uri[]> callback,
+                              FileChooserParams params) {
+
+                          if (fileCallback != null) {
+                              fileCallback.onReceiveValue(null);
+                          }
+
+                          fileCallback = callback;
+
+                          try {
+                              Intent intent = params.createIntent();
+                              startActivityForResult(intent, FILE_REQUEST);
+                              return true;
+                          } catch (Exception e) {
+                              fileCallback = null;
+                              return false;
+                          }
+                      }
+                  });
+
+                  webView.loadUrl("https://sentongoharuna.github.io/kampala-city-live-/");
+                  setContentView(webView);
+              }
+
+              @Override
+              public void onRequestPermissionsResult(
+                      int requestCode,
+                      String[] permissions,
+                      int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+                  if (requestCode == WEB_PERMISSION_REQUEST && pendingWebPermission != null) {
+                      boolean granted = true;
+
+                      for (int result : grantResults) {
+                          if (result != PackageManager.PERMISSION_GRANTED) {
+                              granted = false;
+                              break;
+                          }
+                      }
+
+                      if (granted) {
+                          pendingWebPermission.grant(pendingWebPermission.getResources());
+                      } else {
+                          pendingWebPermission.deny();
+                      }
+
+                      pendingWebPermission = null;
+                  }
+
+                  if (requestCode == LOCATION_REQUEST && geoCallback != null) {
+                      boolean granted = false;
+
+                      for (int result : grantResults) {
+                          if (result == PackageManager.PERMISSION_GRANTED) {
+                              granted = true;
+                              break;
+                          }
+                      }
+
+                      geoCallback.invoke(geoOrigin, granted, false);
+                      geoCallback = null;
+                      geoOrigin = null;
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(
+                      int requestCode,
+                      int resultCode,
+                      Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+
+                  if (requestCode == FILE_REQUEST && fileCallback != null) {
+                      Uri[] result =
+                          WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                      fileCallback.onReceiveValue(result);
+                      fileCallback = null;
+                  }
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+
+      - name: Build PULSE V167 APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk PULSE-V167.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: PULSE-V167-APK
+          path: PULSE-V167.apk
+          archive: false
