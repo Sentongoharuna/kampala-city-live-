@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 17300
-        versionName = "173.0-direct-source-clean-camera"
+        versionCode = 17301
+        versionName = "173.1-direct-source-clean-camera"
     }
 
     buildTypes {
@@ -42,8 +42,4 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("androidx.camera:camera-effects:$camerax")
     implementation("com.google.android.gms:play-services-location:21.4.0")
-    implementation("androidx.media3:media3-transformer:1.11.0")
-    implementation("androidx.media3:media3-effect:1.11.0")
-    implementation("androidx.media3:media3-muxer:1.11.0")
-    implementation("com.github.pedroSG94.RootEncoder:library:2.8.0")
 }
