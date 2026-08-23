@@ -1,0 +1,118 @@
+name: Fix and Build develop.uganda V176 Field Cinema
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify fixed V176 source
+        run: |
+          set -e
+          test -f DevelopUgandaCameraActivityV176FIX.kt
+          test -d v172-source
+          echo "Fixed V176 source found"
+
+      - name: Install exact V176 compiler fix
+        run: |
+          set -e
+
+          cp DevelopUgandaCameraActivityV176FIX.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("v172-source/app/build.gradle.kts")
+          text = p.read_text(encoding="utf-8")
+          text = text.replace('versionCode = 17600', 'versionCode = 17601')
+          text = text.replace(
+              'versionName = "176.0-field-cinema"',
+              'versionName = "176.1-field-cinema-fixed"'
+          )
+          p.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit exact V176 fix
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V176 fix already committed"
+          else
+            git commit -m "Fix V176 Field Cinema click listener ambiguity"
+            git push
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build fixed V176 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v176-fixed-build.log
+
+      - name: Print useful compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v176-fixed-build.log \
+            | head -240 \
+            || true
+
+      - name: Prepare APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V176-FIELD-CINEMA-FIXED.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V176-FIELD-CINEMA-FIXED
+          path: DEVELOP-UGANDA-V176-FIELD-CINEMA-FIXED.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V176-FIX-BUILD-LOG
+          path: v172-source/v176-fixed-build.log
+          if-no-files-found: warn
+          retention-days: 7
