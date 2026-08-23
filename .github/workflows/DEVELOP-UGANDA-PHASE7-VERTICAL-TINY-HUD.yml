@@ -1,0 +1,637 @@
+name: Build develop.uganda Phase 7 Vertical Tiny Pro Camera
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify source
+        run: |
+          test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack cumulative project
+        run: |
+          rm -rf phase7-build
+          mkdir phase7-build
+
+          unzip -q \
+            PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip \
+            -d phase7-build
+
+          test -f phase7-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          test -f phase7-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt
+
+      - name: Rename visible app to develop.uganda
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("phase7-build/pulse-phase4-production/app/src/main")
+
+          for path in root.rglob("*"):
+              if not path.is_file():
+                  continue
+
+              if path.suffix not in [".kt", ".xml"]:
+                  continue
+
+              try:
+                  text = path.read_text(encoding="utf-8")
+              except:
+                  continue
+
+              original = text
+
+              text = text.replace("PULSE NEWS", "develop.uganda")
+              text = text.replace("PULSE REPORTER", "develop.uganda REPORTER")
+              text = text.replace("PULSE", "develop.uganda")
+              text = text.replace("Pulse", "develop.uganda")
+
+              if path.name == "AndroidManifest.xml":
+                  text = re.sub(
+                      r'android:label="[^"]*"',
+                      'android:label="develop.uganda"',
+                      text
+                  )
+
+              if text != original:
+                  path.write_text(text, encoding="utf-8")
+
+          print("Brand changed to develop.uganda")
+          PY
+
+      - name: Force upright portrait reporting mode
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          manifest = Path(
+              "phase7-build/pulse-phase4-production/"
+              "app/src/main/AndroidManifest.xml"
+          )
+
+          text = manifest.read_text(encoding="utf-8")
+
+          # Keep the main recording experience upright in 9:16.
+          if "screenOrientation" not in text:
+              text = re.sub(
+                  r'(<activity[^>]+android:name="[^"]*(?:MainActivity|LiveActivity)[^"]*"[^>]*)>',
+                  r'\1 android:screenOrientation="portrait">',
+                  text
+              )
+
+          manifest.write_text(text, encoding="utf-8")
+
+          print("Portrait 9:16 mode requested")
+          PY
+
+      - name: Create tiny vertical-column telemetry HUD
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          overlay = Path(
+              "phase7-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/"
+              "ProMonitorOverlayView.kt"
+          )
+
+          text = overlay.read_text(encoding="utf-8")
+          original = text
+
+          # ------------------------------------------------
+          # NO ROTATED/SIDEWAYS LETTERS
+          # Vertical means stacked DOWN the portrait frame.
+          # ------------------------------------------------
+
+          text = re.sub(
+              r'canvas\.rotate\([^;\n]*\)',
+              '/* Phase 7 upright portrait telemetry */',
+              text
+          )
+
+          # ------------------------------------------------
+          # EXTREMELY SMALL TELEMETRY TEXT
+          # ------------------------------------------------
+
+          def tiny(match):
+              prefix = match.group(1)
+              value = float(match.group(2))
+
+              # Compress aggressively.
+              new = max(5.5, min(8.0, value * 0.28))
+
+              number = (
+                  f"{new:.1f}"
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return prefix + number + "f"
+
+          text = re.sub(
+              r'((?:\.?textSize)\s*=\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f',
+              tiny,
+              text
+          )
+
+          def tiny_set(match):
+              start = match.group(1)
+              value = float(match.group(2))
+              end = match.group(3)
+
+              new = max(5.5, min(8.0, value * 0.28))
+
+              number = (
+                  f"{new:.1f}"
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return start + number + "f" + end
+
+          text = re.sub(
+              r'(setTextSize\([^,]+,\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f'
+              r'(\s*\))',
+              tiny_set,
+              text
+          )
+
+          # ------------------------------------------------
+          # REMOVE DARK HUD BACKGROUNDS COMPLETELY
+          # ------------------------------------------------
+
+          dark_values = [
+              "0xFF000000",
+              "0xF5000000",
+              "0xEE000000",
+              "0xE6000000",
+              "0xDD000000",
+              "0xD9000000",
+              "0xCC000000",
+              "0xC0000000",
+              "0xB8000000",
+              "0xB0000000",
+              "0xA6000000",
+              "0xA0000000",
+              "0x98000000",
+              "0x92000000",
+              "0x8C000000",
+              "0x88000000",
+              "0x80000000",
+              "0x78000000"
+          ]
+
+          for colour in dark_values:
+              text = text.replace(
+                  colour,
+                  "0x00000000"
+              )
+
+          # Background/panel paints become transparent.
+          text = re.sub(
+              r'(\b[A-Za-z_][A-Za-z0-9_]*'
+              r'(?:background|panel|sidebar|strip|hudBg|box)'
+              r'[A-Za-z0-9_]*\.color\s*=\s*)'
+              r'[^\n]+',
+              r'\1android.graphics.Color.TRANSPARENT',
+              text,
+              flags=re.IGNORECASE
+          )
+
+          # ------------------------------------------------
+          # REMOVE LARGE SIDE PANEL WIDTH
+          # ------------------------------------------------
+
+          text = re.sub(
+              r'width\s*\*\s*0\.(?:1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])f',
+              'width * 0.015f',
+              text
+          )
+
+          # ------------------------------------------------
+          # COMPRESS SPACING
+          # ------------------------------------------------
+
+          def compress(match):
+              prefix = match.group(1)
+              value = float(match.group(2))
+
+              new = max(6.0, value * 0.32)
+
+              number = (
+                  f"{new:.1f}"
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return prefix + number + "f"
+
+          text = re.sub(
+              r'(\b[A-Za-z_][A-Za-z0-9_]*'
+              r'(?:Spacing|Gap|LineHeight|RowHeight)'
+              r'\s*=\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f',
+              compress,
+              text,
+              flags=re.IGNORECASE
+          )
+
+          # ------------------------------------------------
+          # MOVE TELEMETRY TOWARD A NARROW LEFT COLUMN
+          # ------------------------------------------------
+
+          # Canvas text that used large percentage X positions
+          # is pulled toward the safe left edge.
+          text = re.sub(
+              r'width\s*\*\s*0\.(?:0[5-9]|1[0-9]|2[0-9]|3[0-9])f',
+              'width * 0.025f',
+              text
+          )
+
+          # ------------------------------------------------
+          # PROFESSIONAL COLOUR SYSTEM
+          # ------------------------------------------------
+
+          GOLD = "android.graphics.Color.rgb(255,193,7)"
+          RED = "android.graphics.Color.rgb(255,45,45)"
+          WHITE = "android.graphics.Color.rgb(255,255,255)"
+          CYAN = "android.graphics.Color.rgb(0,229,255)"
+          BLUE = "android.graphics.Color.rgb(64,196,255)"
+          GREEN = "android.graphics.Color.rgb(72,220,110)"
+
+          colour_rules = {
+              "brand": GOLD,
+              "develop": GOLD,
+              "title": WHITE,
+              "reporter": WHITE,
+
+              "rec": RED,
+              "record": RED,
+
+              "gps": CYAN,
+              "lat": CYAN,
+              "lon": CYAN,
+              "coord": CYAN,
+              "alt": CYAN,
+
+              "weather": BLUE,
+              "wind": BLUE,
+              "temp": BLUE,
+              "humidity": BLUE,
+              "wx": BLUE,
+
+              "mic": GREEN,
+              "battery": GREEN,
+              "storage": GREEN,
+              "network": GREEN,
+              "signal": GREEN,
+              "status": GREEN,
+
+              "camera": GOLD,
+              "mode": GOLD,
+              "fps": GOLD,
+              "hdr": GOLD,
+              "hevc": GOLD,
+              "codec": GOLD,
+              "uhd": GOLD
+          }
+
+          for key, colour in colour_rules.items():
+
+              pattern = (
+                  r'(\b[A-Za-z_][A-Za-z0-9_]*'
+                  + re.escape(key) +
+                  r'[A-Za-z0-9_]*\.color\s*=\s*)'
+                  r'[^\n]+'
+              )
+
+              text = re.sub(
+                  pattern,
+                  lambda m: m.group(1) + colour,
+                  text,
+                  flags=re.IGNORECASE
+              )
+
+          # ------------------------------------------------
+          # BRAND / REPORT TEXT
+          # ------------------------------------------------
+
+          text = text.replace(
+              '"CITIZEN REPORT"',
+              '"CITIZEN REPORT"'
+          )
+
+          text = text.replace(
+              '"develop.uganda REPORTER"',
+              '"REPORTER"'
+          )
+
+          # Text shadow only; NO background box.
+          text = text.replace(
+              "setShadowLayer(0f",
+              "setShadowLayer(1.5f"
+          )
+
+          overlay.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print("Tiny colour telemetry column applied")
+          PY
+
+      - name: Give camera interface a professional REC look
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path(
+              "phase7-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse"
+          )
+
+          for path in root.rglob("*.kt"):
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              original = text
+
+              # Strong professional recording terminology.
+              text = text.replace(
+                  '"RECORD"',
+                  '"● REC"'
+              )
+
+              text = text.replace(
+                  '"STOP RECORD"',
+                  '"■ STOP"'
+              )
+
+              text = text.replace(
+                  '"STOP"',
+                  '"■ STOP"'
+              )
+
+              # Keep existing working professional controls.
+              # Do not replace their functionality.
+              text = text.replace(
+                  '"AUTO"',
+                  '"AUTO"'
+              )
+
+              text = text.replace(
+                  '"PRO"',
+                  '"PRO"'
+              )
+
+              text = text.replace(
+                  '"TORCH"',
+                  '"TORCH"'
+              )
+
+              text = text.replace(
+                  '"FLIP"',
+                  '"FLIP"'
+              )
+
+              text = text.replace(
+                  '"DATA"',
+                  '"DATA"'
+              )
+
+              if text != original:
+                  path.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
+
+          print("Professional REC terminology applied")
+          PY
+
+      - name: Preserve professional camera capability labels
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path(
+              "phase7-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse"
+          )
+
+          terms = [
+              "ISO",
+              "SHUTTER",
+              "WB",
+              "FOCUS",
+              "EXPOSURE",
+              "ZOOM",
+              "FPS",
+              "HDR",
+              "HEVC",
+              "UHD",
+              "4K",
+              "STAB",
+              "MIC",
+              "TORCH"
+          ]
+
+          found = set()
+
+          for path in root.rglob("*.kt"):
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              ).upper()
+
+              for term in terms:
+                  if term in text:
+                      found.add(term)
+
+          print(
+              "Existing professional capabilities:",
+              ", ".join(sorted(found))
+          )
+
+          # We intentionally do not create fake manual controls.
+          # Existing controls remain functional, and hardware-
+          # dependent controls remain device/camera dependent.
+          PY
+
+      - name: Add Phase 7 continuity record
+        run: |
+          cat >> \
+          phase7-build/pulse-phase4-production/PHASE-CONTINUITY.md \
+          <<'EOF'
+
+          ## Phase 7 — develop.uganda Vertical Tiny Pro Camera
+
+          Phase 7 is cumulative.
+
+          Public name:
+          develop.uganda
+
+          Primary recording format:
+          upright 9:16 portrait.
+
+          HUD design:
+          very small professional text
+          arranged as a narrow vertical column.
+
+          Letters remain upright.
+          Text is not rotated sideways.
+
+          No dark telemetry background.
+          No black sidebar.
+          No telemetry strip.
+          No large panel.
+
+          Colour system:
+
+          GOLD
+          develop.uganda and camera mode.
+
+          RED
+          REC and recording warning.
+
+          WHITE
+          reporter, date, time and general metadata.
+
+          CYAN
+          GPS, latitude, longitude and altitude.
+
+          LIGHT BLUE
+          weather, humidity and wind.
+
+          GREEN
+          microphone, network, battery and storage.
+
+          All available reporting telemetry remains preserved:
+
+          develop.uganda identity
+          reporter
+          citizen report
+          REC status
+          timecode
+          date
+          time
+          timezone
+          location
+          latitude
+          longitude
+          altitude
+          GPS accuracy
+          weather
+          temperature
+          humidity
+          wind
+          microphone
+          audio level
+          network
+          cellular state
+          battery
+          free storage
+          camera mode
+          UHD / 4K
+          FPS
+          HDR
+          HEVC
+          stabilization
+
+          The live camera retains the existing working
+          professional controls and receives a stronger
+          professional REC appearance.
+
+          Hardware-dependent functions such as manual ISO,
+          shutter speed, manual focus, advanced frame rates
+          and HDR modes must only operate when supported by
+          the Android device camera hardware.
+          EOF
+
+      - name: Verify project
+        run: |
+          test -f \
+          phase7-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/MainActivity.kt
+
+          test -f \
+          phase7-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+
+          test -f \
+          phase7-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt
+
+          grep -q "Phase 7" \
+          phase7-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+      - name: Build develop.uganda APK
+        working-directory: phase7-build/pulse-phase4-production
+        run: |
+          gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Prepare APK
+        run: |
+          cp \
+          phase7-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk \
+          DEVELOP-UGANDA-PHASE7-VERTICAL-TINY-PRO-CAMERA.apk
+
+          ls -lh \
+          DEVELOP-UGANDA-PHASE7-VERTICAL-TINY-PRO-CAMERA.apk
+
+      - name: Package source
+        run: |
+          cd phase7-build
+
+          zip -qr \
+          ../DEVELOP-UGANDA-PHASE7-VERTICAL-TINY-PRO-CAMERA-SOURCE.zip \
+          pulse-phase4-production
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-PHASE7-VERTICAL-TINY-PRO-CAMERA
+          path: DEVELOP-UGANDA-PHASE7-VERTICAL-TINY-PRO-CAMERA.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-PHASE7-VERTICAL-TINY-PRO-CAMERA-SOURCE
+          path: DEVELOP-UGANDA-PHASE7-VERTICAL-TINY-PRO-CAMERA-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
