@@ -1,0 +1,1018 @@
+name: Build develop.uganda Phase 9 Tiny HUD Pro Camera
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify Phase 4 cumulative source
+        run: |
+          test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+          echo "Phase 4 source found"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack cumulative Android project
+        run: |
+          rm -rf phase9-build
+          mkdir phase9-build
+
+          unzip -q \
+            PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip \
+            -d phase9-build
+
+          PROJECT="phase9-build/pulse-phase4-production"
+
+          test -f "$PROJECT/app/build.gradle.kts"
+          test -f "$PROJECT/app/src/main/AndroidManifest.xml"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/MainActivity.kt"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt"
+
+          echo "Project unpacked correctly"
+
+      - name: Rename visible app to develop.uganda safely
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path(
+              "phase9-build/pulse-phase4-production/app/src/main"
+          )
+
+          # ----------------------------------------
+          # XML resources
+          # ----------------------------------------
+
+          for path in root.rglob("*.xml"):
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              original = text
+
+              text = re.sub(
+                  r'(<string\s+name="app_name"[^>]*>).*?(</string>)',
+                  r'\1develop.uganda\2',
+                  text,
+                  flags=re.DOTALL
+              )
+
+              text = text.replace(
+                  ">PULSE<",
+                  ">develop.uganda<"
+              )
+
+              text = text.replace(
+                  ">Pulse<",
+                  ">develop.uganda<"
+              )
+
+              if text != original:
+                  path.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
+
+          # ----------------------------------------
+          # Kotlin strings only.
+          # DO NOT rename Kotlin identifiers.
+          # ----------------------------------------
+
+          string_re = re.compile(
+              r'"(?:\\.|[^"\\])*"'
+          )
+
+          targets = [
+              root / "java/com/sentongoharuna/pulse/MainActivity.kt",
+              root / "java/com/sentongoharuna/pulse/LiveActivity.kt",
+              root / "java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt",
+          ]
+
+          for path in targets:
+
+              if not path.exists():
+                  continue
+
+              text = path.read_text(
+                  encoding="utf-8"
+              )
+
+              def replace_visible_string(match):
+
+                  token = match.group(0)
+                  value = token[1:-1]
+
+                  value = value.replace(
+                      "PULSE NEWS",
+                      "develop.uganda"
+                  )
+
+                  value = value.replace(
+                      "PULSE REPORTER",
+                      "develop.uganda"
+                  )
+
+                  value = value.replace(
+                      "PULSE",
+                      "develop.uganda"
+                  )
+
+                  return '"' + value + '"'
+
+              text = string_re.sub(
+                  replace_visible_string,
+                  text
+              )
+
+              path.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          print("Visible branding safely changed to develop.uganda")
+          PY
+
+      - name: Create Phase 9 tiny straight telemetry
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          overlay = Path(
+              "phase9-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/"
+              "ProMonitorOverlayView.kt"
+          )
+
+          text = overlay.read_text(
+              encoding="utf-8"
+          )
+
+          original = text
+
+          # ==================================================
+          # 1. STRAIGHT UPRIGHT WORDS
+          # Remove sideways / rotated text.
+          # ==================================================
+
+          text = re.sub(
+              r'canvas\.rotate\s*\([^)]*\)',
+              'canvas.rotate(0f)',
+              text
+          )
+
+          # ==================================================
+          # 2. EXTREMELY SMALL TELEMETRY
+          # ==================================================
+
+          def shrink_text(match):
+
+              prefix = match.group(1)
+              old = float(match.group(2))
+
+              new = max(
+                  6.0,
+                  min(
+                      9.0,
+                      old * 0.30
+                  )
+              )
+
+              number = (
+                  f"{new:.1f}"
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return prefix + number + "f"
+
+          text = re.sub(
+              r'((?:\.?textSize)\s*=\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f',
+              shrink_text,
+              text
+          )
+
+          # Paint.setTextSize / TextView.setTextSize
+          def shrink_set_text(match):
+
+              before = match.group(1)
+              old = float(match.group(2))
+              after = match.group(3)
+
+              new = max(
+                  6.0,
+                  min(
+                      9.0,
+                      old * 0.30
+                  )
+              )
+
+              number = (
+                  f"{new:.1f}"
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return before + number + "f" + after
+
+          text = re.sub(
+              r'(setTextSize\([^,]+,\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f'
+              r'(\s*\))',
+              shrink_set_text,
+              text
+          )
+
+          # ==================================================
+          # 3. REMOVE BLACK / DARK TELEMETRY BACKGROUNDS
+          # ==================================================
+
+          dark_values = [
+              "0xFF000000",
+              "0xFA000000",
+              "0xF5000000",
+              "0xF0000000",
+              "0xEE000000",
+              "0xE6000000",
+              "0xE0000000",
+              "0xDD000000",
+              "0xD9000000",
+              "0xD0000000",
+              "0xCC000000",
+              "0xC8000000",
+              "0xC0000000",
+              "0xB8000000",
+              "0xB0000000",
+              "0xA6000000",
+              "0xA0000000",
+              "0x98000000",
+              "0x92000000",
+              "0x90000000",
+              "0x8C000000",
+              "0x88000000",
+              "0x80000000",
+              "0x78000000",
+              "0x70000000"
+          ]
+
+          for colour in dark_values:
+              text = text.replace(
+                  colour,
+                  "0x00000000"
+              )
+
+          # Color.argb(alpha, 0, 0, 0)
+          text = re.sub(
+              r'(?:android\.graphics\.)?Color\.argb'
+              r'\(\s*\d+\s*,\s*0\s*,\s*0\s*,\s*0\s*\)',
+              'android.graphics.Color.TRANSPARENT',
+              text
+          )
+
+          # Named panel / strip / sidebar paints
+          text = re.sub(
+              r'(\b[A-Za-z_][A-Za-z0-9_]*'
+              r'(?:background|Background|panel|Panel|'
+              r'sidebar|Sidebar|strip|Strip|'
+              r'box|Box|backdrop|Backdrop|'
+              r'hudBg|HudBg)'
+              r'[A-Za-z0-9_]*\.color\s*=\s*)'
+              r'[^\n]+',
+              r'\1android.graphics.Color.TRANSPARENT',
+              text
+          )
+
+          # ==================================================
+          # 4. COMPRESS LARGE TELEMETRY WIDTH
+          # ==================================================
+
+          text = re.sub(
+              r'width\s*\*\s*0\.(?:4[0-9]|3[0-9]|2[5-9])f',
+              'width * 0.14f',
+              text
+          )
+
+          text = re.sub(
+              r'width\s*\*\s*0\.(?:2[0-4]|1[8-9])f',
+              'width * 0.12f',
+              text
+          )
+
+          # ==================================================
+          # 5. COLOUR TELEMETRY BY PURPOSE
+          # ==================================================
+
+          GOLD = "android.graphics.Color.rgb(255,193,7)"
+          RED = "android.graphics.Color.rgb(255,45,45)"
+          CYAN = "android.graphics.Color.rgb(0,229,255)"
+          BLUE = "android.graphics.Color.rgb(64,196,255)"
+          GREEN = "android.graphics.Color.rgb(80,220,120)"
+          WHITE = "android.graphics.Color.rgb(255,255,255)"
+
+          colour_rules = {
+              "brand": GOLD,
+              "develop": GOLD,
+              "camera": GOLD,
+              "mode": GOLD,
+              "fps": GOLD,
+              "hdr": GOLD,
+              "hevc": GOLD,
+              "uhd": GOLD,
+              "codec": GOLD,
+
+              "rec": RED,
+              "record": RED,
+
+              "gps": CYAN,
+              "lat": CYAN,
+              "lon": CYAN,
+              "coord": CYAN,
+              "alt": CYAN,
+
+              "weather": BLUE,
+              "wx": BLUE,
+              "wind": BLUE,
+              "temp": BLUE,
+              "humidity": BLUE,
+
+              "mic": GREEN,
+              "battery": GREEN,
+              "storage": GREEN,
+              "network": GREEN,
+              "signal": GREEN,
+              "status": GREEN,
+
+              "reporter": WHITE,
+              "title": WHITE,
+          }
+
+          for key, colour in colour_rules.items():
+
+              pattern = (
+                  r'(\b[A-Za-z_][A-Za-z0-9_]*'
+                  + re.escape(key)
+                  + r'[A-Za-z0-9_]*\.color\s*=\s*)'
+                  r'[^\n]+'
+              )
+
+              text = re.sub(
+                  pattern,
+                  lambda m:
+                      m.group(1) + colour,
+                  text,
+                  flags=re.IGNORECASE
+              )
+
+          # ==================================================
+          # 6. SMALL TEXT SHADOW ONLY
+          # No background rectangle.
+          # ==================================================
+
+          text = text.replace(
+              "setShadowLayer(0f",
+              "setShadowLayer(1.5f"
+          )
+
+          if text == original:
+              raise SystemExit(
+                  "Phase 9 telemetry source was not changed"
+              )
+
+          overlay.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print("Phase 9 tiny straight telemetry applied")
+          PY
+
+      - name: Preserve all telemetry labels
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          overlay = Path(
+              "phase9-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/"
+              "ProMonitorOverlayView.kt"
+          )
+
+          text = overlay.read_text(
+              encoding="utf-8",
+              errors="ignore"
+          ).upper()
+
+          labels = [
+              "REPORT",
+              "LAT",
+              "LON",
+              "ALT",
+              "MIC",
+              "BAT",
+              "NET",
+              "UHD",
+              "FPS",
+              "HDR",
+              "HEVC",
+              "REC"
+          ]
+
+          found = [
+              item
+              for item in labels
+              if item in text
+          ]
+
+          print(
+              "Telemetry labels preserved:",
+              ", ".join(found)
+          )
+          PY
+
+      - name: Add Phase 9 professional camera look
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path(
+              "phase9-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/"
+              "LiveActivity.kt"
+          )
+
+          text = path.read_text(
+              encoding="utf-8"
+          )
+
+          call = "applyPhase9ProCameraLook()"
+
+          if call not in text:
+
+              marker = "super.onCreate(savedInstanceState)"
+
+              if marker not in text:
+                  raise SystemExit(
+                      "LiveActivity onCreate marker not found"
+                  )
+
+              text = text.replace(
+                  marker,
+                  marker + "\n        " + call,
+                  1
+              )
+
+              methods = r'''
+
+          private fun applyPhase9ProCameraLook() {
+
+              window.decorView.postDelayed({
+
+                  stylePhase9CameraControls(
+                      window.decorView
+                  )
+
+                  addPhase9ProStatus()
+
+              }, 500L)
+          }
+
+          private fun stylePhase9CameraControls(
+              view: android.view.View
+          ) {
+
+              if (
+                  view is android.widget.TextView
+              ) {
+
+                  val label =
+                      view.text
+                          ?.toString()
+                          ?.trim()
+                          ?.uppercase()
+                          ?: ""
+
+                  val controls =
+                      setOf(
+                          "REPORT",
+                          "PRO",
+                          "AUTO",
+                          "PHOTO",
+                          "LIVE",
+                          "DATA",
+                          "FLIP",
+                          "TORCH",
+                          "RECORD",
+                          "● REC",
+                          "STOP",
+                          "■ STOP"
+                      )
+
+                  if (
+                      label in controls
+                      || label.contains("REC")
+                  ) {
+
+                      val textColour =
+                          when {
+
+                              label.contains("REC") ||
+                              label.contains("STOP") ->
+
+                                  android.graphics.Color.rgb(
+                                      255,
+                                      255,
+                                      255
+                                  )
+
+                              label == "PRO" ->
+
+                                  android.graphics.Color.rgb(
+                                      255,
+                                      193,
+                                      7
+                                  )
+
+                              label == "DATA" ->
+
+                                  android.graphics.Color.rgb(
+                                      0,
+                                      229,
+                                      255
+                                  )
+
+                              label == "LIVE" ->
+
+                                  android.graphics.Color.rgb(
+                                      80,
+                                      220,
+                                      120
+                                  )
+
+                              else ->
+
+                                  android.graphics.Color.WHITE
+                          }
+
+                      view.setTextColor(
+                          textColour
+                      )
+
+                      view.textSize =
+                          if (
+                              label.contains("REC") ||
+                              label.contains("STOP")
+                          ) {
+                              12f
+                          } else {
+                              10f
+                          }
+
+                      view.typeface =
+                          android.graphics.Typeface.create(
+                              "sans-serif-medium",
+                              android.graphics.Typeface.NORMAL
+                          )
+
+                      view.letterSpacing =
+                          0.04f
+
+                      val shape =
+                          android.graphics.drawable.GradientDrawable()
+
+                      shape.shape =
+                          android.graphics.drawable.GradientDrawable.RECTANGLE
+
+                      shape.cornerRadius =
+                          phase9Dp(16)
+                              .toFloat()
+
+                      if (
+                          label.contains("REC") ||
+                          label.contains("STOP")
+                      ) {
+
+                          shape.setColor(
+                              android.graphics.Color.rgb(
+                                  225,
+                                  38,
+                                  38
+                              )
+                          )
+
+                      } else {
+
+                          shape.setColor(
+                              android.graphics.Color.argb(
+                                  95,
+                                  8,
+                                  12,
+                                  18
+                              )
+                          )
+
+                          shape.setStroke(
+                              phase9Dp(1),
+                              android.graphics.Color.argb(
+                                  150,
+                                  210,
+                                  220,
+                                  230
+                              )
+                          )
+                      }
+
+                      view.background =
+                          shape
+
+                      view.setPadding(
+                          phase9Dp(12),
+                          phase9Dp(6),
+                          phase9Dp(12),
+                          phase9Dp(6)
+                      )
+                  }
+              }
+
+              if (
+                  view is android.view.ViewGroup
+              ) {
+
+                  for (
+                      index in 0 until view.childCount
+                  ) {
+
+                      stylePhase9CameraControls(
+                          view.getChildAt(index)
+                      )
+                  }
+              }
+          }
+
+          private fun addPhase9ProStatus() {
+
+              val decor =
+                  window.decorView
+
+              if (
+                  decor.findViewWithTag<android.view.View>(
+                      "phase9ProStatus"
+                  ) != null
+              ) {
+                  return
+              }
+
+              val holder =
+                  android.widget.LinearLayout(
+                      this
+                  )
+
+              holder.tag =
+                  "phase9ProStatus"
+
+              holder.orientation =
+                  android.widget.LinearLayout.VERTICAL
+
+              holder.setBackgroundColor(
+                  android.graphics.Color.TRANSPARENT
+              )
+
+              holder.isClickable =
+                  false
+
+              holder.isFocusable =
+                  false
+
+              holder.setPadding(
+                  phase9Dp(12),
+                  phase9Dp(4),
+                  phase9Dp(8),
+                  phase9Dp(4)
+              )
+
+              holder.translationY =
+                  phase9Dp(30)
+                      .toFloat()
+
+              val top =
+                  android.widget.TextView(
+                      this
+                  )
+
+              top.text =
+                  "develop.uganda   PRO CAM   ● REC READY"
+
+              top.setTextColor(
+                  android.graphics.Color.rgb(
+                      255,
+                      193,
+                      7
+                  )
+              )
+
+              top.textSize =
+                  9f
+
+              top.typeface =
+                  android.graphics.Typeface.create(
+                      "sans-serif-medium",
+                      android.graphics.Typeface.BOLD
+                  )
+
+              top.setShadowLayer(
+                  2f,
+                  1f,
+                  1f,
+                  android.graphics.Color.BLACK
+              )
+
+              val technical =
+                  android.widget.TextView(
+                      this
+                  )
+
+              technical.text =
+                  "4K • 30FPS • HDR • HEVC • STAB   ISO • SHUTTER • WB • AF • EXP"
+
+              technical.setTextColor(
+                  android.graphics.Color.rgb(
+                      0,
+                      229,
+                      255
+                  )
+              )
+
+              technical.textSize =
+                  7f
+
+              technical.setShadowLayer(
+                  2f,
+                  1f,
+                  1f,
+                  android.graphics.Color.BLACK
+              )
+
+              holder.addView(
+                  top
+              )
+
+              holder.addView(
+                  technical
+              )
+
+              addContentView(
+                  holder,
+                  android.view.ViewGroup.LayoutParams(
+                      android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                      android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                  )
+              )
+          }
+
+          private fun phase9Dp(
+              value: Int
+          ): Int {
+
+              return (
+                  value *
+                  resources.displayMetrics.density
+              ).toInt()
+          }
+          '''
+
+              pos = text.rfind("}")
+
+              if pos == -1:
+                  raise SystemExit(
+                      "LiveActivity closing brace not found"
+                  )
+
+              text = (
+                  text[:pos]
+                  + methods
+                  + "\n"
+                  + text[pos:]
+              )
+
+              path.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          print("Phase 9 professional camera styling applied")
+          PY
+
+      - name: Strengthen REC labels safely
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path(
+              "phase9-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse"
+          )
+
+          string_re = re.compile(
+              r'"(?:\\.|[^"\\])*"'
+          )
+
+          for path in root.rglob("*.kt"):
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              def replace_label(match):
+
+                  token = match.group(0)
+                  value = token[1:-1]
+
+                  if value == "RECORD":
+                      return '"● REC"'
+
+                  if value == "STOP RECORD":
+                      return '"■ STOP"'
+
+                  return token
+
+              text = string_re.sub(
+                  replace_label,
+                  text
+              )
+
+              path.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          print("REC labels updated safely")
+          PY
+
+      - name: Add Phase 9 continuity record
+        run: |
+          cat >> \
+          phase9-build/pulse-phase4-production/PHASE-CONTINUITY.md \
+          <<'EOF'
+
+          ## Phase 9 — develop.uganda Tiny HUD Pro Camera
+
+          Phase 9 is cumulative.
+
+          Visible public brand:
+          develop.uganda
+
+          Recorded video requirements:
+
+          - straight upright words
+          - no sideways telemetry
+          - no vertical rotated text
+          - no black telemetry background
+          - no large dark telemetry strip
+          - very small compressed reporting text
+          - all available telemetry retained
+          - professional colour separation
+
+          Colour hierarchy:
+
+          GOLD:
+          develop.uganda, camera mode,
+          resolution, FPS, HDR and codec.
+
+          RED:
+          REC and recording status.
+
+          WHITE:
+          reporter, location, date,
+          time and normal metadata.
+
+          CYAN:
+          GPS, latitude, longitude,
+          altitude and technical telemetry.
+
+          LIGHT BLUE:
+          temperature, weather,
+          humidity and wind.
+
+          GREEN:
+          microphone, network,
+          battery, storage and healthy status.
+
+          Live camera:
+
+          - professional REC appearance
+          - compact control styling
+          - PRO CAM identification
+          - 4K / FPS / HDR / HEVC status
+          - ISO / shutter / WB / AF / EXP control labels
+          - existing working camera functions preserved
+
+          Camera hardware-specific manual functions
+          remain dependent on Android camera support.
+          EOF
+
+      - name: Verify Phase 9 modifications
+        run: |
+          PROJECT="phase9-build/pulse-phase4-production"
+
+          test -f \
+            "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+
+          test -f \
+            "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt"
+
+          grep -q \
+            "applyPhase9ProCameraLook" \
+            "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+
+          grep -q \
+            "Phase 9" \
+            "$PROJECT/PHASE-CONTINUITY.md"
+
+          echo "Phase 9 verification complete"
+
+      - name: Build Phase 9 APK
+        working-directory: phase9-build/pulse-phase4-production
+        run: |
+          set -o pipefail
+
+          gradle \
+            --no-daemon \
+            :app:assembleDebug \
+            --stacktrace \
+            2>&1 | tee phase9-build.log
+
+      - name: Print useful errors if build fails
+        if: failure()
+        working-directory: phase9-build/pulse-phase4-production
+        run: |
+          echo "========== PHASE 9 BUILD ERRORS =========="
+
+          grep -Ei \
+            "(^e:|error:|unresolved reference|expecting|type mismatch|FAILURE:)" \
+            phase9-build.log \
+            | head -150 \
+            || true
+
+      - name: Prepare Phase 9 APK
+        run: |
+          cp \
+            phase9-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk \
+            PHASE9-DEVELOP-UGANDA-TINY-HUD-PRO-CAMERA.apk
+
+          ls -lh \
+            PHASE9-DEVELOP-UGANDA-TINY-HUD-PRO-CAMERA.apk
+
+      - name: Package Phase 9 source
+        run: |
+          cd phase9-build
+
+          zip -qr \
+            ../PHASE9-DEVELOP-UGANDA-TINY-HUD-PRO-CAMERA-SOURCE.zip \
+            pulse-phase4-production
+
+      - name: Upload Phase 9 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PHASE9-DEVELOP-UGANDA-TINY-HUD-PRO-CAMERA
+          path: PHASE9-DEVELOP-UGANDA-TINY-HUD-PRO-CAMERA.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Phase 9 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: PHASE9-DEVELOP-UGANDA-TINY-HUD-PRO-CAMERA-SOURCE
+          path: PHASE9-DEVELOP-UGANDA-TINY-HUD-PRO-CAMERA-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
