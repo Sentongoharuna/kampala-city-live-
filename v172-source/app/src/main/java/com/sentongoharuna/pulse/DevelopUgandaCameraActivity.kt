@@ -85,6 +85,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     private lateinit var torchButton: Button
     private lateinit var zoomSeek: SeekBar
     private lateinit var exposureSeek: SeekBar
+    private lateinit var sceneButton: Button
+    private lateinit var lookButton: Button
+    private lateinit var qualityButton: Button
 
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
@@ -93,6 +96,33 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     private var overlayEffect: OverlayEffect? = null
     private var useFront = false
     private var torchOn = false
+
+    private val sceneModes = listOf(
+        "REPORTER",
+        "NEWS",
+        "CINEMA",
+        "MOVIE",
+        "OUTDOOR",
+        "INDOOR",
+        "NIGHT"
+    )
+    private val lookModes = listOf(
+        "CLEAN",
+        "WARM",
+        "COOL",
+        "TEAL",
+        "GOLD",
+        "NIGHT"
+    )
+    private val qualityModes = listOf(
+        "UHD",
+        "FHD",
+        "HD"
+    )
+    private var sceneIndex = 0
+    private var lookIndex = 0
+    private var qualityIndex = 0
+    private var sceneExposureTarget = 0
 
     private val weather = WeatherRepository()
     private lateinit var telemetryRecorder: TelemetryRecorder
@@ -207,130 +237,118 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             )
         )
 
-        // Tiny transparent top telemetry. No black strip, no dark panel.
-        val top = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(4))
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-
-        val line1 = row()
-
+        // Internal state views. The visible HUD is rendered by OverlayEffect so
+        // preview and saved video share the same telemetry layout.
         brandView = hud(
             "develop.uganda",
-            11f,
+            10f,
             0xFFFFC21A.toInt(),
             bold = true
         )
-
         statusView = hud(
             "STBY",
             8f,
             0xFFFF5A52.toInt(),
             bold = true
-        ).apply {
+        )
+        timecodeView = hud(
+            "TC 00:00:00",
+            7f,
+            Color.WHITE
+        )
+        formatView = hud(
+            "UHD • DEVICE FPS",
+            7f,
+            0xFFFFC21A.toInt()
+        )
+        locationView = hud(
+            "GPS acquiring…",
+            6f,
+            0xFF7FE8FF.toInt()
+        )
+        weatherView = hud(
+            "WX --",
+            6f,
+            0xFF8ECFFF.toInt()
+        )
+        systemView = hud(
+            "MIC READY • NET -- • BAT -- • FREE --",
+            6f,
+            0xFF76E39A.toInt()
+        )
+
+        // ORBIT DECK: a custom floating control system. No large black panel.
+        val bottomDeck = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                dp(10),
+                dp(4),
+                dp(10),
+                dp(10)
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+
+        val modeRow = row().apply {
             gravity = Gravity.CENTER
         }
 
-        timecodeView = hud(
-            "TC 00:00:00",
-            7.2f,
-            Color.WHITE
-        ).apply {
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
-        }
-
-        line1.addView(brandView, weight())
-        line1.addView(statusView, wrap(52, 26))
-        line1.addView(timecodeView, wrap(92, 26))
-        top.addView(line1)
-
-        formatView = hud(
-            "UHD TARGET • FPS DEVICE • HDR/HEVC DEVICE",
-            6.6f,
+        sceneButton = deckButton(
+            "SCENE\n${sceneModes[sceneIndex]}",
             0xFFFFC21A.toInt()
         )
-        top.addView(formatView)
-
-        locationView = hud(
-            "GPS acquiring…",
-            6.3f,
+        lookButton = deckButton(
+            "LOOK\n${lookModes[lookIndex]}",
             0xFF7FE8FF.toInt()
         )
-        top.addView(locationView)
-
-        weatherView = hud(
-            "WX --",
-            6.3f,
-            0xFF8ECFFF.toInt()
+        qualityButton = deckButton(
+            "FORMAT\n${qualityModes[qualityIndex]}",
+            0xFFE8F1F2.toInt()
         )
-        top.addView(weatherView)
 
-        systemView = hud(
-            "MIC STBY • NET -- • BAT -- • FREE --",
-            6.3f,
-            0xFF76E39A.toInt()
-        )
-        top.addView(systemView)
-
-        top.visibility = View.GONE
-
-        root.addView(
-            top,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP
+        modeRow.addView(
+            sceneButton,
+            LinearLayout.LayoutParams(
+                0,
+                dp(44),
+                1f
             )
         )
-
-        // Small professional readout row. These are status readouts, not fake manual controls.
-        val proReadout = row().apply {
-            setPadding(dp(8), dp(2), dp(8), dp(2))
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-
-        listOf(
-            "ISO AUTO",
-            "SHUTTER AUTO",
-            "WB AUTO",
-            "AF",
-            "STAB",
-            "GRID",
-            "LEVEL"
-        ).forEach {
-            proReadout.addView(
-                hud(it, 6.1f, 0xFFD9E5E8.toInt()).apply {
-                    gravity = Gravity.CENTER
-                },
-                weight()
-            )
-        }
-
-        proReadout.visibility = View.GONE
-
-        root.addView(
-            proReadout,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP
-            ).apply {
-                topMargin = dp(102)
-            }
+        modeRow.addView(
+            space(dp(8)),
+            wrap(8, 1)
         )
-
-        // Bottom controls remain live-camera UI only and are not burned into the video.
-        val bottom = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), dp(4), dp(10), dp(10))
-            setBackgroundColor(Color.TRANSPARENT)
-        }
+        modeRow.addView(
+            lookButton,
+            LinearLayout.LayoutParams(
+                0,
+                dp(44),
+                1f
+            )
+        )
+        modeRow.addView(
+            space(dp(8)),
+            wrap(8, 1)
+        )
+        modeRow.addView(
+            qualityButton,
+            LinearLayout.LayoutParams(
+                0,
+                dp(44),
+                1f
+            )
+        )
+        bottomDeck.addView(modeRow)
 
         val zoomRow = row()
         zoomRow.addView(
-            hud("ZOOM", 7f, Color.WHITE, bold = true),
-            wrap(54, 30)
+            hud(
+                "ZOOM",
+                6.6f,
+                Color.WHITE,
+                bold = true
+            ),
+            wrap(48, 28)
         )
         zoomSeek = SeekBar(this).apply {
             max = 100
@@ -339,16 +357,21 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             zoomSeek,
             LinearLayout.LayoutParams(
                 0,
-                dp(30),
+                dp(28),
                 1f
             )
         )
-        bottom.addView(zoomRow)
+        bottomDeck.addView(zoomRow)
 
         val exposureRow = row()
         exposureRow.addView(
-            hud("EXP", 7f, Color.WHITE, bold = true),
-            wrap(54, 30)
+            hud(
+                "EXP",
+                6.6f,
+                Color.WHITE,
+                bold = true
+            ),
+            wrap(48, 28)
         )
         exposureSeek = SeekBar(this).apply {
             max = 12
@@ -358,30 +381,51 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             exposureSeek,
             LinearLayout.LayoutParams(
                 0,
-                dp(30),
+                dp(28),
                 1f
             )
         )
-        bottom.addView(exposureRow)
+        bottomDeck.addView(exposureRow)
 
         val actionRow = row().apply {
             gravity = Gravity.CENTER
         }
 
-        lensButton = actionButton("LENS")
-        torchButton = actionButton("TORCH")
+        lensButton = deckButton(
+            "LENS\nBACK",
+            0xFF7FE8FF.toInt()
+        )
+        torchButton = deckButton(
+            "LIGHT\nOFF",
+            0xFFE8F1F2.toInt()
+        )
         recordButton = recordButton()
 
-        actionRow.addView(lensButton, wrap(82, 44))
-        actionRow.addView(space(dp(14)), wrap(14, 1))
-        actionRow.addView(recordButton, wrap(126, 52))
-        actionRow.addView(space(dp(14)), wrap(14, 1))
-        actionRow.addView(torchButton, wrap(82, 44))
+        actionRow.addView(
+            lensButton,
+            wrap(86, 46)
+        )
+        actionRow.addView(
+            space(dp(14)),
+            wrap(14, 1)
+        )
+        actionRow.addView(
+            recordButton,
+            wrap(138, 54)
+        )
+        actionRow.addView(
+            space(dp(14)),
+            wrap(14, 1)
+        )
+        actionRow.addView(
+            torchButton,
+            wrap(86, 46)
+        )
 
-        bottom.addView(actionRow)
+        bottomDeck.addView(actionRow)
 
         root.addView(
-            bottom,
+            bottomDeck,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -391,12 +435,28 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         setContentView(root)
 
+        sceneButton.setOnClickListener {
+            cycleScene()
+        }
+
+        lookButton.setOnClickListener {
+            cycleLook()
+        }
+
+        qualityButton.setOnClickListener {
+            cycleQuality()
+        }
+
         lensButton.setOnClickListener {
             if (recording == null) {
                 useFront = !useFront
+                lensButton.text =
+                    "LENS\n${if (useFront) "FRONT" else "BACK"}"
                 bindCamera()
             } else {
-                toast("Stop recording before changing lens")
+                toast(
+                    "Stop recording before changing lens"
+                )
             }
         }
 
@@ -409,16 +469,26 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         }
 
         zoomSeek.setOnSeekBarChangeListener(
-            simpleSeek { applyZoom(it) }
+            simpleSeek {
+                applyZoom(it)
+            }
         )
 
         exposureSeek.setOnSeekBarChangeListener(
-            simpleSeek { applyExposure(it - 6) }
+            simpleSeek {
+                applyExposure(it - 6)
+            }
         )
 
         previewView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP) {
-                tapToFocus(event.x, event.y)
+            if (
+                event.action ==
+                MotionEvent.ACTION_UP
+            ) {
+                tapToFocus(
+                    event.x,
+                    event.y
+                )
                 true
             } else {
                 true
@@ -535,16 +605,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         val recorder = Recorder.Builder()
             .setQualitySelector(
-                QualitySelector.fromOrderedList(
-                    listOf(
-                        Quality.UHD,
-                        Quality.FHD,
-                        Quality.HD
-                    ),
-                    FallbackStrategy.lowerQualityOrHigherThan(
-                        Quality.HD
-                    )
-                )
+                buildQualitySelector()
             )
             .build()
 
@@ -586,12 +647,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             )
 
             torchOn = false
-            torchButton.text = "TORCH"
+            torchButton.text = "LIGHT\nOFF"
 
             syncCameraRanges()
+            applyScenePreset()
 
             statusView.text = "STBY"
             statusView.setTextColor(0xFFFF5A52.toInt())
+            refreshHud()
         } catch (e: Exception) {
             toast("Selected camera is unavailable")
         }
@@ -601,7 +664,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         val c = frame.overlayCanvas
         val crop = frame.cropRect
 
-        if (crop.width() <= 0 || crop.height() <= 0) {
+        if (
+            crop.width() <= 0 ||
+            crop.height() <= 0
+        ) {
             return
         }
 
@@ -610,27 +676,25 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             android.graphics.PorterDuff.Mode.CLEAR
         )
 
-        /*
-         * CameraX applies the frame crop first, then rotates the camera buffer,
-         * then mirrors it when needed. We draw in final portrait coordinates
-         * and map those coordinates back into the valid crop rectangle.
-         *
-         * This is the key burn-in fix: only pixels inside frame.cropRect are
-         * visible in the final video, and text must account for rotation.
-         */
         val rotation = (
             (frame.rotationDegrees % 360) + 360
         ) % 360
 
         val finalWidth =
-            if (rotation == 90 || rotation == 270) {
+            if (
+                rotation == 90 ||
+                rotation == 270
+            ) {
                 crop.height().toFloat()
             } else {
                 crop.width().toFloat()
             }
 
         val finalHeight =
-            if (rotation == 90 || rotation == 270) {
+            if (
+                rotation == 90 ||
+                rotation == 270
+            ) {
                 crop.width().toFloat()
             } else {
                 crop.height().toFloat()
@@ -641,8 +705,6 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         val r = crop.right.toFloat()
         val b = crop.bottom.toFloat()
 
-        // Destination points are the crop-buffer positions of final:
-        // top-left, top-right, bottom-right, bottom-left.
         val nonMirrored = when (rotation) {
             90 -> floatArrayOf(
                 l, b,
@@ -676,20 +738,28 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         val destination =
             if (frame.isMirroring) {
                 floatArrayOf(
-                    nonMirrored[2], nonMirrored[3],
-                    nonMirrored[0], nonMirrored[1],
-                    nonMirrored[6], nonMirrored[7],
-                    nonMirrored[4], nonMirrored[5]
+                    nonMirrored[2],
+                    nonMirrored[3],
+                    nonMirrored[0],
+                    nonMirrored[1],
+                    nonMirrored[6],
+                    nonMirrored[7],
+                    nonMirrored[4],
+                    nonMirrored[5]
                 )
             } else {
                 nonMirrored
             }
 
         val source = floatArrayOf(
-            0f, 0f,
-            finalWidth, 0f,
-            finalWidth, finalHeight,
-            0f, finalHeight
+            0f,
+            0f,
+            finalWidth,
+            0f,
+            finalWidth,
+            finalHeight,
+            0f,
+            finalHeight
         )
 
         val finalToBuffer = Matrix()
@@ -709,15 +779,26 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         c.save()
         c.concat(finalToBuffer)
 
+        drawCreativeLook(
+            c,
+            finalWidth,
+            finalHeight
+        )
+
         val u = minOf(
             finalWidth,
             finalHeight
         ) / 1000f
 
-        val left = 18f * u
-        var y = 34f * u
+        // Wide title-safe area fixes the left-edge crop seen on V174.
+        val safeLeft =
+            finalWidth * 0.22f
+        val safeTop =
+            finalHeight * 0.060f
         val maxWidth =
-            finalWidth - (36f * u)
+            finalWidth * 0.72f
+
+        var y = safeTop
 
         val text = Paint(
             Paint.ANTI_ALIAS_FLAG
@@ -728,33 +809,73 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             )
 
             setShadowLayer(
-                1.8f * u,
-                0.6f * u,
-                0.6f * u,
-                0xD0000000.toInt()
+                2.2f * u,
+                0.7f * u,
+                0.7f * u,
+                0xE0000000.toInt()
             )
         }
 
-        // 1. Brand.
+        // Signature brand line.
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.color = 0xFFFFC21A.toInt()
-        text.textSize = 16f * u
+        text.color =
+            0xFFFFC21A.toInt()
+        text.textSize =
+            26f * u
 
-        drawFitText(
-            c,
-            "develop.uganda",
-            left,
+        val brand = "develop.uganda"
+
+        c.drawText(
+            brand,
+            safeLeft,
             y,
-            maxWidth,
-            text,
-            11f * u
+            text
         )
 
-        // 2. REC + timecode + date + timezone.
-        y += 18f * u
+        val brandWidth =
+            text.measureText(brand)
+
+        text.color = Color.WHITE
+        text.textSize =
+            11.5f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+
+        c.drawText(
+            "CITIZEN REPORT",
+            safeLeft +
+                brandWidth +
+                (16f * u),
+            y,
+            text
+        )
+
+        val accent = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
+            color =
+                0xB3FFC21A.toInt()
+            strokeWidth =
+                1.3f * u
+        }
+
+        c.drawLine(
+            safeLeft,
+            y + (7f * u),
+            safeLeft + maxWidth,
+            y + (7f * u),
+            accent
+        )
+
+        // REC / time / date / timezone.
+        y += 28f * u
+        text.textSize =
+            12f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
@@ -763,9 +884,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             if (recording != null) {
                 0xFFFF4138.toInt()
             } else {
-                Color.WHITE
+                0xFFDCE7E9.toInt()
             }
-        text.textSize = 12f * u
 
         val recState =
             if (recording != null) {
@@ -777,129 +897,125 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         drawFitText(
             c,
             "$recState • TC ${tc()} • ${clock.format(Date())} • ${ZoneId.systemDefault().id}",
-            left,
+            safeLeft,
             y,
             maxWidth,
             text,
             9.2f * u
         )
 
-        // 3. Report identity.
-        y += 16f * u
-        text.color = Color.WHITE
-        text.textSize = 12f * u
-
-        drawFitText(
-            c,
-            "CITIZEN REPORT • develop.uganda",
-            left,
-            y,
-            maxWidth,
-            text,
-            9.2f * u
-        )
-
-        // 4. Full place name.
-        y += 16f * u
+        // Place.
+        y += 17f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.NORMAL
         )
-        text.color = Color.WHITE
-        text.textSize = 10.8f * u
+        text.color =
+            Color.WHITE
+        text.textSize =
+            11.2f * u
 
         drawFitText(
             c,
             placeName,
-            left,
+            safeLeft,
             y,
             maxWidth,
             text,
-            8.2f * u
+            8.5f * u
         )
 
-        // 5. GPS coordinates / altitude / accuracy / movement.
-        y += 15f * u
-        text.color = 0xFF7FE8FF.toInt()
-        text.textSize = 10.8f * u
+        // Coordinates.
+        y += 16f * u
+        text.color =
+            0xFF7FE8FF.toInt()
+        text.textSize =
+            10.7f * u
 
         drawFitText(
             c,
             coordinateOverlay(),
-            left,
+            safeLeft,
             y,
             maxWidth,
             text,
             8.2f * u
         )
 
-        // 6. Weather.
-        y += 15f * u
-        text.color = 0xFF8ECFFF.toInt()
-        text.textSize = 10.6f * u
+        // Weather.
+        y += 16f * u
+        text.color =
+            0xFF8ECFFF.toInt()
+        text.textSize =
+            10.5f * u
 
         drawFitText(
             c,
             weatherOverlay(),
-            left,
+            safeLeft,
             y,
             maxWidth,
             text,
             8f * u
         )
 
-        // 7. Mic / network / battery / storage.
-        y += 15f * u
-        text.color = 0xFF76E39A.toInt()
-        text.textSize = 10.4f * u
+        // System status.
+        y += 16f * u
+        text.color =
+            0xFF76E39A.toInt()
+        text.textSize =
+            10.3f * u
 
         drawFitText(
             c,
             systemOverlay(),
-            left,
+            safeLeft,
             y,
             maxWidth,
             text,
             7.9f * u
         )
 
-        // 8. Camera / recording status.
-        y += 15f * u
+        // Scene / look / camera status.
+        y += 17f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.color = 0xFFFFC21A.toInt()
-        text.textSize = 10.3f * u
+        text.color =
+            0xFFFFC21A.toInt()
+        text.textSize =
+            10.5f * u
 
         drawFitText(
             c,
-            "CAM UHD TARGET • FPS DEVICE • HDR/HEVC DEVICE • STAB • ZOOM • EXP",
-            left,
+            "SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • TAP AF",
+            safeLeft,
             y,
             maxWidth,
             text,
             7.8f * u
         )
 
-        // 9. Professional readouts. AUTO is truthful unless direct sensor
-        // control is later implemented with Camera2 interop.
-        y += 15f * u
+        // Truthful professional state.
+        y += 16f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.NORMAL
         )
-        text.color = 0xFFDDE8EA.toInt()
-        text.textSize = 9.8f * u
+        text.color =
+            0xFFDDE8EA.toInt()
+        text.textSize =
+            9.6f * u
 
         drawFitText(
             c,
-            "ISO AUTO • SHUTTER AUTO • WB AUTO • AF • GRID • LEVEL • ${if (useFront) "FRONT" else "BACK"}",
-            left,
+            "ISO AUTO • SHUTTER AUTO • WB AUTO • MIC • GPS • GRID • LEVEL • CODEC DEVICE",
+            safeLeft,
             y,
             maxWidth,
             text,
-            7.4f * u
+            7.3f * u
         )
 
         c.restore()
@@ -1022,7 +1138,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             return
         }
 
-        baseName = "DEVELOP_UGANDA_" +
+        baseName = "DEVELOP_UGANDA_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -1121,14 +1237,201 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     }
 
     private fun refreshHud() {
-        timecodeView.text = "TC ${tc()}"
+        timecodeView.text =
+            "TC ${tc()}"
 
         formatView.text =
-            "UHD TARGET • FPS DEVICE • HDR/HEVC DEVICE • ${if (useFront) "FRONT" else "BACK"}"
+            "${qualityModes[qualityIndex]} • DEVICE FPS • SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]}"
 
-        locationView.text = locationOverlay()
-        weatherView.text = weatherOverlay()
-        systemView.text = systemOverlay()
+        locationView.text =
+            locationOverlay()
+        weatherView.text =
+            weatherOverlay()
+        systemView.text =
+            systemOverlay()
+
+        if (::sceneButton.isInitialized) {
+            sceneButton.text =
+                "SCENE\n${sceneModes[sceneIndex]}"
+        }
+
+        if (::lookButton.isInitialized) {
+            lookButton.text =
+                "LOOK\n${lookModes[lookIndex]}"
+        }
+
+        if (::qualityButton.isInitialized) {
+            qualityButton.text =
+                "FORMAT\n${qualityModes[qualityIndex]}"
+        }
+
+        if (::lensButton.isInitialized) {
+            lensButton.text =
+                "LENS\n${if (useFront) "FRONT" else "BACK"}"
+        }
+    }
+
+    private fun cycleScene() {
+        if (recording != null) {
+            toast(
+                "Stop recording before changing scene"
+            )
+            return
+        }
+
+        sceneIndex =
+            (sceneIndex + 1) %
+                sceneModes.size
+
+        applyScenePreset()
+        refreshHud()
+    }
+
+    private fun cycleLook() {
+        lookIndex =
+            (lookIndex + 1) %
+                lookModes.size
+
+        refreshHud()
+    }
+
+    private fun cycleQuality() {
+        if (recording != null) {
+            toast(
+                "Stop recording before changing format"
+            )
+            return
+        }
+
+        qualityIndex =
+            (qualityIndex + 1) %
+                qualityModes.size
+
+        refreshHud()
+        bindCamera()
+    }
+
+    private fun buildQualitySelector():
+        QualitySelector {
+
+        val ordered =
+            when (
+                qualityModes[
+                    qualityIndex
+                ]
+            ) {
+                "FHD" -> listOf(
+                    Quality.FHD,
+                    Quality.HD,
+                    Quality.UHD
+                )
+
+                "HD" -> listOf(
+                    Quality.HD,
+                    Quality.FHD,
+                    Quality.UHD
+                )
+
+                else -> listOf(
+                    Quality.UHD,
+                    Quality.FHD,
+                    Quality.HD
+                )
+            }
+
+        return QualitySelector
+            .fromOrderedList(
+                ordered,
+                FallbackStrategy
+                    .lowerQualityOrHigherThan(
+                        Quality.HD
+                    )
+            )
+    }
+
+    private fun applyScenePreset() {
+        sceneExposureTarget =
+            when (
+                sceneModes[
+                    sceneIndex
+                ]
+            ) {
+                "CINEMA" -> -1
+                "MOVIE" -> -1
+                "OUTDOOR" -> -1
+                "INDOOR" -> 1
+                "NIGHT" -> 2
+                else -> 0
+            }
+
+        applyExposure(
+            sceneExposureTarget
+        )
+
+        if (
+            ::exposureSeek.isInitialized
+        ) {
+            exposureSeek.progress =
+                (
+                    sceneExposureTarget +
+                        6
+                    ).coerceIn(
+                        0,
+                        12
+                    )
+        }
+    }
+
+    private fun drawCreativeLook(
+        canvas: Canvas,
+        width: Float,
+        height: Float
+    ) {
+        val color: Int =
+            when (
+                lookModes[
+                    lookIndex
+                ]
+            ) {
+                "WARM" ->
+                    0x12FF8A45
+
+                "COOL" ->
+                    0x102F72FF
+
+                "TEAL" ->
+                    0x1200A7A1
+
+                "GOLD" ->
+                    0x12F2B43C
+
+                "NIGHT" ->
+                    0x18092346
+
+                else ->
+                    Color.TRANSPARENT
+            }
+
+        if (
+            color ==
+            Color.TRANSPARENT
+        ) {
+            return
+        }
+
+        val grade = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
+            this.color = color
+        }
+
+        canvas.drawRect(
+            0f,
+            0f,
+            width,
+            height,
+            grade
+        )
     }
 
     private fun writeTelemetry() {
@@ -1375,9 +1678,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         torchOn = !torchOn
         cam.cameraControl.enableTorch(torchOn)
         torchButton.text = if (torchOn) {
-            "TORCH ON"
+            "LIGHT\nON"
         } else {
-            "TORCH"
+            "LIGHT\nOFF"
         }
     }
 
@@ -1567,15 +1870,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun actionButton(
-        value: String
+    private fun deckButton(
+        value: String,
+        accentColor: Int
     ): Button {
         return Button(this).apply {
             text = value
-            textSize = 8f
+            textSize = 7.1f
             isAllCaps = false
             setTextColor(Color.WHITE)
             minHeight = dp(40)
+            setPadding(
+                dp(4),
+                0,
+                dp(4),
+                0
+            )
 
             background =
                 GradientDrawable().apply {
@@ -1585,15 +1895,24 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                         dp(18).toFloat()
 
                     setColor(
-                        0x2A000000
+                        0x3D030A0E
                     )
 
                     setStroke(
                         dp(1),
-                        0x99FFFFFF.toInt()
+                        accentColor
                     )
                 }
         }
+    }
+
+    private fun actionButton(
+        value: String
+    ): Button {
+        return deckButton(
+            value,
+            0x99FFFFFF.toInt()
+        )
     }
 
     private fun recordButton(): Button {
@@ -1763,6 +2082,80 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                 cy - r,
                 cx + r,
                 cy + r,
+                focusPaint
+            )
+
+            // Signature ORBIT marks around the focus zone.
+            val orbitPaint =
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color =
+                        0x88FFC21A.toInt()
+                    style =
+                        Paint.Style.STROKE
+                    strokeWidth =
+                        dp(1).toFloat()
+                }
+
+            val orbitRadius =
+                dp(42).toFloat()
+
+            canvas.drawArc(
+                cx - orbitRadius,
+                cy - orbitRadius,
+                cx + orbitRadius,
+                cy + orbitRadius,
+                205f,
+                70f,
+                false,
+                orbitPaint
+            )
+
+            canvas.drawArc(
+                cx - orbitRadius,
+                cy - orbitRadius,
+                cx + orbitRadius,
+                cy + orbitRadius,
+                25f,
+                70f,
+                false,
+                orbitPaint
+            )
+
+            // Title-safe corner marks.
+            val insetX =
+                w * 0.08f
+            val insetY =
+                h * 0.08f
+            val arm =
+                dp(20).toFloat()
+
+            canvas.drawLine(
+                insetX,
+                insetY,
+                insetX + arm,
+                insetY,
+                focusPaint
+            )
+            canvas.drawLine(
+                insetX,
+                insetY,
+                insetX,
+                insetY + arm,
+                focusPaint
+            )
+
+            canvas.drawLine(
+                w - insetX,
+                insetY,
+                w - insetX - arm,
+                insetY,
+                focusPaint
+            )
+            canvas.drawLine(
+                w - insetX,
+                insetY,
+                w - insetX,
+                insetY + arm,
                 focusPaint
             )
         }
