@@ -1,0 +1,157 @@
+name: Build PULSE Phase 4 Advanced Telemetry FIXED
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify Phase 4 source package
+        run: test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack cumulative Phase 4 project
+        run: |
+          rm -rf phase4-build
+          mkdir phase4-build
+          unzip -q PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip -d phase4-build
+          test -f phase4-build/pulse-phase4-production/gradle.properties
+          test -f phase4-build/pulse-phase4-production/app/build.gradle.kts
+          test -f phase4-build/pulse-phase4-production/app/src/main/AndroidManifest.xml
+          test -f phase4-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          grep -q "android.useAndroidX=true" phase4-build/pulse-phase4-production/gradle.properties
+          test -f phase4-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+      - name: Fix Phase 4 cellular generation telemetry reference
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("phase4-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt")
+          text = path.read_text(encoding="utf-8")
+          before = text
+
+          text = re.sub(
+              r'\bcellularGeneration\s*\(\s*\)',
+              'cellularGenerationCompat(this@LiveActivity)',
+              text
+          )
+          text = re.sub(
+              r'\bcellularGeneration\b',
+              'cellularGenerationCompat(this@LiveActivity)',
+              text
+          )
+
+          if text == before:
+              raise SystemExit("Expected cellularGeneration reference was not found; refusing to patch the wrong source.")
+
+          helper = '''
+
+          private fun cellularGenerationCompat(context: android.content.Context): String {
+              val connectivity = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE)
+                  as android.net.ConnectivityManager
+              val network = connectivity.activeNetwork ?: return "OFFLINE"
+              val caps = connectivity.getNetworkCapabilities(network) ?: return "UNKNOWN"
+
+              if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+                  return "Wi-Fi"
+              }
+              if (!caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                  return "NETWORK"
+              }
+
+              val telephony = context.getSystemService(android.content.Context.TELEPHONY_SERVICE)
+                  as android.telephony.TelephonyManager
+
+              val type = try {
+                  if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                      telephony.dataNetworkType
+                  } else {
+                      @Suppress("DEPRECATION")
+                      telephony.networkType
+                  }
+              } catch (_: SecurityException) {
+                  return "CELLULAR"
+              } catch (_: Exception) {
+                  return "CELLULAR"
+              }
+
+              return when (type) {
+                  android.telephony.TelephonyManager.NETWORK_TYPE_NR -> "5G"
+                  android.telephony.TelephonyManager.NETWORK_TYPE_LTE -> "4G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_UMTS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_0,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_A,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_B,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EHRPD -> "3G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GPRS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EDGE,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_CDMA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_1xRTT,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_IDEN,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GSM -> "2G"
+
+                  else -> "CELLULAR"
+              }
+          }
+          '''
+
+          text += helper
+          path.write_text(text, encoding="utf-8")
+          print("Patched:", path)
+          PY
+
+      - name: Verify Phase 4 continuity after patch
+        run: |
+          test -f phase4-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/MainActivity.kt
+          test -f phase4-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt
+          test -f phase4-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          grep -q "cellularGenerationCompat" phase4-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          grep -q "Phase 1" phase4-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 2" phase4-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 3" phase4-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+      - name: Build PULSE Phase 4 fixed APK
+        working-directory: phase4-build/pulse-phase4-production
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Prepare installable APK
+        run: |
+          cp phase4-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk PULSE-PHASE4-ADVANCED-TELEMETRY-FIXED.apk
+          ls -lh PULSE-PHASE4-ADVANCED-TELEMETRY-FIXED.apk
+
+      - name: Upload Phase 4 fixed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSE-PHASE4-ADVANCED-TELEMETRY-FIXED
+          path: PULSE-PHASE4-ADVANCED-TELEMETRY-FIXED.apk
+          if-no-files-found: error
+          retention-days: 14
