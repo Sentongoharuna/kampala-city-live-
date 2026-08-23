@@ -73,6 +73,17 @@ import kotlin.math.roundToInt
 
 class DevelopUgandaCameraActivity : AppCompatActivity() {
 
+    private companion object {
+        const val ACTION_SCENE = 1
+        const val ACTION_LOOK = 2
+        const val ACTION_QUALITY = 3
+        const val ACTION_CAPTURE_MODE = 4
+        const val ACTION_LENS = 5
+        const val ACTION_TORCH = 6
+        const val ACTION_RECORD = 7
+    }
+
+
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
     private lateinit var brandView: TextView
@@ -439,42 +450,33 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        installTap(sceneButton) {
-            cycleScene()
-        }
+        sceneButton.setOnTouchListener(
+            DeckTouchListener(ACTION_SCENE)
+        )
 
-        installTap(lookButton) {
-            cycleLook()
-        }
+        lookButton.setOnTouchListener(
+            DeckTouchListener(ACTION_LOOK)
+        )
 
-        installTap(qualityButton) {
-            cycleQuality()
-        }
+        qualityButton.setOnTouchListener(
+            DeckTouchListener(ACTION_QUALITY)
+        )
 
-        installTap(captureModeButton) {
-            cycleCaptureMode()
-        }
+        captureModeButton.setOnTouchListener(
+            DeckTouchListener(ACTION_CAPTURE_MODE)
+        )
 
-        installTap(lensButton) {
-            if (recording == null) {
-                useFront = !useFront
-                lensButton.text =
-                    "LENS\n${if (useFront) "FRONT" else "BACK"}"
-                bindCamera()
-            } else {
-                toast(
-                    "Stop recording before changing lens"
-                )
-            }
-        }
+        lensButton.setOnTouchListener(
+            DeckTouchListener(ACTION_LENS)
+        )
 
-        installTap(torchButton) {
-            toggleTorch()
-        }
+        torchButton.setOnTouchListener(
+            DeckTouchListener(ACTION_TORCH)
+        )
 
-        installTap(recordButton) {
-            toggleRecording()
-        }
+        recordButton.setOnTouchListener(
+            DeckTouchListener(ACTION_RECORD)
+        )
 
         zoomSeek.setOnSeekBarChangeListener(
             simpleSeek {
@@ -2055,39 +2057,58 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun installTap(
-        view: View,
-        action: () -> Unit
-    ) {
-        view.setOnTouchListener(
-            object : View.OnTouchListener {
-                override fun onTouch(
-                    v: View?,
-                    event: MotionEvent
-                ): Boolean {
-                    when (event.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            v?.alpha = 0.82f
-                            return true
+    private inner class DeckTouchListener(
+        private val actionCode: Int
+    ) : View.OnTouchListener {
+
+        override fun onTouch(
+            v: View?,
+            event: MotionEvent
+        ): Boolean {
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    v?.alpha = 0.82f
+                    return true
+                }
+
+                MotionEvent.ACTION_CANCEL -> {
+                    v?.alpha = 1f
+                    return true
+                }
+
+                MotionEvent.ACTION_UP -> {
+                    v?.alpha = 1f
+                    v?.performClick()
+
+                    when (actionCode) {
+                        ACTION_SCENE -> cycleScene()
+                        ACTION_LOOK -> cycleLook()
+                        ACTION_QUALITY -> cycleQuality()
+                        ACTION_CAPTURE_MODE -> cycleCaptureMode()
+
+                        ACTION_LENS -> {
+                            if (recording == null) {
+                                useFront = !useFront
+                                lensButton.text =
+                                    "LENS\n${if (useFront) "FRONT" else "BACK"}"
+                                bindCamera()
+                            } else {
+                                toast(
+                                    "Stop recording before changing lens"
+                                )
+                            }
                         }
 
-                        MotionEvent.ACTION_CANCEL -> {
-                            v?.alpha = 1f
-                            return true
-                        }
-
-                        MotionEvent.ACTION_UP -> {
-                            v?.alpha = 1f
-                            v?.performClick()
-                            action.invoke()
-                            return true
-                        }
+                        ACTION_TORCH -> toggleTorch()
+                        ACTION_RECORD -> toggleRecording()
                     }
 
                     return true
                 }
             }
-        )
+
+            return true
+        }
     }
 
     private fun simpleSeek(
