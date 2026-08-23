@@ -1,0 +1,456 @@
+name: Build PULSE Phase 5 Professional HUD
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify Phase 4 source
+        run: |
+          test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack Phase 4 cumulative project
+        run: |
+          rm -rf phase5-build
+          mkdir phase5-build
+          unzip -q PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip -d phase5-build
+
+          test -f phase5-build/pulse-phase4-production/gradle.properties
+          test -f phase5-build/pulse-phase4-production/app/build.gradle.kts
+          test -f phase5-build/pulse-phase4-production/app/src/main/AndroidManifest.xml
+          test -f phase5-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          test -f phase5-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt
+
+      - name: Preserve Phase 4 cellular telemetry fix
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path(
+              "phase5-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          )
+
+          text = path.read_text(encoding="utf-8")
+
+          if "cellularGenerationCompat" not in text:
+
+              text = re.sub(
+                  r'\bcellularGeneration\s*\(\s*\)',
+                  'cellularGenerationCompat(this@LiveActivity)',
+                  text
+              )
+
+              text = re.sub(
+                  r'\bcellularGeneration\b',
+                  'cellularGenerationCompat(this@LiveActivity)',
+                  text
+              )
+
+              helper = '''
+
+          private fun cellularGenerationCompat(
+              context: android.content.Context
+          ): String {
+
+              val connectivity =
+                  context.getSystemService(
+                      android.content.Context.CONNECTIVITY_SERVICE
+                  ) as android.net.ConnectivityManager
+
+              val network =
+                  connectivity.activeNetwork
+                      ?: return "OFFLINE"
+
+              val caps =
+                  connectivity.getNetworkCapabilities(network)
+                      ?: return "UNKNOWN"
+
+              if (
+                  caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_WIFI
+                  )
+              ) {
+                  return "Wi-Fi"
+              }
+
+              if (
+                  !caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+                  )
+              ) {
+                  return "NETWORK"
+              }
+
+              val telephony =
+                  context.getSystemService(
+                      android.content.Context.TELEPHONY_SERVICE
+                  ) as android.telephony.TelephonyManager
+
+              val type = try {
+
+                  if (
+                      android.os.Build.VERSION.SDK_INT >=
+                      android.os.Build.VERSION_CODES.N
+                  ) {
+                      telephony.dataNetworkType
+                  } else {
+                      @Suppress("DEPRECATION")
+                      telephony.networkType
+                  }
+
+              } catch (_: Exception) {
+                  return "CELLULAR"
+              }
+
+              return when (type) {
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_NR ->
+                      "5G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_LTE ->
+                      "4G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_UMTS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_0,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_A,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_B,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EHRPD ->
+                      "3G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GPRS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EDGE,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_CDMA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_1xRTT,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_IDEN,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GSM ->
+                      "2G"
+
+                  else ->
+                      "CELLULAR"
+              }
+          }
+          '''
+
+              text += helper
+              path.write_text(text, encoding="utf-8")
+
+          print("Phase 4 cellular telemetry compatibility preserved")
+          PY
+
+      - name: Create Phase 5 Professional Compact HUD
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path(
+              "phase5-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse"
+          )
+
+          files = list(root.rglob("*.kt"))
+
+          keywords = [
+              "PULSE",
+              "CITIZEN REPORT",
+              "REPORTER",
+              "LAT",
+              "LON",
+              "ALT",
+              "WX",
+              "WIND",
+              "BAT",
+              "MIC",
+              "UHD",
+              "4K",
+              "HDR10",
+              "HEVC",
+              "REC"
+          ]
+
+          changed = []
+
+          for path in files:
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              if not any(word in text for word in keywords):
+                  continue
+
+              original = text
+
+              # -----------------------------------
+              # SMALLER PROFESSIONAL TELEMETRY TEXT
+              # -----------------------------------
+
+              def shrink(match):
+
+                  prefix = match.group(1)
+                  value = float(match.group(2))
+
+                  if value <= 11:
+                      return match.group(0)
+
+                  new = max(
+                      9.0,
+                      round(value * 0.55, 1)
+                  )
+
+                  value_text = (
+                      str(new)
+                      .rstrip("0")
+                      .rstrip(".")
+                  )
+
+                  return prefix + value_text + "f"
+
+              text = re.sub(
+                  r'(textSize\s*=\s*)'
+                  r'([0-9]+(?:\.[0-9]+)?)f',
+                  shrink,
+                  text
+              )
+
+              # -----------------------------------
+              # SMALLER PAINT TEXT
+              # -----------------------------------
+
+              text = re.sub(
+                  r'(\.textSize\s*=\s*)32f',
+                  r'\g<1>17f',
+                  text
+              )
+
+              text = re.sub(
+                  r'(\.textSize\s*=\s*)30f',
+                  r'\g<1>16f',
+                  text
+              )
+
+              text = re.sub(
+                  r'(\.textSize\s*=\s*)28f',
+                  r'\g<1>15f',
+                  text
+              )
+
+              text = re.sub(
+                  r'(\.textSize\s*=\s*)26f',
+                  r'\g<1>14f',
+                  text
+              )
+
+              text = re.sub(
+                  r'(\.textSize\s*=\s*)24f',
+                  r'\g<1>13f',
+                  text
+              )
+
+              text = re.sub(
+                  r'(\.textSize\s*=\s*)22f',
+                  r'\g<1>12f',
+                  text
+              )
+
+              text = re.sub(
+                  r'(\.textSize\s*=\s*)20f',
+                  r'\g<1>11f',
+                  text
+              )
+
+              # -----------------------------------
+              # COMPACT TELEMETRY PANELS
+              # -----------------------------------
+
+              text = re.sub(
+                  r'width\s*\*\s*0\.4[0-9]f',
+                  'width * 0.18f',
+                  text
+              )
+
+              text = re.sub(
+                  r'width\s*\*\s*0\.3[0-9]f',
+                  'width * 0.18f',
+                  text
+              )
+
+              text = re.sub(
+                  r'width\s*\*\s*0\.2[5-9]f',
+                  'width * 0.18f',
+                  text
+              )
+
+              # -----------------------------------
+              # TRANSPARENT BROADCAST BACKGROUNDS
+              # -----------------------------------
+
+              colours = {
+                  "0xFF000000": "0xA6000000",
+                  "0xF5000000": "0xA0000000",
+                  "0xEE000000": "0x98000000",
+                  "0xE6000000": "0x92000000",
+                  "0xDD000000": "0x8C000000",
+                  "0xD9000000": "0x88000000",
+                  "0xCC000000": "0x80000000",
+                  "0xC0000000": "0x78000000"
+              }
+
+              for old, new in colours.items():
+                  text = text.replace(old, new)
+
+              if text != original:
+
+                  path.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
+
+                  changed.append(str(path))
+
+          if not changed:
+              raise SystemExit(
+                  "Phase 5 could not locate the telemetry HUD source."
+              )
+
+          print("PHASE 5 PROFESSIONAL HUD UPDATED:")
+
+          for path in changed:
+              print(path)
+
+          PY
+
+      - name: Add Phase 5 continuity record
+        run: |
+          cat >> phase5-build/pulse-phase4-production/PHASE-CONTINUITY.md <<'EOF'
+
+          ## Phase 5 — Professional Broadcast Telemetry HUD
+
+          Phase 5 is cumulative.
+
+          Phase 1 remains included.
+          Phase 2 remains included.
+          Phase 3 remains included.
+          Phase 4 remains included.
+
+          Phase 5 keeps all reporting telemetry,
+          GPS, latitude, longitude, altitude,
+          location, date, time, timecode,
+          weather, temperature, humidity,
+          wind direction, wind speed,
+          network, cellular generation,
+          microphone information,
+          battery, storage, camera mode,
+          UHD/4K, FPS, HDR10, HEVC,
+          stabilization and recording information.
+
+          Phase 5 reduces the visual footprint of
+          the permanent burn-in HUD.
+
+          Professional colour hierarchy:
+
+          RED:
+          REC and critical warnings.
+
+          WHITE:
+          normal metadata and reporting text.
+
+          YELLOW / GOLD:
+          PULSE branding and professional
+          camera mode information.
+
+          CYAN:
+          GPS, coordinates, altitude and
+          technical telemetry.
+
+          GREEN:
+          healthy microphone, network,
+          storage, battery and stabilization.
+
+          The recorded picture remains dominant
+          while all reporting information
+          remains permanently visible.
+          EOF
+
+      - name: Verify cumulative Phase 5 project
+        run: |
+          test -f phase5-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/MainActivity.kt
+          test -f phase5-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          test -f phase5-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt
+          test -f phase5-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+          grep -q "Phase 1" phase5-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 2" phase5-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 3" phase5-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 5" phase5-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+      - name: Build PULSE Phase 5 APK
+        working-directory: phase5-build/pulse-phase4-production
+        run: |
+          gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Prepare installable APK
+        run: |
+          cp \
+          phase5-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk \
+          PULSE-PHASE5-PROFESSIONAL-HUD.apk
+
+          ls -lh PULSE-PHASE5-PROFESSIONAL-HUD.apk
+
+      - name: Package Phase 5 cumulative source
+        run: |
+          cd phase5-build
+
+          zip -qr \
+          ../PULSE-PHASE5-PROFESSIONAL-HUD-SOURCE.zip \
+          pulse-phase4-production
+
+      - name: Upload Phase 5 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSE-PHASE5-PROFESSIONAL-HUD
+          path: PULSE-PHASE5-PROFESSIONAL-HUD.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Phase 5 Source
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSE-PHASE5-PROFESSIONAL-HUD-SOURCE
+          path: PULSE-PHASE5-PROFESSIONAL-HUD-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
