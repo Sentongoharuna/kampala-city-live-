@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 17301
-        versionName = "173.1-direct-source-clean-camera"
+        versionCode = 17400
+        versionName = "174.0-burn-in-telemetry-fix"
     }
 
     buildTypes {

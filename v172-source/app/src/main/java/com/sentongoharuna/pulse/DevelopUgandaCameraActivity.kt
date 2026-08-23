@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -39,6 +40,7 @@ import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.Preview
 import androidx.camera.core.SessionConfig
 import androidx.camera.core.ZoomState
+import androidx.camera.effects.Frame
 import androidx.camera.effects.OverlayEffect
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FallbackStrategy
@@ -271,6 +273,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         )
         top.addView(systemView)
 
+        top.visibility = View.GONE
+
         root.addView(
             top,
             FrameLayout.LayoutParams(
@@ -302,6 +306,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                 weight()
             )
         }
+
+        proReadout.visibility = View.GONE
 
         root.addView(
             proReadout,
@@ -554,11 +560,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             )
         }.also { effect ->
             effect.setOnDrawListener { frame ->
-                drawReporterOverlay(
-                    frame.overlayCanvas,
-                    frame.cropRect.width().toFloat(),
-                    frame.cropRect.height().toFloat()
-                )
+                drawReporterOverlay(frame)
                 true
             }
         }
@@ -595,45 +597,152 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun drawReporterOverlay(
-        c: Canvas,
-        w: Float,
-        h: Float
-    ) {
-        if (w <= 0f || h <= 0f) return
+    private fun drawReporterOverlay(frame: Frame) {
+        val c = frame.overlayCanvas
+        val crop = frame.cropRect
+
+        if (crop.width() <= 0 || crop.height() <= 0) {
+            return
+        }
 
         c.drawColor(
             Color.TRANSPARENT,
             android.graphics.PorterDuff.Mode.CLEAR
         )
 
-        // All exported telemetry stays upright, horizontal, tiny and transparent.
-        // No rectangle, sidebar, lower-third block, black strip or dark backdrop.
-        val u = minOf(w, h) / 1000f
-        val left = 18f * u
-        var y = 30f * u
-        val maxWidth = w - 36f * u
+        /*
+         * CameraX applies the frame crop first, then rotates the camera buffer,
+         * then mirrors it when needed. We draw in final portrait coordinates
+         * and map those coordinates back into the valid crop rectangle.
+         *
+         * This is the key burn-in fix: only pixels inside frame.cropRect are
+         * visible in the final video, and text must account for rotation.
+         */
+        val rotation = (
+            (frame.rotationDegrees % 360) + 360
+        ) % 360
 
-        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val finalWidth =
+            if (rotation == 90 || rotation == 270) {
+                crop.height().toFloat()
+            } else {
+                crop.width().toFloat()
+            }
+
+        val finalHeight =
+            if (rotation == 90 || rotation == 270) {
+                crop.width().toFloat()
+            } else {
+                crop.height().toFloat()
+            }
+
+        val l = crop.left.toFloat()
+        val t = crop.top.toFloat()
+        val r = crop.right.toFloat()
+        val b = crop.bottom.toFloat()
+
+        // Destination points are the crop-buffer positions of final:
+        // top-left, top-right, bottom-right, bottom-left.
+        val nonMirrored = when (rotation) {
+            90 -> floatArrayOf(
+                l, b,
+                l, t,
+                r, t,
+                r, b
+            )
+
+            180 -> floatArrayOf(
+                r, b,
+                l, b,
+                l, t,
+                r, t
+            )
+
+            270 -> floatArrayOf(
+                r, t,
+                r, b,
+                l, b,
+                l, t
+            )
+
+            else -> floatArrayOf(
+                l, t,
+                r, t,
+                r, b,
+                l, b
+            )
+        }
+
+        val destination =
+            if (frame.isMirroring) {
+                floatArrayOf(
+                    nonMirrored[2], nonMirrored[3],
+                    nonMirrored[0], nonMirrored[1],
+                    nonMirrored[6], nonMirrored[7],
+                    nonMirrored[4], nonMirrored[5]
+                )
+            } else {
+                nonMirrored
+            }
+
+        val source = floatArrayOf(
+            0f, 0f,
+            finalWidth, 0f,
+            finalWidth, finalHeight,
+            0f, finalHeight
+        )
+
+        val finalToBuffer = Matrix()
+
+        if (
+            !finalToBuffer.setPolyToPoly(
+                source,
+                0,
+                destination,
+                0,
+                4
+            )
+        ) {
+            return
+        }
+
+        c.save()
+        c.concat(finalToBuffer)
+
+        val u = minOf(
+            finalWidth,
+            finalHeight
+        ) / 1000f
+
+        val left = 18f * u
+        var y = 34f * u
+        val maxWidth =
+            finalWidth - (36f * u)
+
+        val text = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
             typeface = Typeface.create(
                 Typeface.MONOSPACE,
                 Typeface.NORMAL
             )
+
             setShadowLayer(
                 1.8f * u,
                 0.6f * u,
                 0.6f * u,
-                0xCC000000.toInt()
+                0xD0000000.toInt()
             )
         }
 
-        // Brand.
+        // 1. Brand.
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
         text.color = 0xFFFFC21A.toInt()
         text.textSize = 16f * u
+
         drawFitText(
             c,
             "develop.uganda",
@@ -644,20 +753,27 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             11f * u
         )
 
-        // REC / timecode / date / timezone.
+        // 2. REC + timecode + date + timezone.
         y += 18f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.color = if (recording != null) {
-            0xFFFF4138.toInt()
-        } else {
-            0xFFE6EEF0.toInt()
-        }
-        text.textSize = 12.2f * u
+        text.color =
+            if (recording != null) {
+                0xFFFF4138.toInt()
+            } else {
+                Color.WHITE
+            }
+        text.textSize = 12f * u
 
-        val recState = if (recording != null) "● REC" else "STBY"
+        val recState =
+            if (recording != null) {
+                "● REC"
+            } else {
+                "STBY"
+            }
+
         drawFitText(
             c,
             "$recState • TC ${tc()} • ${clock.format(Date())} • ${ZoneId.systemDefault().id}",
@@ -665,17 +781,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            9.5f * u
+            9.2f * u
         )
 
-        // Reporter/title.
+        // 3. Report identity.
         y += 16f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
         text.color = Color.WHITE
-        text.textSize = 12.2f * u
+        text.textSize = 12f * u
+
         drawFitText(
             c,
             "CITIZEN REPORT • develop.uganda",
@@ -683,48 +796,21 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            9.5f * u
+            9.2f * u
         )
 
-        // Location / coordinates / altitude / GPS accuracy.
+        // 4. Full place name.
         y += 16f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.NORMAL
         )
-        text.color = 0xFF7FE8FF.toInt()
-        text.textSize = 11.3f * u
-        drawFitText(
-            c,
-            locationOverlay(),
-            left,
-            y,
-            maxWidth,
-            text,
-            8.7f * u
-        )
-
-        // Weather.
-        y += 15f * u
-        text.color = 0xFF8ECFFF.toInt()
-        text.textSize = 11f * u
-        drawFitText(
-            c,
-            weatherOverlay(),
-            left,
-            y,
-            maxWidth,
-            text,
-            8.5f * u
-        )
-
-        // Network / mic / battery / storage.
-        y += 15f * u
-        text.color = 0xFF76E39A.toInt()
+        text.color = Color.WHITE
         text.textSize = 10.8f * u
+
         drawFitText(
             c,
-            systemOverlay(),
+            placeName,
             left,
             y,
             maxWidth,
@@ -732,19 +818,150 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             8.2f * u
         )
 
-        // Camera format/status.
+        // 5. GPS coordinates / altitude / accuracy / movement.
         y += 15f * u
-        text.color = 0xFFFFC21A.toInt()
-        text.textSize = 10.5f * u
+        text.color = 0xFF7FE8FF.toInt()
+        text.textSize = 10.8f * u
+
         drawFitText(
             c,
-            "CAM UHD TARGET • FPS DEVICE • HDR/HEVC DEVICE • STAB CAMERA • ZOOM/EXP LIVE",
+            coordinateOverlay(),
+            left,
+            y,
+            maxWidth,
+            text,
+            8.2f * u
+        )
+
+        // 6. Weather.
+        y += 15f * u
+        text.color = 0xFF8ECFFF.toInt()
+        text.textSize = 10.6f * u
+
+        drawFitText(
+            c,
+            weatherOverlay(),
             left,
             y,
             maxWidth,
             text,
             8f * u
         )
+
+        // 7. Mic / network / battery / storage.
+        y += 15f * u
+        text.color = 0xFF76E39A.toInt()
+        text.textSize = 10.4f * u
+
+        drawFitText(
+            c,
+            systemOverlay(),
+            left,
+            y,
+            maxWidth,
+            text,
+            7.9f * u
+        )
+
+        // 8. Camera / recording status.
+        y += 15f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.color = 0xFFFFC21A.toInt()
+        text.textSize = 10.3f * u
+
+        drawFitText(
+            c,
+            "CAM UHD TARGET • FPS DEVICE • HDR/HEVC DEVICE • STAB • ZOOM • EXP",
+            left,
+            y,
+            maxWidth,
+            text,
+            7.8f * u
+        )
+
+        // 9. Professional readouts. AUTO is truthful unless direct sensor
+        // control is later implemented with Camera2 interop.
+        y += 15f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.NORMAL
+        )
+        text.color = 0xFFDDE8EA.toInt()
+        text.textSize = 9.8f * u
+
+        drawFitText(
+            c,
+            "ISO AUTO • SHUTTER AUTO • WB AUTO • AF • GRID • LEVEL • ${if (useFront) "FRONT" else "BACK"}",
+            left,
+            y,
+            maxWidth,
+            text,
+            7.4f * u
+        )
+
+        c.restore()
+    }
+
+    private fun coordinateOverlay(): String {
+        val b = StringBuilder("GPS")
+
+        if (lat != null && lon != null) {
+            b.append(
+                String.format(
+                    Locale.US,
+                    " • LAT %.5f LON %.5f",
+                    lat,
+                    lon
+                )
+            )
+        } else {
+            b.append(" --")
+        }
+
+        if (alt != null) {
+            b.append(
+                String.format(
+                    Locale.US,
+                    " • ALT %.0fm",
+                    alt
+                )
+            )
+        }
+
+        if (accuracy != null) {
+            b.append(
+                String.format(
+                    Locale.US,
+                    " • ±%.0fm",
+                    accuracy
+                )
+            )
+        }
+
+        if (heading != null) {
+            b.append(
+                String.format(
+                    Locale.US,
+                    " • HDG %.0f°",
+                    heading
+                )
+            )
+        }
+
+        if (speedKmh != null) {
+            b.append(
+                String.format(
+                    Locale.US,
+                    " • SPD %.1fkm/h",
+                    speedKmh
+                )
+            )
+        }
+
+        return b.toString()
     }
 
     private fun drawFitText(
