@@ -1,6 +1,7 @@
 package com.sentongoharuna.pulse
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
@@ -10,11 +11,18 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Address
 import android.location.Geocoder
+import android.location.GnssStatus
+import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -26,6 +34,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -69,9 +78,10 @@ import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.log10
 import kotlin.math.roundToInt
 
-class DevelopUgandaCameraActivity : AppCompatActivity() {
+class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
     private companion object {
         const val ACTION_SCENE = 1
@@ -81,6 +91,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         const val ACTION_LENS = 5
         const val ACTION_TORCH = 6
         const val ACTION_RECORD = 7
+        const val ACTION_IDENTITY = 8
     }
 
 
@@ -102,6 +113,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     private lateinit var lookButton: Button
     private lateinit var qualityButton: Button
     private lateinit var captureModeButton: Button
+    private lateinit var identityButton: Button
 
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
@@ -151,6 +163,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     private val weather = WeatherRepository()
     private lateinit var telemetryRecorder: TelemetryRecorder
     private lateinit var fused: FusedLocationProviderClient
+    private lateinit var sensorManager: SensorManager
+    private var rotationVectorSensor: Sensor? = null
+    private lateinit var locationManager: LocationManager
 
     @Volatile private var lat: Double? = null
     @Volatile private var lon: Double? = null
@@ -164,6 +179,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     @Volatile private var distanceTravelledM = 0f
     @Volatile private var previousTrackLat: Double? = null
     @Volatile private var previousTrackLon: Double? = null
+    @Volatile private var compassAzimuthDeg: Float? = null
+    @Volatile private var phonePitchDeg: Float? = null
+    @Volatile private var phoneRollDeg: Float? = null
+    @Volatile private var gnssSatellitesVisible = -1
+    @Volatile private var gnssSatellitesUsed = -1
+    @Volatile private var audioAmplitude = 0.0
+    @Volatile private var audioStateLabel = "MIC READY"
+
+    private var gnssCallbackHolder: Any? = null
+    private var reporterName = "CITIZEN"
+    private var storyId = ""
+    private var reportId = ""
+
 
     private var recStarted = 0L
     private var lastWeatherAt = 0L
@@ -263,6 +291,17 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         telemetryRecorder = TelemetryRecorder(this)
         fused = LocationServices.getFusedLocationProviderClient(this)
+        sensorManager =
+            getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        rotationVectorSensor =
+            sensorManager.getDefaultSensor(
+                Sensor.TYPE_ROTATION_VECTOR
+            )
+        locationManager =
+            getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+        loadReporterIdentity()
+        reportId = newReportId()
 
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -393,6 +432,23 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         }
         bottomDeck.addView(modeRow)
 
+        val identityRow = row().apply {
+            gravity = Gravity.CENTER
+        }
+        identityButton = deckButton(
+            identityButtonText(),
+            0xFFFFC21A.toInt()
+        )
+        identityRow.addView(
+            identityButton,
+            LinearLayout.LayoutParams(
+                0,
+                dp(38),
+                1f
+            )
+        )
+        bottomDeck.addView(identityRow)
+
         val zoomRow = row()
         zoomRow.addView(
             hud(
@@ -509,6 +565,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             DeckTouchListener(ACTION_CAPTURE_MODE)
         )
 
+        identityButton.setOnTouchListener(
+            DeckTouchListener(ACTION_IDENTITY)
+        )
+
         lensButton.setOnTouchListener(
             DeckTouchListener(ACTION_LENS)
         )
@@ -599,6 +659,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         }
 
         startLocation()
+        startGnssMonitor()
     }
 
     private fun startLocation() {
@@ -893,12 +954,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         // V177 social-safe broadcast HUD:
         // all telemetry is retained, but reorganized into deliberate rows.
         // Values such as LAT/LON/ALT/HDG/SPD/FIX/DIST continue changing live.
+        // V178 uses a deeper social-safe inset. The previous transform
+        // placed the left edge too close to the exported crop on some phones.
         val safeLeft =
-            finalWidth * 0.12f
+            finalWidth * 0.24f
         val safeTop =
-            finalHeight * 0.10f
+            finalHeight * 0.105f
         val maxWidth =
-            finalWidth * 0.70f
+            finalWidth * 0.54f
 
         var y = safeTop
 
@@ -935,7 +998,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             safeLeft - (10f * u),
             y - (4f * u),
             safeLeft - (10f * u),
-            y + (126f * u),
+            y + (184f * u),
             rail
         )
 
@@ -947,7 +1010,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            31f * u
+            28f * u
 
         val brand = "develop.uganda"
 
@@ -991,13 +1054,32 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             accent
         )
 
-        // 2. REC / timecode / local / UTC.
-        y += 29f * u
+        // 2. Report identity. Always visible in preview and saved media.
+        y += 25f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.textSize = 12.6f * u
+        text.color = Color.WHITE
+        text.textSize = 11.8f * u
+
+        drawFitText(
+            c,
+            "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            9.2f * u
+        )
+
+        // 3. REC / timecode / local / UTC.
+        y += 17f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.textSize = 12.4f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
@@ -1019,15 +1101,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            9.5f * u
+            9.4f * u
         )
 
-        // 3. Editorial / camera identity.
-        y += 18f * u
+        // 4. Editorial / camera identity.
+        y += 16f * u
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            11.2f * u
+            10.9f * u
 
         drawFitText(
             c,
@@ -1036,17 +1118,17 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            8.5f * u
+            8.3f * u
         )
 
-        // 4. Place name.
-        y += 18f * u
+        // 5. Place.
+        y += 16f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.NORMAL
         )
         text.color = Color.WHITE
-        text.textSize = 11.5f * u
+        text.textSize = 11.1f * u
 
         drawFitText(
             c,
@@ -1055,15 +1137,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            8.8f * u
+            8.6f * u
         )
 
-        // 5. Live coordinates.
-        y += 17f * u
+        // 6. Live changing coordinates.
+        y += 16f * u
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            11f * u
+            10.7f * u
 
         drawFitText(
             c,
@@ -1072,32 +1154,66 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            8.4f * u
+            8.2f * u
         )
 
-        // 6. Live movement + GPS quality.
-        y += 17f * u
+        // 7. GPS altitude / accuracy / satellites / fix age.
+        y += 15f * u
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            10.8f * u
+            10.3f * u
 
         drawFitText(
             c,
-            movementOverlay(),
+            gnssOverlay(),
             safeLeft,
             y,
             maxWidth,
             text,
-            8.2f * u
+            7.9f * u
         )
 
-        // 7. Weather.
-        y += 17f * u
+        // 8. Compass / GPS bearing / speed / motion / distance.
+        y += 15f * u
+        text.color =
+            0xFF7FE8FF.toInt()
+        text.textSize =
+            10.2f * u
+
+        drawFitText(
+            c,
+            navigationOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.8f * u
+        )
+
+        // 9. Real phone orientation / horizon angle.
+        y += 15f * u
+        text.color =
+            0xFFDDE8EA.toInt()
+        text.textSize =
+            9.9f * u
+
+        drawFitText(
+            c,
+            orientationOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.6f * u
+        )
+
+        // 10. Weather.
+        y += 15f * u
         text.color =
             0xFF8ECFFF.toInt()
         text.textSize =
-            10.7f * u
+            10.2f * u
 
         drawFitText(
             c,
@@ -1106,28 +1222,28 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            8.1f * u
+            7.8f * u
         )
 
-        // 8. Mic / network / battery / storage / uplink estimate.
-        y += 17f * u
+        // 11. Real recording audio amplitude + network / battery / storage.
+        y += 15f * u
         text.color =
             0xFF76E39A.toInt()
         text.textSize =
-            10.6f * u
+            10.1f * u
 
         drawFitText(
             c,
-            systemOverlay(),
+            "${audioLevelOverlay()} • ${systemOverlay()}",
             safeLeft,
             y,
             maxWidth,
             text,
-            8f * u
+            7.7f * u
         )
 
-        // 9. Active camera state.
-        y += 18f * u
+        // 12. Active camera state.
+        y += 16f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
@@ -1135,7 +1251,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            10.7f * u
+            10.2f * u
 
         drawFitText(
             c,
@@ -1144,11 +1260,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            8f * u
+            7.7f * u
         )
 
-        // 10. Truthful automatic/manual-capability state.
-        y += 17f * u
+        // 13. Keep all automatic/manual-capability information.
+        y += 15f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.NORMAL
@@ -1156,7 +1272,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         text.color =
             0xFFDDE8EA.toInt()
         text.textSize =
-            9.9f * u
+            9.5f * u
 
         drawFitText(
             c,
@@ -1165,7 +1281,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            7.5f * u
+            7.3f * u
         )
 
         c.restore()
@@ -1328,6 +1444,459 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         return dirs[index]
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        rotationVectorSensor?.let { sensor ->
+            sensorManager.registerListener(
+                this,
+                sensor,
+                SensorManager.SENSOR_DELAY_GAME
+            )
+        }
+    }
+
+    override fun onPause() {
+        try {
+            sensorManager.unregisterListener(this)
+        } catch (_: Exception) {
+        }
+
+        super.onPause()
+    }
+
+    override fun onAccuracyChanged(
+        sensor: Sensor?,
+        accuracy: Int
+    ) {
+    }
+
+    override fun onSensorChanged(
+        event: SensorEvent?
+    ) {
+        if (
+            event == null ||
+            event.sensor.type !=
+            Sensor.TYPE_ROTATION_VECTOR
+        ) {
+            return
+        }
+
+        try {
+            val rotationMatrix = FloatArray(9)
+            val orientation = FloatArray(3)
+
+            SensorManager.getRotationMatrixFromVector(
+                rotationMatrix,
+                event.values
+            )
+            SensorManager.getOrientation(
+                rotationMatrix,
+                orientation
+            )
+
+            val azimuth =
+                Math.toDegrees(
+                    orientation[0].toDouble()
+                ).toFloat()
+            val pitch =
+                Math.toDegrees(
+                    orientation[1].toDouble()
+                ).toFloat()
+            val roll =
+                Math.toDegrees(
+                    orientation[2].toDouble()
+                ).toFloat()
+
+            compassAzimuthDeg =
+                (
+                    (azimuth % 360f) +
+                        360f
+                    ) % 360f
+            phonePitchDeg = pitch
+            phoneRollDeg = roll
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun startGnssMonitor() {
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.N
+        ) {
+            return
+        }
+
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        if (gnssCallbackHolder != null) {
+            return
+        }
+
+        try {
+            val callback =
+                object : GnssStatus.Callback() {
+                    override fun onSatelliteStatusChanged(
+                        status: GnssStatus
+                    ) {
+                        gnssSatellitesVisible =
+                            status.satelliteCount
+
+                        var used = 0
+                        for (
+                            i in
+                            0 until status.satelliteCount
+                        ) {
+                            if (status.usedInFix(i)) {
+                                used++
+                            }
+                        }
+                        gnssSatellitesUsed = used
+                    }
+
+                    override fun onStopped() {
+                        gnssSatellitesVisible = -1
+                        gnssSatellitesUsed = -1
+                    }
+                }
+
+            gnssCallbackHolder = callback
+            locationManager.registerGnssStatusCallback(
+                callback,
+                Handler(Looper.getMainLooper())
+            )
+        } catch (_: Exception) {
+            gnssCallbackHolder = null
+        }
+    }
+
+    private fun stopGnssMonitor() {
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.N
+        ) {
+            return
+        }
+
+        val callback =
+            gnssCallbackHolder as?
+                GnssStatus.Callback
+                ?: return
+
+        try {
+            locationManager.unregisterGnssStatusCallback(
+                callback
+            )
+        } catch (_: Exception) {
+        }
+
+        gnssCallbackHolder = null
+    }
+
+    private fun gnssOverlay(): String {
+        val altText =
+            alt?.let {
+                String.format(
+                    Locale.US,
+                    "ALT %.0fm",
+                    it
+                )
+            } ?: "ALT --"
+
+        val accText =
+            accuracy?.let {
+                String.format(
+                    Locale.US,
+                    "ACC ±%.0fm",
+                    it
+                )
+            } ?: "ACC --"
+
+        val satText =
+            if (
+                gnssSatellitesVisible >= 0 &&
+                gnssSatellitesUsed >= 0
+            ) {
+                "SAT ${gnssSatellitesUsed}/${gnssSatellitesVisible}"
+            } else {
+                "SAT --/--"
+            }
+
+        return "$altText • $accText • $satText • ${gpsQualityLabel()} • FIX ${gpsFixAgeText()}"
+    }
+
+    private fun navigationOverlay(): String {
+        val compassText =
+            compassAzimuthDeg?.let {
+                String.format(
+                    Locale.US,
+                    "COMP %.0f° %s",
+                    it,
+                    cardinalDirection(it)
+                )
+            } ?: "COMP --"
+
+        val gpsHeadingText =
+            heading?.let {
+                String.format(
+                    Locale.US,
+                    "GPS HDG %.0f° %s",
+                    it,
+                    cardinalDirection(it)
+                )
+            } ?: "GPS HDG --"
+
+        val speedText =
+            speedKmh?.let {
+                String.format(
+                    Locale.US,
+                    "SPD %.1fkm/h",
+                    it
+                )
+            } ?: "SPD --"
+
+        val distanceText =
+            if (recording != null) {
+                if (distanceTravelledM >= 1000f) {
+                    String.format(
+                        Locale.US,
+                        "DIST %.2fkm",
+                        distanceTravelledM / 1000f
+                    )
+                } else {
+                    String.format(
+                        Locale.US,
+                        "DIST %.0fm",
+                        distanceTravelledM
+                    )
+                }
+            } else {
+                "DIST STBY"
+            }
+
+        return "$compassText • $gpsHeadingText • $speedText • ${motionLabel()} • $distanceText"
+    }
+
+    private fun orientationOverlay(): String {
+        val pitch =
+            phonePitchDeg?.let {
+                String.format(
+                    Locale.US,
+                    "TILT %.1f°",
+                    it
+                )
+            } ?: "TILT --"
+
+        val roll =
+            phoneRollDeg?.let {
+                String.format(
+                    Locale.US,
+                    "HORIZON %.1f°",
+                    it
+                )
+            } ?: "HORIZON --"
+
+        val level =
+            phoneRollDeg?.let {
+                when {
+                    kotlin.math.abs(it) <= 1.0f ->
+                        "LEVEL LOCK"
+                    kotlin.math.abs(it) <= 3.0f ->
+                        "LEVEL NEAR"
+                    else ->
+                        "LEVEL ADJUST"
+                }
+            } ?: "LEVEL --"
+
+        return "$pitch • $roll • $level"
+    }
+
+    private fun audioLevelOverlay(): String {
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return "MIC OFF"
+        }
+
+        if (recording == null) {
+            return "MIC READY"
+        }
+
+        val amplitude =
+            audioAmplitude.coerceIn(
+                0.0,
+                1.0
+            )
+
+        val percent =
+            (amplitude * 100.0)
+                .roundToInt()
+
+        val dbfs =
+            if (amplitude > 0.0001) {
+                (
+                    20.0 *
+                        log10(amplitude)
+                    ).coerceAtLeast(-80.0)
+            } else {
+                -80.0
+            }
+
+        return String.format(
+            Locale.US,
+            "%s • LVL %d%% • %.1fdBFS",
+            audioStateLabel,
+            percent,
+            dbfs
+        )
+    }
+
+    private fun loadReporterIdentity() {
+        val prefs =
+            getSharedPreferences(
+                "develop_uganda_reporter",
+                Context.MODE_PRIVATE
+            )
+
+        reporterName =
+            prefs.getString(
+                "reporter_name",
+                "CITIZEN"
+            )
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?: "CITIZEN"
+
+        storyId =
+            prefs.getString(
+                "story_id",
+                ""
+            )
+                ?.trim()
+                ?: ""
+    }
+
+    private fun reporterDisplayName(): String {
+        return reporterName
+            .ifBlank { "CITIZEN" }
+            .take(28)
+    }
+
+    private fun storyDisplayId(): String {
+        return storyId
+            .ifBlank { "--" }
+            .take(24)
+    }
+
+    private fun newReportId(): String {
+        return "DU-" +
+            SimpleDateFormat(
+                "yyMMdd-HHmmss",
+                Locale.US
+            ).format(Date())
+    }
+
+    private fun identityButtonText(): String {
+        return "REPORT ID\n$reportId • ${reporterDisplayName()} • ${storyDisplayId()}"
+    }
+
+    private fun showIdentityDialog() {
+        val container =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+                setPadding(
+                    dp(18),
+                    dp(8),
+                    dp(18),
+                    dp(4)
+                )
+            }
+
+        val reporterInput =
+            EditText(this).apply {
+                hint = "Reporter / citizen name"
+                setText(
+                    if (
+                        reporterName ==
+                        "CITIZEN"
+                    ) {
+                        ""
+                    } else {
+                        reporterName
+                    }
+                )
+                isSingleLine = true
+            }
+
+        val storyInput =
+            EditText(this).apply {
+                hint = "Story ID / assignment (optional)"
+                setText(storyId)
+                isSingleLine = true
+            }
+
+        container.addView(reporterInput)
+        container.addView(storyInput)
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "develop.uganda Report Identity"
+            )
+            .setMessage(
+                "These fields are burned into the recorded report."
+            )
+            .setView(container)
+            .setPositiveButton(
+                "SAVE"
+            ) { _, _ ->
+                reporterName =
+                    reporterInput.text
+                        .toString()
+                        .trim()
+                        .ifBlank {
+                            "CITIZEN"
+                        }
+
+                storyId =
+                    storyInput.text
+                        .toString()
+                        .trim()
+
+                getSharedPreferences(
+                    "develop_uganda_reporter",
+                    Context.MODE_PRIVATE
+                )
+                    .edit()
+                    .putString(
+                        "reporter_name",
+                        reporterName
+                    )
+                    .putString(
+                        "story_id",
+                        storyId
+                    )
+                    .apply()
+
+                refreshHud()
+            }
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .show()
+    }
+
     private fun coordinateOverlay(): String {
         val b = StringBuilder("GPS")
 
@@ -1453,7 +2022,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             return
         }
 
-        baseName = "DEVELOP_UGANDA_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        reportId = newReportId()
+
+        baseName = "DEVELOP_UGANDA_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -1506,6 +2077,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                 is VideoRecordEvent.Start -> {
                     recStarted = System.currentTimeMillis()
                     distanceTravelledM = 0f
+                    audioAmplitude = 0.0
+                    audioStateLabel = "MIC REC"
                     previousTrackLat = lat
                     previousTrackLon = lon
                     statusView.text = "● REC"
@@ -1515,11 +2088,36 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                     recordButton.text = "■ STOP"
                 }
 
+                is VideoRecordEvent.Status -> {
+                    val audioStats =
+                        event.recordingStats.audioStats
+                    audioAmplitude =
+                        audioStats.audioAmplitude
+                    audioStateLabel =
+                        when {
+                            audioStats.hasError() -> "MIC ERROR"
+                            audioStats.hasAudio() -> "MIC LIVE"
+                            else -> "MIC OFF"
+                        }
+                }
+
                 is VideoRecordEvent.Finalize -> {
                     val hadError = event.hasError()
 
                     recording = null
                     recStarted = 0L
+                    audioAmplitude = 0.0
+                    audioStateLabel =
+                        if (
+                            ContextCompat.checkSelfPermission(
+                                this,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            "MIC READY"
+                        } else {
+                            "MIC OFF"
+                        }
                     recordButton.text = "● RECORD"
 
                     if (hadError) {
@@ -1560,8 +2158,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             return
         }
 
+        reportId = newReportId()
+
         val photoName =
-            "DEVELOP_UGANDA_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+            "DEVELOP_UGANDA_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
                 SimpleDateFormat(
                     "yyyyMMdd_HHmmss",
                     Locale.US
@@ -1673,6 +2273,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         if (::captureModeButton.isInitialized) {
             captureModeButton.text =
                 "CAPTURE\n${captureModes[captureModeIndex]}"
+        }
+
+        if (::identityButton.isInitialized) {
+            identityButton.text =
+                identityButtonText()
         }
 
         if (
@@ -2071,28 +2676,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     }
 
     private fun systemOverlay(): String {
-        val mic = if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            if (recording != null) {
-                "MIC REC"
-            } else {
-                "MIC READY"
-            }
-        } else {
-            "MIC OFF"
-        }
-
         val net = networkType()
         val uplink =
             estimatedUploadKbps?.let {
-                " • UP~${it}kbps"
-            } ?: ""
+                "UP~${it}kbps"
+            } ?: "UP~--"
 
-        return "$mic • NET $net$uplink" +
+        return "NET $net • $uplink" +
             " • BAT ${batteryPct() ?: "--"}%" +
             " • FREE ${freeStorageGb() ?: "--"}GB"
     }
@@ -2328,6 +2918,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                         ACTION_LOOK -> cycleLook()
                         ACTION_QUALITY -> cycleQuality()
                         ACTION_CAPTURE_MODE -> cycleCaptureMode()
+                        ACTION_IDENTITY -> showIdentityDialog()
 
                         ACTION_LENS -> {
                             if (recording == null) {
@@ -2752,6 +3343,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             )
         } catch (_: Exception) {
         }
+
+        stopGnssMonitor()
 
         try {
             recording?.stop()

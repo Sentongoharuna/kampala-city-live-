@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 17700
-        versionName = "177.0-field-broadcast-pro"
+        versionCode = 17800
+        versionName = "178.0-broadcast-instruments"
     }
 
     buildTypes {
