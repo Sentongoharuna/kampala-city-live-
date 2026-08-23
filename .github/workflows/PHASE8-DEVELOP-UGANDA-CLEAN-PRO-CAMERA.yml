@@ -1,0 +1,1125 @@
+name: Build develop.uganda Phase 7 Fixed Pro Camera
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify source
+        run: |
+          test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack cumulative source
+        run: |
+          rm -rf phase7-fixed
+          mkdir phase7-fixed
+
+          unzip -q \
+            PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip \
+            -d phase7-fixed
+
+          PROJECT="phase7-fixed/pulse-phase4-production"
+
+          test -f "$PROJECT/app/build.gradle.kts"
+          test -f "$PROJECT/app/src/main/AndroidManifest.xml"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt"
+
+      - name: Preserve cellular compatibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path(
+              "phase7-fixed/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/"
+              "LiveActivity.kt"
+          )
+
+          text = path.read_text(encoding="utf-8")
+
+          if "cellularGenerationCompat" not in text:
+
+              text = re.sub(
+                  r'\bcellularGeneration\s*\(\s*\)',
+                  'cellularGenerationCompat(this@LiveActivity)',
+                  text
+              )
+
+              helper = r'''
+
+          private fun cellularGenerationCompat(
+              context: android.content.Context
+          ): String {
+
+              val cm =
+                  context.getSystemService(
+                      android.content.Context.CONNECTIVITY_SERVICE
+                  ) as android.net.ConnectivityManager
+
+              val network =
+                  cm.activeNetwork ?: return "OFFLINE"
+
+              val caps =
+                  cm.getNetworkCapabilities(network)
+                      ?: return "UNKNOWN"
+
+              if (
+                  caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_WIFI
+                  )
+              ) {
+                  return "Wi-Fi"
+              }
+
+              if (
+                  !caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+                  )
+              ) {
+                  return "NETWORK"
+              }
+
+              val tm =
+                  context.getSystemService(
+                      android.content.Context.TELEPHONY_SERVICE
+                  ) as android.telephony.TelephonyManager
+
+              val type = try {
+
+                  if (
+                      android.os.Build.VERSION.SDK_INT >=
+                      android.os.Build.VERSION_CODES.N
+                  ) {
+                      tm.dataNetworkType
+                  } else {
+                      @Suppress("DEPRECATION")
+                      tm.networkType
+                  }
+
+              } catch (_: Exception) {
+                  return "CELLULAR"
+              }
+
+              return when (type) {
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_NR ->
+                      "5G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_LTE ->
+                      "4G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_UMTS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP ->
+                      "3G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GPRS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EDGE,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GSM ->
+                      "2G"
+
+                  else ->
+                      "CELLULAR"
+              }
+          }
+          '''
+
+              text += helper
+
+              path.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          print("Cellular compatibility preserved")
+          PY
+
+      - name: Safely rename visible brand
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          project = Path(
+              "phase7-fixed/pulse-phase4-production"
+          )
+
+          main = project / "app/src/main"
+
+          # ---------------------------
+          # Android XML branding
+          # ---------------------------
+
+          for path in main.rglob("*.xml"):
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              original = text
+
+              text = text.replace(
+                  ">PULSE<",
+                  ">develop.uganda<"
+              )
+
+              text = text.replace(
+                  ">Pulse<",
+                  ">develop.uganda<"
+              )
+
+              if path.name == "AndroidManifest.xml":
+
+                  text = re.sub(
+                      r'android:label="PULSE"',
+                      'android:label="develop.uganda"',
+                      text
+                  )
+
+              if text != original:
+                  path.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
+
+          # --------------------------------------
+          # Kotlin: ONLY modify quoted strings.
+          # Never rename Kotlin identifiers.
+          # --------------------------------------
+
+          kotlin_files = [
+              main / "java/com/sentongoharuna/pulse/MainActivity.kt",
+              main / "java/com/sentongoharuna/pulse/LiveActivity.kt",
+              main / "java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt",
+          ]
+
+          string_re = re.compile(
+              r'"(?:\\.|[^"\\])*"'
+          )
+
+          for path in kotlin_files:
+
+              if not path.exists():
+                  continue
+
+              text = path.read_text(
+                  encoding="utf-8"
+              )
+
+              def change_string(match):
+
+                  token = match.group(0)
+
+                  content = token[1:-1]
+
+                  content = content.replace(
+                      "PULSE NEWS",
+                      "develop.uganda"
+                  )
+
+                  content = content.replace(
+                      "PULSE REPORTER",
+                      "develop.uganda REPORTER"
+                  )
+
+                  content = content.replace(
+                      "PULSE",
+                      "develop.uganda"
+                  )
+
+                  return '"' + content + '"'
+
+              text = string_re.sub(
+                  change_string,
+                  text
+              )
+
+              path.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          print("Visible brand safely changed")
+          PY
+
+      - name: Fix recorded telemetry HUD
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path(
+              "phase7-fixed/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse"
+          )
+
+          targets = []
+
+          for path in root.rglob("*.kt"):
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              if (
+                  (
+                      "CITIZEN REPORT" in text
+                      or "REPORTER" in text
+                  )
+                  and (
+                      "LAT" in text
+                      or "LON" in text
+                      or "ALT" in text
+                  )
+              ):
+                  targets.append(path)
+
+          if not targets:
+              targets = [
+                  root / "ProMonitorOverlayView.kt"
+              ]
+
+          changed = []
+
+          for path in targets:
+
+              if not path.exists():
+                  continue
+
+              text = path.read_text(
+                  encoding="utf-8"
+              )
+
+              original = text
+
+              # ======================================
+              # 1. STRAIGHT UPRIGHT WORDING
+              # ======================================
+
+              # Neutralize Canvas text rotation.
+              text = re.sub(
+                  r'canvas\.rotate\s*\([^)]*\)',
+                  'canvas.rotate(0f)',
+                  text
+              )
+
+              # ======================================
+              # 2. VERY SMALL TELEMETRY TEXT
+              # ======================================
+
+              def tiny(match):
+
+                  prefix = match.group(1)
+
+                  try:
+                      old = float(
+                          match.group(2)
+                      )
+                  except:
+                      return match.group(0)
+
+                  new = max(
+                      6.5,
+                      min(
+                          10.0,
+                          old * 0.30
+                      )
+                  )
+
+                  value = (
+                      f"{new:.1f}"
+                      .rstrip("0")
+                      .rstrip(".")
+                  )
+
+                  return (
+                      prefix +
+                      value +
+                      "f"
+                  )
+
+              text = re.sub(
+                  r'((?:\.?textSize)\s*=\s*)'
+                  r'([0-9]+(?:\.[0-9]+)?)f',
+                  tiny,
+                  text
+              )
+
+              # ======================================
+              # 3. REMOVE BLACK TELEMETRY BACKGROUND
+              # ======================================
+
+              dark_values = [
+                  "0xFF000000",
+                  "0xF5000000",
+                  "0xEE000000",
+                  "0xE6000000",
+                  "0xDD000000",
+                  "0xD9000000",
+                  "0xCC000000",
+                  "0xC8000000",
+                  "0xC0000000",
+                  "0xB8000000",
+                  "0xB0000000",
+                  "0xA6000000",
+                  "0xA0000000",
+                  "0x98000000",
+                  "0x92000000",
+                  "0x8C000000",
+                  "0x88000000",
+                  "0x80000000",
+                  "0x78000000"
+              ]
+
+              for colour in dark_values:
+                  text = text.replace(
+                      colour,
+                      "0x00000000"
+                  )
+
+              # Color.argb(alpha,0,0,0)
+              text = re.sub(
+                  r'(?:android\.graphics\.)?Color\.argb'
+                  r'\(\s*\d+\s*,\s*0\s*,\s*0\s*,\s*0\s*\)',
+                  'android.graphics.Color.TRANSPARENT',
+                  text
+              )
+
+              # Named background/panel paints.
+              text = re.sub(
+                  r'(\b[A-Za-z_][A-Za-z0-9_]*'
+                  r'(?:Background|background|Panel|panel|'
+                  r'Sidebar|sidebar|Strip|strip|Backdrop|backdrop|'
+                  r'Box|box|HudBg|hudBg)'
+                  r'[A-Za-z0-9_]*\.color\s*=\s*)'
+                  r'[^\n]+',
+                  r'\1android.graphics.Color.TRANSPARENT',
+                  text
+              )
+
+              # ======================================
+              # 4. PROFESSIONAL COLOURS
+              # ======================================
+
+              colour_rules = {
+                  "rec":
+                      "android.graphics.Color.rgb(255,45,45)",
+
+                  "record":
+                      "android.graphics.Color.rgb(255,45,45)",
+
+                  "gps":
+                      "android.graphics.Color.rgb(0,229,255)",
+
+                  "lat":
+                      "android.graphics.Color.rgb(0,229,255)",
+
+                  "lon":
+                      "android.graphics.Color.rgb(0,229,255)",
+
+                  "alt":
+                      "android.graphics.Color.rgb(0,229,255)",
+
+                  "coord":
+                      "android.graphics.Color.rgb(0,229,255)",
+
+                  "weather":
+                      "android.graphics.Color.rgb(64,196,255)",
+
+                  "wind":
+                      "android.graphics.Color.rgb(64,196,255)",
+
+                  "temp":
+                      "android.graphics.Color.rgb(64,196,255)",
+
+                  "humidity":
+                      "android.graphics.Color.rgb(64,196,255)",
+
+                  "mic":
+                      "android.graphics.Color.rgb(80,220,120)",
+
+                  "battery":
+                      "android.graphics.Color.rgb(80,220,120)",
+
+                  "storage":
+                      "android.graphics.Color.rgb(80,220,120)",
+
+                  "network":
+                      "android.graphics.Color.rgb(80,220,120)",
+
+                  "status":
+                      "android.graphics.Color.rgb(80,220,120)",
+
+                  "camera":
+                      "android.graphics.Color.rgb(255,193,7)",
+
+                  "fps":
+                      "android.graphics.Color.rgb(255,193,7)",
+
+                  "hdr":
+                      "android.graphics.Color.rgb(255,193,7)",
+
+                  "hevc":
+                      "android.graphics.Color.rgb(255,193,7)",
+
+                  "uhd":
+                      "android.graphics.Color.rgb(255,193,7)",
+
+                  "brand":
+                      "android.graphics.Color.rgb(255,193,7)"
+              }
+
+              for key, colour in colour_rules.items():
+
+                  pattern = (
+                      r'(\b[A-Za-z_][A-Za-z0-9_]*'
+                      + re.escape(key) +
+                      r'[A-Za-z0-9_]*\.color\s*=\s*)'
+                      r'[^\n]+'
+                  )
+
+                  text = re.sub(
+                      pattern,
+                      lambda m:
+                          m.group(1) + colour,
+                      text,
+                      flags=re.IGNORECASE
+                  )
+
+              # ======================================
+              # 5. TIGHTER WIDTH / LESS SCREEN SPACE
+              # ======================================
+
+              text = re.sub(
+                  r'width\s*\*\s*0\.(?:4[0-9]|3[0-9]|2[5-9])f',
+                  'width * 0.16f',
+                  text
+              )
+
+              if text != original:
+
+                  path.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
+
+                  changed.append(
+                      str(path)
+                  )
+
+          if not changed:
+              raise SystemExit(
+                  "No telemetry renderer was changed"
+              )
+
+          print(
+              "Telemetry renderer files changed:"
+          )
+
+          for item in changed:
+              print(item)
+
+          PY
+
+      - name: Add professional live camera styling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path(
+              "phase7-fixed/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/"
+              "LiveActivity.kt"
+          )
+
+          text = path.read_text(
+              encoding="utf-8"
+          )
+
+          if "applyDevelopUgandaProLook()" not in text:
+
+              marker = (
+                  "super.onCreate(savedInstanceState)"
+              )
+
+              if marker not in text:
+                  raise SystemExit(
+                      "Could not find LiveActivity onCreate"
+                  )
+
+              text = text.replace(
+                  marker,
+                  marker +
+                  "\n        applyDevelopUgandaProLook()",
+                  1
+              )
+
+              methods = r'''
+
+          private fun applyDevelopUgandaProLook() {
+
+              window.decorView.postDelayed({
+
+                  styleDevelopUgandaTree(
+                      window.decorView
+                  )
+
+                  addDevelopUgandaProReadout()
+
+              }, 450L)
+          }
+
+          private fun styleDevelopUgandaTree(
+              view: android.view.View
+          ) {
+
+              if (
+                  view is android.widget.TextView
+              ) {
+
+                  val label =
+                      view.text
+                          ?.toString()
+                          ?.trim()
+                          ?.uppercase()
+                          ?: ""
+
+                  val proControls =
+                      setOf(
+                          "REPORT",
+                          "PRO",
+                          "AUTO",
+                          "PHOTO",
+                          "LIVE",
+                          "DATA",
+                          "FLIP",
+                          "TORCH",
+                          "RECORD",
+                          "● REC",
+                          "STOP",
+                          "■ STOP"
+                      )
+
+                  if (
+                      label in proControls
+                      || label.contains("REC")
+                  ) {
+
+                      val accent =
+                          when {
+
+                              label.contains("REC") ||
+                              label.contains("STOP") ->
+
+                                  android.graphics.Color.rgb(
+                                      255,
+                                      55,
+                                      55
+                                  )
+
+                              label == "PRO" ->
+
+                                  android.graphics.Color.rgb(
+                                      255,
+                                      193,
+                                      7
+                                  )
+
+                              label == "DATA" ->
+
+                                  android.graphics.Color.rgb(
+                                      0,
+                                      220,
+                                      255
+                                  )
+
+                              label == "LIVE" ->
+
+                                  android.graphics.Color.rgb(
+                                      80,
+                                      220,
+                                      120
+                                  )
+
+                              else ->
+
+                                  android.graphics.Color.WHITE
+                          }
+
+                      view.setTextColor(
+                          accent
+                      )
+
+                      view.textSize =
+                          if (
+                              label.contains("REC")
+                          ) {
+                              13f
+                          } else {
+                              11f
+                          }
+
+                      view.typeface =
+                          android.graphics.Typeface.create(
+                              "sans-serif-medium",
+                              android.graphics.Typeface.NORMAL
+                          )
+
+                      view.letterSpacing =
+                          0.06f
+
+                      view.scaleX =
+                          if (
+                              label.contains("REC")
+                          ) {
+                              0.94f
+                          } else {
+                              0.82f
+                          }
+
+                      view.scaleY =
+                          if (
+                              label.contains("REC")
+                          ) {
+                              0.94f
+                          } else {
+                              0.82f
+                          }
+
+                      val bg =
+                          android.graphics.drawable
+                              .GradientDrawable()
+
+                      bg.shape =
+                          android.graphics.drawable
+                              .GradientDrawable.RECTANGLE
+
+                      bg.cornerRadius =
+                          dpDevelopUganda(18)
+                              .toFloat()
+
+                      if (
+                          label.contains("REC")
+                          || label.contains("STOP")
+                      ) {
+
+                          bg.setColor(
+                              android.graphics.Color.argb(
+                                  235,
+                                  220,
+                                  35,
+                                  35
+                              )
+                          )
+
+                      } else {
+
+                          bg.setColor(
+                              android.graphics.Color.argb(
+                                  95,
+                                  8,
+                                  10,
+                                  14
+                              )
+                          )
+
+                          bg.setStroke(
+                              dpDevelopUganda(1),
+                              android.graphics.Color.argb(
+                                  130,
+                                  220,
+                                  230,
+                                  240
+                              )
+                          )
+                      }
+
+                      view.background =
+                          bg
+
+                      view.setPadding(
+                          dpDevelopUganda(14),
+                          dpDevelopUganda(7),
+                          dpDevelopUganda(14),
+                          dpDevelopUganda(7)
+                      )
+                  }
+              }
+
+              if (
+                  view is android.view.ViewGroup
+              ) {
+
+                  for (
+                      i in 0 until view.childCount
+                  ) {
+
+                      styleDevelopUgandaTree(
+                          view.getChildAt(i)
+                      )
+                  }
+              }
+          }
+
+          private fun addDevelopUgandaProReadout() {
+
+              val decor =
+                  window.decorView
+
+              if (
+                  decor.findViewWithTag<android.view.View>(
+                      "developUgandaProReadout"
+                  ) != null
+              ) {
+                  return
+              }
+
+              val box =
+                  android.widget.LinearLayout(
+                      this
+                  )
+
+              box.tag =
+                  "developUgandaProReadout"
+
+              box.orientation =
+                  android.widget.LinearLayout.VERTICAL
+
+              box.setBackgroundColor(
+                  android.graphics.Color.TRANSPARENT
+              )
+
+              box.setPadding(
+                  dpDevelopUganda(14),
+                  dpDevelopUganda(8),
+                  dpDevelopUganda(8),
+                  dpDevelopUganda(4)
+              )
+
+              box.translationY =
+                  dpDevelopUganda(28)
+                      .toFloat()
+
+              box.isClickable =
+                  false
+
+              box.isFocusable =
+                  false
+
+              val brand =
+                  android.widget.TextView(
+                      this
+                  )
+
+              brand.text =
+                  "develop.uganda   •   PRO CAM   •   ● REC READY"
+
+              brand.setTextColor(
+                  android.graphics.Color.rgb(
+                      255,
+                      193,
+                      7
+                  )
+              )
+
+              brand.textSize =
+                  10f
+
+              brand.typeface =
+                  android.graphics.Typeface.create(
+                      "sans-serif-medium",
+                      android.graphics.Typeface.BOLD
+                  )
+
+              brand.setShadowLayer(
+                  2f,
+                  1f,
+                  1f,
+                  android.graphics.Color.BLACK
+              )
+
+              val camera =
+                  android.widget.TextView(
+                      this
+                  )
+
+              camera.text =
+                  "4K  •  30FPS  •  HDR  •  HEVC  •  STAB  |  ISO AUTO  •  SHUTTER AUTO  •  WB AUTO  •  AF"
+
+              camera.setTextColor(
+                  android.graphics.Color.rgb(
+                      0,
+                      220,
+                      255
+                  )
+              )
+
+              camera.textSize =
+                  8f
+
+              camera.setShadowLayer(
+                  2f,
+                  1f,
+                  1f,
+                  android.graphics.Color.BLACK
+              )
+
+              box.addView(
+                  brand
+              )
+
+              box.addView(
+                  camera
+              )
+
+              addContentView(
+                  box,
+                  android.view.ViewGroup.LayoutParams(
+                      android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                      android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                  )
+              )
+          }
+
+          private fun dpDevelopUganda(
+              value: Int
+          ): Int {
+
+              return (
+                  value *
+                  resources.displayMetrics.density
+              ).toInt()
+          }
+          '''
+
+              # Insert methods before the final class brace.
+              pos = text.rfind("}")
+
+              if pos == -1:
+                  raise SystemExit(
+                      "LiveActivity class end not found"
+                  )
+
+              text = (
+                  text[:pos]
+                  + methods
+                  + "\n"
+                  + text[pos:]
+              )
+
+              path.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          print(
+              "Professional live camera styling added"
+          )
+          PY
+
+      - name: Strengthen REC wording
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path(
+              "phase7-fixed/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse"
+          )
+
+          string_re = re.compile(
+              r'"(?:\\.|[^"\\])*"'
+          )
+
+          for path in root.rglob("*.kt"):
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              def replace_label(match):
+
+                  token =
+                      match.group(0)
+
+                  value =
+                      token[1:-1]
+
+                  if value == "RECORD":
+                      return '"● REC"'
+
+                  if value == "STOP RECORD":
+                      return '"■ STOP"'
+
+                  return token
+
+              text =
+                  string_re.sub(
+                      replace_label,
+                      text
+                  )
+
+              path.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          PY
+
+      - name: Add Phase 7 record
+        run: |
+          cat >> \
+          phase7-fixed/pulse-phase4-production/PHASE-CONTINUITY.md \
+          <<'EOF'
+
+          ## Phase 7 Fixed — develop.uganda Pro Camera
+
+          Visible brand:
+          develop.uganda
+
+          Recorded-video HUD:
+
+          - straight upright wording
+          - no sideways telemetry text
+          - no large black telemetry background
+          - extremely small compact text
+          - all available reporting data retained
+          - professional colour hierarchy
+
+          Colours:
+
+          RED:
+          recording information.
+
+          GOLD:
+          develop.uganda and camera information.
+
+          CYAN:
+          GPS and technical data.
+
+          LIGHT BLUE:
+          weather.
+
+          GREEN:
+          healthy status information.
+
+          WHITE:
+          normal reporting metadata.
+
+          Live camera:
+
+          - compact professional control styling
+          - professional REC presentation
+          - develop.uganda PRO CAM status
+          - 4K / FPS / HDR / HEVC / stabilization readout
+          - ISO / shutter / white balance / autofocus status
+          - existing functional controls preserved
+
+          Manual hardware capabilities remain dependent
+          on the Android device and camera sensor.
+          EOF
+
+      - name: Verify source before build
+        run: |
+          PROJECT="phase7-fixed/pulse-phase4-production"
+
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/MainActivity.kt"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt"
+
+          grep -q "develop.uganda" \
+            "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+
+          grep -q "Phase 7 Fixed" \
+            "$PROJECT/PHASE-CONTINUITY.md"
+
+      - name: Build develop.uganda Phase 7 APK
+        working-directory: phase7-fixed/pulse-phase4-production
+        run: |
+          set -o pipefail
+
+          gradle \
+            --no-daemon \
+            :app:assembleDebug \
+            --stacktrace \
+            2>&1 | tee phase7-build.log
+
+      - name: Show useful build errors
+        if: failure()
+        working-directory: phase7-fixed/pulse-phase4-production
+        run: |
+          echo "======== IMPORTANT BUILD ERRORS ========"
+
+          grep -Ei \
+            "(^e:|error:|unresolved reference|expecting|type mismatch|FAILURE:)" \
+            phase7-build.log \
+            | head -120 \
+            || true
+
+      - name: Prepare APK
+        run: |
+          cp \
+            phase7-fixed/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-PHASE7-FIXED-PRO-CAMERA.apk
+
+          ls -lh \
+            DEVELOP-UGANDA-PHASE7-FIXED-PRO-CAMERA.apk
+
+      - name: Package Phase 7 source
+        run: |
+          cd phase7-fixed
+
+          zip -qr \
+            ../DEVELOP-UGANDA-PHASE7-FIXED-PRO-CAMERA-SOURCE.zip \
+            pulse-phase4-production
+
+      - name: Upload Phase 7 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-PHASE7-FIXED-PRO-CAMERA
+          path: DEVELOP-UGANDA-PHASE7-FIXED-PRO-CAMERA.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Phase 7 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-PHASE7-FIXED-PRO-CAMERA-SOURCE
+          path: DEVELOP-UGANDA-PHASE7-FIXED-PRO-CAMERA-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
