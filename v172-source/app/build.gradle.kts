@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 17200
-        versionName = "172.0-broadcast-reporter"
+        versionCode = 17300
+        versionName = "173.0-direct-source-clean-camera"
     }
 
     buildTypes {
@@ -25,6 +25,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
