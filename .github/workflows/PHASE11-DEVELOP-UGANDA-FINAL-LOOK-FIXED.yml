@@ -1,0 +1,699 @@
+name: Build develop.uganda Phase 11 FINAL LOOK FIXED
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify cumulative source
+        run: |
+          set -e
+          test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+          echo "Phase 11 source found"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack cumulative project
+        run: |
+          set -e
+          rm -rf phase11-build
+          mkdir -p phase11-build
+          unzip -q PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip -d phase11-build
+          PROJECT="phase11-build/pulse-phase4-production"
+          test -f "$PROJECT/app/build.gradle.kts"
+          test -f "$PROJECT/app/src/main/AndroidManifest.xml"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/MainActivity.kt"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          test -f "$PROJECT/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt"
+
+      - name: Write Phase 11 professional camera chrome
+        run: |
+          cat > phase11-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/Phase11ProChromeView.kt <<'KOTLIN'
+          package com.sentongoharuna.pulse
+
+          import android.content.Context
+          import android.graphics.Canvas
+          import android.graphics.Color
+          import android.graphics.Paint
+          import android.graphics.RectF
+          import android.view.View
+
+          class Phase11ProChromeView(context: Context) : View(context) {
+              private val d = resources.displayMetrics.density
+
+              private val grid = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                  color = Color.argb(60, 255, 255, 255)
+                  strokeWidth = d * 0.55f
+                  style = Paint.Style.STROKE
+              }
+
+              private val horizon = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                  color = Color.argb(180, 255, 193, 7)
+                  strokeWidth = d * 1.0f
+                  style = Paint.Style.STROKE
+              }
+
+              private val focus = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                  color = Color.argb(210, 0, 229, 255)
+                  strokeWidth = d * 1.0f
+                  style = Paint.Style.STROKE
+              }
+
+              private val corners = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                  color = Color.argb(150, 255, 255, 255)
+                  strokeWidth = d * 1.0f
+                  style = Paint.Style.STROKE
+              }
+
+              override fun onDraw(canvas: Canvas) {
+                  super.onDraw(canvas)
+                  val w = width.toFloat()
+                  val h = height.toFloat()
+                  if (w <= 0f || h <= 0f) return
+
+                  canvas.drawLine(w / 3f, 0f, w / 3f, h, grid)
+                  canvas.drawLine(w * 2f / 3f, 0f, w * 2f / 3f, h, grid)
+                  canvas.drawLine(0f, h / 3f, w, h / 3f, grid)
+                  canvas.drawLine(0f, h * 2f / 3f, w, h * 2f / 3f, grid)
+
+                  val hw = w * 0.20f
+                  canvas.drawLine(w / 2f - hw, h / 2f, w / 2f - d * 8f, h / 2f, horizon)
+                  canvas.drawLine(w / 2f + d * 8f, h / 2f, w / 2f + hw, h / 2f, horizon)
+                  canvas.drawLine(w / 2f, h / 2f - d * 4f, w / 2f, h / 2f + d * 4f, horizon)
+
+                  val r = d * 18f
+                  canvas.drawRect(
+                      RectF(w / 2f - r, h / 2f - r, w / 2f + r, h / 2f + r),
+                      focus
+                  )
+
+                  val m = d * 18f
+                  val l = d * 22f
+                  canvas.drawLine(m, m, m + l, m, corners)
+                  canvas.drawLine(m, m, m, m + l, corners)
+                  canvas.drawLine(w - m, m, w - m - l, m, corners)
+                  canvas.drawLine(w - m, m, w - m, m + l, corners)
+                  canvas.drawLine(m, h - m, m + l, h - m, corners)
+                  canvas.drawLine(m, h - m, m, h - m - l, corners)
+                  canvas.drawLine(w - m, h - m, w - m - l, h - m, corners)
+                  canvas.drawLine(w - m, h - m, w - m, h - m - l, corners)
+              }
+          }
+          KOTLIN
+
+      - name: Write Phase 11 source patcher
+        run: |
+          cat > /tmp/phase11_patch.py <<'PY'
+          from pathlib import Path
+          import re
+
+          project = Path("phase11-build/pulse-phase4-production")
+          main = project / "app/src/main"
+          live = main / "java/com/sentongoharuna/pulse/LiveActivity.kt"
+          hud = main / "java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt"
+          manifest = main / "AndroidManifest.xml"
+
+          live_text = live.read_text(encoding="utf-8")
+
+          if "private fun cellularGenerationCompat" not in live_text:
+              live_text = re.sub(
+                  r"\bcellularGeneration\s*\(\s*\)",
+                  "cellularGenerationCompat(this@LiveActivity)",
+                  live_text,
+              )
+              live_text = re.sub(
+                  r"\bcellularGeneration\b(?!Compat)",
+                  "cellularGenerationCompat(this@LiveActivity)",
+                  live_text,
+              )
+
+              cellular_helper = r'''
+
+          private fun cellularGenerationCompat(context: android.content.Context): String {
+              val connectivity = context.getSystemService(
+                  android.content.Context.CONNECTIVITY_SERVICE
+              ) as android.net.ConnectivityManager
+
+              val network = connectivity.activeNetwork ?: return "OFFLINE"
+              val caps = connectivity.getNetworkCapabilities(network) ?: return "UNKNOWN"
+
+              if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+                  return "Wi-Fi"
+              }
+
+              if (!caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                  return "NETWORK"
+              }
+
+              val telephony = context.getSystemService(
+                  android.content.Context.TELEPHONY_SERVICE
+              ) as android.telephony.TelephonyManager
+
+              val type = try {
+                  if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                      telephony.dataNetworkType
+                  } else {
+                      @Suppress("DEPRECATION")
+                      telephony.networkType
+                  }
+              } catch (_: Exception) {
+                  return "CELLULAR"
+              }
+
+              return when (type) {
+                  android.telephony.TelephonyManager.NETWORK_TYPE_NR -> "5G"
+                  android.telephony.TelephonyManager.NETWORK_TYPE_LTE -> "4G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_UMTS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_0,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_A,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_B,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EHRPD -> "3G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GPRS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EDGE,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_CDMA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_1xRTT,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_IDEN,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GSM -> "2G"
+
+                  else -> "CELLULAR"
+              }
+          }
+          '''
+              live_text += cellular_helper
+          else:
+              live_text = re.sub(
+                  r"\bcellularGeneration\s*\(\s*\)",
+                  "cellularGenerationCompat(this@LiveActivity)",
+                  live_text,
+              )
+              live_text = re.sub(
+                  r"\bcellularGeneration\b(?!Compat)",
+                  "cellularGenerationCompat(this@LiveActivity)",
+                  live_text,
+              )
+
+          call = "applyPhase11FinalCameraLook()"
+
+          if call not in live_text:
+              marker = "super.onCreate(savedInstanceState)"
+              if marker not in live_text:
+                  raise SystemExit("LiveActivity onCreate marker not found")
+              live_text = live_text.replace(marker, marker + "\n        " + call, 1)
+
+          if "private fun LiveActivity.applyPhase11FinalCameraLook" not in live_text:
+              pro_extensions = r'''
+
+          private fun LiveActivity.applyPhase11FinalCameraLook() {
+              window.decorView.postDelayed({
+                  stylePhase11Controls(window.decorView)
+                  addPhase11Chrome()
+              }, 450L)
+          }
+
+          private fun LiveActivity.stylePhase11Controls(view: android.view.View) {
+              if (view is android.widget.TextView) {
+                  val label = view.text?.toString()?.trim()?.uppercase() ?: ""
+
+                  val controls = setOf(
+                      "REPORT", "PRO", "AUTO", "PHOTO", "VIDEO", "LIVE",
+                      "DATA", "FLIP", "LENS", "TORCH", "RECORD",
+                      "● REC", "STOP", "■ STOP"
+                  )
+
+                  if (label in controls || label.contains("REC")) {
+                      val textColor = when {
+                          label.contains("REC") || label.contains("STOP") ->
+                              android.graphics.Color.rgb(255, 60, 60)
+                          label == "PRO" ->
+                              android.graphics.Color.rgb(255, 193, 7)
+                          label == "DATA" ->
+                              android.graphics.Color.rgb(0, 229, 255)
+                          label == "LIVE" ->
+                              android.graphics.Color.rgb(80, 220, 120)
+                          else ->
+                              android.graphics.Color.WHITE
+                      }
+
+                      view.setTextColor(textColor)
+                      view.textSize = if (
+                          label.contains("REC") || label.contains("STOP")
+                      ) 12f else 9.5f
+
+                      view.typeface = android.graphics.Typeface.create(
+                          "sans-serif-medium",
+                          android.graphics.Typeface.NORMAL
+                      )
+                      view.letterSpacing = 0.035f
+
+                      val bg = android.graphics.drawable.GradientDrawable()
+                      bg.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                      bg.cornerRadius = dpPhase11(13).toFloat()
+
+                      if (label.contains("REC") || label.contains("STOP")) {
+                          bg.setColor(android.graphics.Color.argb(220, 200, 30, 30))
+                          bg.setStroke(
+                              dpPhase11(1),
+                              android.graphics.Color.rgb(255, 95, 95)
+                          )
+                      } else {
+                          bg.setColor(android.graphics.Color.argb(48, 0, 0, 0))
+                          bg.setStroke(
+                              dpPhase11(1),
+                              android.graphics.Color.argb(145, 225, 235, 240)
+                          )
+                      }
+
+                      view.background = bg
+                      view.setPadding(
+                          dpPhase11(10),
+                          dpPhase11(5),
+                          dpPhase11(10),
+                          dpPhase11(5)
+                      )
+                      view.minimumHeight = dpPhase11(32)
+                  }
+              }
+
+              if (view is android.view.ViewGroup) {
+                  for (i in 0 until view.childCount) {
+                      stylePhase11Controls(view.getChildAt(i))
+                  }
+              }
+          }
+
+          private fun LiveActivity.addPhase11Chrome() {
+              val decor = window.decorView
+
+              if (
+                  decor.findViewWithTag<android.view.View>(
+                      "phase11ProfessionalChrome"
+                  ) != null
+              ) return
+
+              val monitor = Phase11ProChromeView(this)
+              monitor.tag = "phase11ProfessionalChrome"
+              monitor.isClickable = false
+              monitor.isFocusable = false
+
+              addContentView(
+                  monitor,
+                  android.view.ViewGroup.LayoutParams(
+                      android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                      android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                  )
+              )
+
+              val status = android.widget.LinearLayout(this)
+              status.tag = "phase11ProStatus"
+              status.orientation = android.widget.LinearLayout.VERTICAL
+              status.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+              status.setPadding(
+                  dpPhase11(12),
+                  dpPhase11(4),
+                  dpPhase11(8),
+                  dpPhase11(4)
+              )
+              status.translationY = dpPhase11(34).toFloat()
+              status.isClickable = false
+              status.isFocusable = false
+
+              val brand = android.widget.TextView(this)
+              brand.text = "develop.uganda  •  PRO CAM  •  REC READY"
+              brand.setTextColor(android.graphics.Color.rgb(255, 193, 7))
+              brand.textSize = 8.5f
+              brand.typeface = android.graphics.Typeface.create(
+                  "sans-serif-medium",
+                  android.graphics.Typeface.BOLD
+              )
+              brand.setShadowLayer(2f, 1f, 1f, android.graphics.Color.BLACK)
+
+              val quality = android.widget.TextView(this)
+              quality.text =
+                  "4K/UHD • 24/30/60FPS • HDR10 • HEVC • STAB | ISO • SHUTTER • WB • AF • EXP"
+              quality.setTextColor(android.graphics.Color.rgb(0, 229, 255))
+              quality.textSize = 6.8f
+              quality.setShadowLayer(2f, 1f, 1f, android.graphics.Color.BLACK)
+
+              val tools = android.widget.TextView(this)
+              tools.text =
+                  "GRID • LEVEL • FOCUS • ZOOM • MIC • GPS • NETWORK • BAT • STORAGE"
+              tools.setTextColor(android.graphics.Color.rgb(80, 220, 120))
+              tools.textSize = 6.4f
+              tools.setShadowLayer(2f, 1f, 1f, android.graphics.Color.BLACK)
+
+              status.addView(brand)
+              status.addView(quality)
+              status.addView(tools)
+
+              addContentView(
+                  status,
+                  android.view.ViewGroup.LayoutParams(
+                      android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                      android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                  )
+              )
+          }
+
+          private fun LiveActivity.dpPhase11(value: Int): Int {
+              return (value * resources.displayMetrics.density).toInt()
+          }
+          '''
+              live_text += pro_extensions
+
+          string_re = re.compile(r'"(?:\\.|[^"\\])*"')
+
+          def rename_visible_string(match):
+              token = match.group(0)
+              value = token[1:-1]
+              value = value.replace("PULSE NEWS", "develop.uganda")
+              value = value.replace("PULSE REPORTER", "develop.uganda")
+              value = value.replace("PULSE", "develop.uganda")
+              return '"' + value + '"'
+
+          live_text = string_re.sub(rename_visible_string, live_text)
+          live.write_text(live_text, encoding="utf-8")
+
+          for kotlin_path in [
+              main / "java/com/sentongoharuna/pulse/MainActivity.kt",
+              hud,
+          ]:
+              kotlin_text = kotlin_path.read_text(encoding="utf-8")
+              kotlin_text = string_re.sub(rename_visible_string, kotlin_text)
+              kotlin_path.write_text(kotlin_text, encoding="utf-8")
+
+          manifest_text = manifest.read_text(encoding="utf-8")
+
+          def add_portrait(match):
+              tag = match.group(0)
+              if "screenOrientation" in tag:
+                  return tag
+              if tag.endswith("/>"):
+                  return tag[:-2] + ' android:screenOrientation="portrait" />'
+              return tag[:-1] + ' android:screenOrientation="portrait">'
+
+          manifest_text = re.sub(
+              r'<activity\b[^>]*android:name="[^"]*(?:LiveActivity|MainActivity)"[^>]*>',
+              add_portrait,
+              manifest_text,
+          )
+          manifest_text = re.sub(
+              r'android:label="PULSE[^"]*"',
+              'android:label="develop.uganda"',
+              manifest_text,
+          )
+          manifest.write_text(manifest_text, encoding="utf-8")
+
+          hud_text = hud.read_text(encoding="utf-8")
+          hud_before = hud_text
+
+          hud_text = re.sub(
+              r'canvas\.rotate\s*\([^;\n]*\)',
+              'canvas.rotate(0f)',
+              hud_text,
+          )
+          hud_text = re.sub(
+              r'\.rotation\s*=\s*(?:-?90|270)(?:\.0)?f',
+              '.rotation = 0f',
+              hud_text,
+          )
+
+          def shrink_size(match):
+              prefix = match.group(1)
+              old = float(match.group(2))
+              new = max(6.0, min(9.0, old * 0.30))
+              number = f"{new:.1f}".rstrip("0").rstrip(".")
+              return prefix + number + "f"
+
+          hud_text = re.sub(
+              r'((?:\.?textSize)\s*=\s*)([0-9]+(?:\.[0-9]+)?)f',
+              shrink_size,
+              hud_text,
+          )
+
+          dark_values = [
+              "0xFF000000", "0xFA000000", "0xF5000000", "0xF0000000",
+              "0xEE000000", "0xE8000000", "0xE6000000", "0xE0000000",
+              "0xDD000000", "0xD9000000", "0xD0000000", "0xCC000000",
+              "0xC8000000", "0xC0000000", "0xB8000000", "0xB5000000",
+              "0xB0000000", "0xAA000000", "0xA6000000", "0xA0000000",
+              "0x99000000", "0x98000000", "0x92000000", "0x90000000",
+              "0x8C000000", "0x88000000", "0x80000000", "0x7A000000",
+              "0x78000000", "0x70000000", "0x66000000", "0x55000000",
+              "0x44000000",
+          ]
+
+          for value in dark_values:
+              hud_text = hud_text.replace(value, "0x00000000")
+
+          hud_text = re.sub(
+              r'(?:android\.graphics\.)?Color\.argb'
+              r'\(\s*\d+\s*,\s*0\s*,\s*0\s*,\s*0\s*\)',
+              'android.graphics.Color.TRANSPARENT',
+              hud_text,
+          )
+
+          hud_text = re.sub(
+              r'(\b[A-Za-z_][A-Za-z0-9_]*'
+              r'(?:panel|Panel|background|Background|backdrop|Backdrop|'
+              r'sidebar|Sidebar|strip|Strip|box|Box|hudBg|HudBg)'
+              r'[A-Za-z0-9_]*\.color\s*=\s*)[^\n]+',
+              r'\1android.graphics.Color.TRANSPARENT',
+              hud_text,
+          )
+
+          hud_text = re.sub(
+              r'width\s*\*\s*0\.(?:[3-5][0-9]|2[0-9])f',
+              'width * 0.12f',
+              hud_text,
+          )
+
+          hud_text = hud_text.replace(
+              "setShadowLayer(0f",
+              "setShadowLayer(1.2f",
+          )
+
+          colours = {
+              "brand": "android.graphics.Color.rgb(255,193,7)",
+              "develop": "android.graphics.Color.rgb(255,193,7)",
+              "camera": "android.graphics.Color.rgb(255,193,7)",
+              "mode": "android.graphics.Color.rgb(255,193,7)",
+              "fps": "android.graphics.Color.rgb(255,193,7)",
+              "uhd": "android.graphics.Color.rgb(255,193,7)",
+              "hdr": "android.graphics.Color.rgb(255,193,7)",
+              "hevc": "android.graphics.Color.rgb(255,193,7)",
+              "codec": "android.graphics.Color.rgb(255,193,7)",
+              "rec": "android.graphics.Color.rgb(255,48,48)",
+              "record": "android.graphics.Color.rgb(255,48,48)",
+              "gps": "android.graphics.Color.rgb(0,229,255)",
+              "lat": "android.graphics.Color.rgb(0,229,255)",
+              "lon": "android.graphics.Color.rgb(0,229,255)",
+              "alt": "android.graphics.Color.rgb(0,229,255)",
+              "coord": "android.graphics.Color.rgb(0,229,255)",
+              "elevation": "android.graphics.Color.rgb(0,229,255)",
+              "weather": "android.graphics.Color.rgb(64,196,255)",
+              "wx": "android.graphics.Color.rgb(64,196,255)",
+              "temp": "android.graphics.Color.rgb(64,196,255)",
+              "humidity": "android.graphics.Color.rgb(64,196,255)",
+              "wind": "android.graphics.Color.rgb(64,196,255)",
+              "mic": "android.graphics.Color.rgb(80,220,120)",
+              "audio": "android.graphics.Color.rgb(80,220,120)",
+              "network": "android.graphics.Color.rgb(80,220,120)",
+              "battery": "android.graphics.Color.rgb(80,220,120)",
+              "storage": "android.graphics.Color.rgb(80,220,120)",
+              "status": "android.graphics.Color.rgb(80,220,120)",
+          }
+
+          for key, colour in colours.items():
+              pattern = (
+                  r'(\b[A-Za-z_][A-Za-z0-9_]*'
+                  + re.escape(key)
+                  + r'[A-Za-z0-9_]*\.color\s*=\s*)[^\n]+'
+              )
+              hud_text = re.sub(
+                  pattern,
+                  lambda m, c=colour: m.group(1) + c,
+                  hud_text,
+                  flags=re.IGNORECASE,
+              )
+
+          if hud_text == hud_before:
+              raise SystemExit("Telemetry renderer was not modified")
+
+          hud.write_text(hud_text, encoding="utf-8")
+
+          live_text = live.read_text(encoding="utf-8")
+
+          def replace_rec_label(match):
+              token = match.group(0)
+              value = token[1:-1]
+              if value == "RECORD":
+                  return '"● REC"'
+              if value == "STOP RECORD":
+                  return '"■ STOP"'
+              return token
+
+          live_text = string_re.sub(replace_rec_label, live_text)
+          live.write_text(live_text, encoding="utf-8")
+
+          print("Phase 11 final source patch completed")
+          PY
+
+          python3 -m py_compile /tmp/phase11_patch.py
+
+      - name: Apply Phase 11 source patcher
+        run: |
+          python3 /tmp/phase11_patch.py
+
+      - name: Add Phase 11 final specification
+        run: |
+          cat >> phase11-build/pulse-phase4-production/PHASE-CONTINUITY.md <<'EOF'
+
+          ## PHASE 11 — develop.uganda FINAL LOOK FIXED
+
+          Public brand: develop.uganda
+
+          Recorded video:
+          - upright 9:16 portrait reporting presentation
+          - straight horizontal words
+          - no sideways telemetry
+          - no rotated reporter wording
+          - no black telemetry rectangle
+          - no left black telemetry strip
+          - no bottom black telemetry strip
+          - very small compressed metadata
+          - camera picture remains dominant
+          - camera control UI is not intended as saved-video burn-in
+
+          Telemetry retained when available:
+          reporter, citizen report, REC, timecode, date, time, timezone,
+          location, latitude, longitude, altitude, elevation, GPS accuracy,
+          temperature, weather, humidity, wind, microphone, audio,
+          network, cellular generation, battery, storage, camera mode,
+          UHD/4K, FPS, HDR/HDR10, HEVC and stabilization.
+
+          Colours:
+          gold = brand/camera format
+          red = REC
+          white = normal report metadata
+          cyan = GPS/coordinates/altitude
+          light blue = weather
+          green = mic/network/battery/storage
+
+          Live professional camera:
+          develop.uganda PRO CAM identity
+          rule-of-thirds grid
+          horizon/level reference
+          centre focus reticle
+          frame corner marks
+          compact professional controls
+          professional REC styling
+          4K/UHD, frame-rate, HDR10, HEVC, stabilization
+          ISO, shutter, white balance, focus, exposure
+          zoom, microphone, GPS, network, battery and storage status.
+
+          Existing working camera actions remain preserved.
+          Hardware-specific manual control depends on the Android device.
+          EOF
+
+      - name: Verify Phase 11 source
+        run: |
+          set -e
+          PROJECT="phase11-build/pulse-phase4-production"
+          LIVE="$PROJECT/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          HUD="$PROJECT/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt"
+          CHROME="$PROJECT/app/src/main/java/com/sentongoharuna/pulse/Phase11ProChromeView.kt"
+
+          test -f "$LIVE"
+          test -f "$HUD"
+          test -f "$CHROME"
+          grep -q "cellularGenerationCompat" "$LIVE"
+          grep -q "applyPhase11FinalCameraLook" "$LIVE"
+          grep -q "Phase11ProChromeView" "$LIVE"
+          grep -q "PHASE 11" "$PROJECT/PHASE-CONTINUITY.md"
+          echo "Phase 11 source verification passed"
+
+      - name: Package Phase 11 source before build
+        run: |
+          cd phase11-build
+          zip -qr ../PHASE11-DEVELOP-UGANDA-FINAL-LOOK-FIXED-SOURCE.zip pulse-phase4-production
+
+      - name: Build Phase 11 APK
+        working-directory: phase11-build/pulse-phase4-production
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee phase11-build.log
+
+      - name: Print useful Phase 11 build errors
+        if: failure()
+        working-directory: phase11-build/pulse-phase4-production
+        run: |
+          echo "========== PHASE 11 IMPORTANT BUILD ERRORS =========="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|expecting|type mismatch|conflicting overload|redeclaration|FAILURE:)" \
+            phase11-build.log \
+            | head -180 \
+            || true
+
+      - name: Prepare Phase 11 APK
+        run: |
+          cp \
+            phase11-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk \
+            PHASE11-DEVELOP-UGANDA-FINAL-LOOK-FIXED.apk
+          ls -lh PHASE11-DEVELOP-UGANDA-FINAL-LOOK-FIXED.apk
+
+      - name: Upload Phase 11 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PHASE11-DEVELOP-UGANDA-FINAL-LOOK-FIXED
+          path: PHASE11-DEVELOP-UGANDA-FINAL-LOOK-FIXED.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Phase 11 source
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PHASE11-DEVELOP-UGANDA-FINAL-LOOK-FIXED-SOURCE
+          path: PHASE11-DEVELOP-UGANDA-FINAL-LOOK-FIXED-SOURCE.zip
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Phase 11 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PHASE11-BUILD-ERROR-LOG
+          path: phase11-build/pulse-phase4-production/phase11-build.log
+          if-no-files-found: warn
+          retention-days: 7
