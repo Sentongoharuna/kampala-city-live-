@@ -439,13 +439,18 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         bottomDeck.addView(actionRow)
 
+        // Avoid the 3-argument FrameLayout.LayoutParams overload that
+        // Kotlin/Android API 36 is resolving ambiguously in this project.
+        val bottomDeckParams =
+            FrameLayout.LayoutParams(
+                -1, // MATCH_PARENT
+                -2  // WRAP_CONTENT
+            )
+        bottomDeckParams.gravity =
+            Gravity.BOTTOM
         root.addView(
             bottomDeck,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM
-            )
+            bottomDeckParams
         )
 
         setContentView(root)
