@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 17500
-        versionName = "175.0-orbit-pro-camera"
+        versionCode = 17600
+        versionName = "176.0-field-cinema"
     }
 
     buildTypes {

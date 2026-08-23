@@ -37,6 +37,8 @@ import androidx.camera.core.CameraEffect
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExposureState
 import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.SessionConfig
 import androidx.camera.core.ZoomState
@@ -88,10 +90,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     private lateinit var sceneButton: Button
     private lateinit var lookButton: Button
     private lateinit var qualityButton: Button
+    private lateinit var captureModeButton: Button
 
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var videoCapture: VideoCapture<Recorder>? = null
+    private var imageCapture: ImageCapture? = null
     private var recording: Recording? = null
     private var overlayEffect: OverlayEffect? = null
     private var useFront = false
@@ -108,20 +112,27 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     )
     private val lookModes = listOf(
         "CLEAN",
+        "NATURAL",
         "WARM",
         "COOL",
         "TEAL",
         "GOLD",
-        "NIGHT"
+        "NIGHT",
+        "MONO"
     )
     private val qualityModes = listOf(
-        "UHD",
-        "FHD",
-        "HD"
+        "SOCIAL FHD",
+        "MASTER UHD",
+        "FAST HD"
+    )
+    private val captureModes = listOf(
+        "VIDEO",
+        "PHOTO"
     )
     private var sceneIndex = 0
     private var lookIndex = 0
     private var qualityIndex = 0
+    private var captureModeIndex = 0
     private var sceneExposureTarget = 0
 
     private val weather = WeatherRepository()
@@ -257,7 +268,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             Color.WHITE
         )
         formatView = hud(
-            "UHD • DEVICE FPS",
+            "SOCIAL FHD • DEVICE FPS",
             7f,
             0xFFFFC21A.toInt()
         )
@@ -302,42 +313,35 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             0xFF7FE8FF.toInt()
         )
         qualityButton = deckButton(
-            "FORMAT\n${qualityModes[qualityIndex]}",
+            "FORMAT\n${qualityDeckLabel()}",
             0xFFE8F1F2.toInt()
         )
+        captureModeButton = deckButton(
+            "CAPTURE\n${captureModes[captureModeIndex]}",
+            0xFF76E39A.toInt()
+        )
 
-        modeRow.addView(
+        listOf(
             sceneButton,
-            LinearLayout.LayoutParams(
-                0,
-                dp(44),
-                1f
-            )
-        )
-        modeRow.addView(
-            space(dp(8)),
-            wrap(8, 1)
-        )
-        modeRow.addView(
             lookButton,
-            LinearLayout.LayoutParams(
-                0,
-                dp(44),
-                1f
-            )
-        )
-        modeRow.addView(
-            space(dp(8)),
-            wrap(8, 1)
-        )
-        modeRow.addView(
             qualityButton,
-            LinearLayout.LayoutParams(
-                0,
-                dp(44),
-                1f
+            captureModeButton
+        ).forEachIndexed { index, button ->
+            modeRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(44),
+                    1f
+                )
             )
-        )
+            if (index < 3) {
+                modeRow.addView(
+                    space(dp(6)),
+                    wrap(6, 1)
+                )
+            }
+        }
         bottomDeck.addView(modeRow)
 
         val zoomRow = row()
@@ -447,6 +451,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             cycleQuality()
         }
 
+        captureModeButton.setOnClickListener {
+            cycleCaptureMode()
+        }
+
         lensButton.setOnClickListener {
             if (recording == null) {
                 useFront = !useFront
@@ -476,7 +484,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         exposureSeek.setOnSeekBarChangeListener(
             simpleSeek {
-                applyExposure(it - 6)
+                sceneExposureTarget = it - 6
+                applyExposure(sceneExposureTarget)
             }
         )
 
@@ -603,16 +612,45 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
 
-        val recorder = Recorder.Builder()
-            .setQualitySelector(
-                buildQualitySelector()
-            )
-            .build()
+        val photoMode =
+            captureModes[captureModeIndex] == "PHOTO"
 
-        videoCapture = VideoCapture.withOutput(recorder)
+        videoCapture = null
+        imageCapture = null
+
+        if (photoMode) {
+            imageCapture = ImageCapture.Builder()
+                .setCaptureMode(
+                    ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
+                )
+                .setJpegQuality(100)
+                .build()
+        } else {
+            val recorder = Recorder.Builder()
+                .setQualitySelector(
+                    buildQualitySelector()
+                )
+                .setTargetVideoEncodingBitRate(
+                    targetVideoBitrate()
+                )
+                .build()
+
+            videoCapture =
+                VideoCapture.withOutput(
+                    recorder
+                )
+        }
+
+        val effectTargets =
+            CameraEffect.PREVIEW or
+                if (photoMode) {
+                    CameraEffect.IMAGE_CAPTURE
+                } else {
+                    CameraEffect.VIDEO_CAPTURE
+                }
 
         overlayEffect = OverlayEffect(
-            CameraEffect.PREVIEW or CameraEffect.VIDEO_CAPTURE,
+            effectTargets,
             0,
             Handler(Looper.getMainLooper())
         ) { throwable ->
@@ -626,12 +664,26 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             }
         }
 
-        val session = SessionConfig.Builder(
-            preview,
-            videoCapture!!
-        )
-            .addEffect(overlayEffect!!)
-            .build()
+        val session =
+            if (photoMode) {
+                SessionConfig.Builder(
+                    preview,
+                    imageCapture!!
+                )
+                    .addEffect(
+                        overlayEffect!!
+                    )
+                    .build()
+            } else {
+                SessionConfig.Builder(
+                    preview,
+                    videoCapture!!
+                )
+                    .addEffect(
+                        overlayEffect!!
+                    )
+                    .build()
+            }
 
         val selector = if (useFront) {
             CameraSelector.DEFAULT_FRONT_CAMERA
@@ -652,8 +704,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             syncCameraRanges()
             applyScenePreset()
 
-            statusView.text = "STBY"
+            statusView.text =
+                if (photoMode) "PHOTO READY" else "STBY"
             statusView.setTextColor(0xFFFF5A52.toInt())
+            recordButton.text =
+                if (photoMode) "● PHOTO" else "● RECORD"
             refreshHud()
         } catch (e: Exception) {
             toast("Selected camera is unavailable")
@@ -790,13 +845,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             finalHeight
         ) / 1000f
 
-        // Wide title-safe area fixes the left-edge crop seen on V174.
+        // Cross-platform social-safe HUD:
+        // keep clear of TikTok/Reels top chrome and right-side action rail.
         val safeLeft =
             finalWidth * 0.22f
         val safeTop =
-            finalHeight * 0.060f
+            finalHeight * 0.085f
         val maxWidth =
-            finalWidth * 0.72f
+            finalWidth * 0.60f
 
         var y = safeTop
 
@@ -824,7 +880,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            26f * u
+            30f * u
 
         val brand = "develop.uganda"
 
@@ -847,7 +903,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         )
 
         c.drawText(
-            "CITIZEN REPORT",
+            "FIELD REPORT",
             safeLeft +
                 brandWidth +
                 (16f * u),
@@ -888,10 +944,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             }
 
         val recState =
-            if (recording != null) {
-                "● REC"
-            } else {
-                "STBY"
+            when {
+                recording != null -> "● REC"
+                captureModes[captureModeIndex] == "PHOTO" -> "● PHOTO"
+                else -> "STBY"
             }
 
         drawFitText(
@@ -902,6 +958,25 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             maxWidth,
             text,
             9.2f * u
+        )
+
+        // Editorial identity: reporter/news/cinema unit.
+        y += 17f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.color = 0xFFFFC21A.toInt()
+        text.textSize = 10.8f * u
+
+        drawFitText(
+            c,
+            "${sceneTag()} • ${lookModes[lookIndex]} • ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            8.2f * u
         )
 
         // Place.
@@ -989,7 +1064,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         drawFitText(
             c,
-            "SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • TAP AF",
+            "CAM ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • TAP AF • HIGH BITRATE",
             safeLeft,
             y,
             maxWidth,
@@ -1010,7 +1085,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         drawFitText(
             c,
-            "ISO AUTO • SHUTTER AUTO • WB AUTO • MIC • GPS • GRID • LEVEL • CODEC DEVICE",
+            "ISO AUTO • SHUTTER AUTO • WB AUTO • MIC • GPS • GRID • LEVEL • ${captureModes[captureModeIndex]}",
             safeLeft,
             y,
             maxWidth,
@@ -1128,6 +1203,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     }
 
     private fun toggleRecording() {
+        if (
+            captureModes[captureModeIndex] ==
+            "PHOTO"
+        ) {
+            takePhoto()
+            return
+        }
+
         val vc = videoCapture ?: run {
             toast("Camera is still starting")
             return
@@ -1236,6 +1319,93 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         }
     }
 
+    private fun takePhoto() {
+        val capture = imageCapture ?: run {
+            toast("Photo camera is still starting")
+            return
+        }
+
+        val photoName =
+            "DEVELOP_UGANDA_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+                SimpleDateFormat(
+                    "yyyyMMdd_HHmmss",
+                    Locale.US
+                ).format(Date())
+
+        val values = ContentValues().apply {
+            put(
+                MediaStore.Images.Media.DISPLAY_NAME,
+                photoName
+            )
+            put(
+                MediaStore.Images.Media.MIME_TYPE,
+                "image/jpeg"
+            )
+
+            if (
+                android.os.Build.VERSION.SDK_INT >=
+                29
+            ) {
+                put(
+                    MediaStore.Images.Media.RELATIVE_PATH,
+                    "Pictures/develop.uganda"
+                )
+            }
+        }
+
+        val output =
+            ImageCapture.OutputFileOptions.Builder(
+                contentResolver,
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                values
+            )
+                .build()
+
+        statusView.text = "CAPTURING"
+
+        capture.takePicture(
+            output,
+            ContextCompat.getMainExecutor(this),
+            object :
+                ImageCapture.OnImageSavedCallback {
+
+                override fun onImageSaved(
+                    result:
+                    ImageCapture.OutputFileResults
+                ) {
+                    statusView.text = "PHOTO SAVED"
+                    statusView.setTextColor(
+                        0xFF76E39A.toInt()
+                    )
+                    toast(
+                        "Photo saved • develop.uganda"
+                    )
+
+                    uiHandler.postDelayed({
+                        statusView.text =
+                            "PHOTO READY"
+                        statusView.setTextColor(
+                            0xFFFF5A52.toInt()
+                        )
+                    }, 1600L)
+                }
+
+                override fun onError(
+                    exception:
+                    ImageCaptureException
+                ) {
+                    statusView.text = "PHOTO ERROR"
+                    statusView.setTextColor(
+                        0xFFFF4138.toInt()
+                    )
+                    toast(
+                        "Photo capture failed"
+                    )
+                }
+            }
+        )
+    }
+
     private fun refreshHud() {
         timecodeView.text =
             "TC ${tc()}"
@@ -1262,7 +1432,28 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         if (::qualityButton.isInitialized) {
             qualityButton.text =
-                "FORMAT\n${qualityModes[qualityIndex]}"
+                "FORMAT\n${qualityDeckLabel()}"
+        }
+
+        if (::captureModeButton.isInitialized) {
+            captureModeButton.text =
+                "CAPTURE\n${captureModes[captureModeIndex]}"
+        }
+
+        if (
+            ::recordButton.isInitialized &&
+            recording == null
+        ) {
+            recordButton.text =
+                if (
+                    captureModes[
+                        captureModeIndex
+                    ] == "PHOTO"
+                ) {
+                    "● PHOTO"
+                } else {
+                    "● RECORD"
+                }
         }
 
         if (::lensButton.isInitialized) {
@@ -1311,6 +1502,67 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         bindCamera()
     }
 
+    private fun cycleCaptureMode() {
+        if (recording != null) {
+            toast(
+                "Stop recording before changing capture mode"
+            )
+            return
+        }
+
+        captureModeIndex =
+            (captureModeIndex + 1) %
+                captureModes.size
+
+        refreshHud()
+        bindCamera()
+    }
+
+    private fun qualityDeckLabel(): String {
+        return when (
+            qualityModes[
+                qualityIndex
+            ]
+        ) {
+            "MASTER UHD" -> "4K MASTER"
+            "FAST HD" -> "HD FAST"
+            else -> "SOCIAL"
+        }
+    }
+
+    private fun targetVideoBitrate(): Int {
+        return when (
+            qualityModes[
+                qualityIndex
+            ]
+        ) {
+            "MASTER UHD" ->
+                48_000_000
+
+            "FAST HD" ->
+                10_000_000
+
+            else ->
+                20_000_000
+        }
+    }
+
+    private fun sceneTag(): String {
+        return when (
+            sceneModes[
+                sceneIndex
+            ]
+        ) {
+            "NEWS" -> "NEWS DESK"
+            "CINEMA" -> "CINEMA UNIT"
+            "MOVIE" -> "MOVIE UNIT"
+            "OUTDOOR" -> "OUTDOOR UNIT"
+            "INDOOR" -> "INTERIOR UNIT"
+            "NIGHT" -> "NIGHT DESK"
+            else -> "FIELD REPORT"
+        }
+    }
+
     private fun buildQualitySelector():
         QualitySelector {
 
@@ -1320,21 +1572,21 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                     qualityIndex
                 ]
             ) {
-                "FHD" -> listOf(
+                "MASTER UHD" -> listOf(
+                    Quality.UHD,
                     Quality.FHD,
-                    Quality.HD,
-                    Quality.UHD
+                    Quality.HD
                 )
 
-                "HD" -> listOf(
+                "FAST HD" -> listOf(
                     Quality.HD,
                     Quality.FHD,
                     Quality.UHD
                 )
 
                 else -> listOf(
-                    Quality.UHD,
                     Quality.FHD,
+                    Quality.UHD,
                     Quality.HD
                 )
             }
@@ -1393,20 +1645,26 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                     lookIndex
                 ]
             ) {
+                "NATURAL" ->
+                    0x06FFF4E8
+
                 "WARM" ->
-                    0x12FF8A45
+                    0x0DFF8A45
 
                 "COOL" ->
-                    0x102F72FF
+                    0x0C2F72FF
 
                 "TEAL" ->
-                    0x1200A7A1
+                    0x0D00A7A1
 
                 "GOLD" ->
-                    0x12F2B43C
+                    0x0EF2B43C
 
                 "NIGHT" ->
-                    0x18092346
+                    0x14092346
+
+                "MONO" ->
+                    0x12000000
 
                 else ->
                     Color.TRANSPARENT
@@ -1876,7 +2134,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     ): Button {
         return Button(this).apply {
             text = value
-            textSize = 7.1f
+            textSize = 6.5f
             isAllCaps = false
             setTextColor(Color.WHITE)
             minHeight = dp(40)
@@ -1895,7 +2153,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                         dp(18).toFloat()
 
                     setColor(
-                        0x3D030A0E
+                        0x30030A0E
                     )
 
                     setStroke(
@@ -1918,7 +2176,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     private fun recordButton(): Button {
         return Button(this).apply {
             text = "● RECORD"
-            textSize = 10f
+            textSize = 9.5f
             isAllCaps = false
             setTextColor(Color.WHITE)
             minHeight = dp(48)
@@ -1931,7 +2189,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                         dp(26).toFloat()
 
                     setColor(
-                        0xCCFF2D20.toInt()
+                        0xD9FF2D20.toInt()
                     )
 
                     setStroke(
@@ -2121,41 +2379,64 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                 orbitPaint
             )
 
-            // Title-safe corner marks.
+            // Social title-safe corner marks.
             val insetX =
                 w * 0.08f
             val insetY =
                 h * 0.08f
             val arm =
-                dp(20).toFloat()
+                dp(18).toFloat()
 
-            canvas.drawLine(
-                insetX,
-                insetY,
-                insetX + arm,
-                insetY,
-                focusPaint
-            )
-            canvas.drawLine(
-                insetX,
-                insetY,
-                insetX,
-                insetY + arm,
-                focusPaint
-            )
+            listOf(
+                floatArrayOf(
+                    insetX,
+                    insetY,
+                    insetX + arm,
+                    insetY,
+                    insetX,
+                    insetY + arm
+                ),
+                floatArrayOf(
+                    w - insetX,
+                    insetY,
+                    w - insetX - arm,
+                    insetY,
+                    w - insetX,
+                    insetY + arm
+                ),
+                floatArrayOf(
+                    insetX,
+                    h - insetY,
+                    insetX + arm,
+                    h - insetY,
+                    insetX,
+                    h - insetY - arm
+                ),
+                floatArrayOf(
+                    w - insetX,
+                    h - insetY,
+                    w - insetX - arm,
+                    h - insetY,
+                    w - insetX,
+                    h - insetY - arm
+                )
+            ).forEach { p ->
+                canvas.drawLine(
+                    p[0], p[1], p[2], p[3],
+                    focusPaint
+                )
+                canvas.drawLine(
+                    p[0], p[1], p[4], p[5],
+                    focusPaint
+                )
+            }
 
-            canvas.drawLine(
-                w - insetX,
-                insetY,
-                w - insetX - arm,
-                insetY,
-                focusPaint
-            )
-            canvas.drawLine(
-                w - insetX,
-                insetY,
-                w - insetX,
-                insetY + arm,
+            val innerOrbit =
+                dp(28).toFloat()
+            canvas.drawCircle(
+                cx,
+                cy,
+                innerOrbit,
                 focusPaint
             )
         }
