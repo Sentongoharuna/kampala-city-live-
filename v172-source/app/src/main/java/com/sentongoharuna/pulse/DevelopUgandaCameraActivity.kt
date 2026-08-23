@@ -78,8 +78,10 @@ import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.cos
 import kotlin.math.log10
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
@@ -191,6 +193,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private var reporterName = "CITIZEN"
     private var storyId = ""
     private var reportId = ""
+    private var clipSequence = 0
+    private var recordStartUtc = "--"
 
 
     private var recStarted = 0L
@@ -956,12 +960,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // Values such as LAT/LON/ALT/HDG/SPD/FIX/DIST continue changing live.
         // V178 uses a deeper social-safe inset. The previous transform
         // placed the left edge too close to the exported crop on some phones.
+        // V179 broadcast-safe layout:
+        // identity stays inside social-media safe margins while the
+        // upper-right is reserved for the live compass/level instruments.
         val safeLeft =
-            finalWidth * 0.24f
+            finalWidth * 0.095f
         val safeTop =
-            finalHeight * 0.105f
+            finalHeight * 0.115f
         val maxWidth =
-            finalWidth * 0.54f
+            finalWidth * 0.61f
 
         var y = safeTop
 
@@ -998,7 +1005,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             safeLeft - (10f * u),
             y - (4f * u),
             safeLeft - (10f * u),
-            y + (184f * u),
+            y + (216f * u),
             rail
         )
 
@@ -1010,7 +1017,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            28f * u
+            30f * u
 
         val brand = "develop.uganda"
 
@@ -1054,6 +1061,38 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             accent
         )
 
+        // Real live field instruments. These are part of the recorded HUD.
+        val instrumentCenterX =
+            finalWidth * 0.82f
+        val compassCenterY =
+            safeTop + (58f * u)
+
+        drawCompassInstrument(
+            c,
+            instrumentCenterX,
+            compassCenterY,
+            48f * u,
+            u
+        )
+
+        drawAudioMeterInstrument(
+            c,
+            finalWidth * 0.745f,
+            safeTop + (119f * u),
+            finalWidth * 0.15f,
+            10f * u,
+            u
+        )
+
+        drawLevelInstrument(
+            c,
+            instrumentCenterX,
+            safeTop + (151f * u),
+            92f * u,
+            30f * u,
+            u
+        )
+
         // 2. Report identity. Always visible in preview and saved media.
         y += 25f * u
         text.typeface = Typeface.create(
@@ -1065,7 +1104,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}",
+            "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()} • CLIP ${clipSequenceText()}",
             safeLeft,
             y,
             maxWidth,
@@ -1096,7 +1135,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "$recState • TC ${tc()} • ${clock.format(Date())} • ${ZoneId.systemDefault().id} • UTC ${utcClockText()}",
+            "$recState • TC ${tc()} • ${clock.format(Date())} • ${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
             safeLeft,
             y,
             maxWidth,
@@ -1285,6 +1324,575 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         c.restore()
+    }
+
+    private fun instrumentStateColor(): Int {
+        val acc = accuracy
+
+        return when {
+            acc == null ->
+                0xFFFF5A52.toInt()
+
+            acc <= 8f ->
+                0xFF76E39A.toInt()
+
+            acc <= 25f ->
+                0xFFFFC21A.toInt()
+
+            else ->
+                0xFFFF6B57.toInt()
+        }
+    }
+
+    private fun drawCompassInstrument(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        radius: Float,
+        u: Float
+    ) {
+        val stateColor =
+            instrumentStateColor()
+
+        val ring =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color =
+                    0xCCFFFFFF.toInt()
+                style =
+                    Paint.Style.STROKE
+                strokeWidth =
+                    1.2f * u
+                setShadowLayer(
+                    2.0f * u,
+                    0.6f * u,
+                    0.6f * u,
+                    0xCC000000.toInt()
+                )
+            }
+
+        val accentPaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = stateColor
+                style =
+                    Paint.Style.STROKE
+                strokeWidth =
+                    2.0f * u
+            }
+
+        val tickPaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color =
+                    0xBFFFFFFF.toInt()
+                strokeWidth =
+                    1.0f * u
+            }
+
+        val labelPaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                typeface = Typeface.create(
+                    Typeface.MONOSPACE,
+                    Typeface.BOLD
+                )
+                textAlign =
+                    Paint.Align.CENTER
+                textSize =
+                    9.2f * u
+                setShadowLayer(
+                    2.0f * u,
+                    0.5f * u,
+                    0.5f * u,
+                    0xDD000000.toInt()
+                )
+            }
+
+        val valuePaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color =
+                    0xFF7FE8FF.toInt()
+                typeface = Typeface.create(
+                    Typeface.MONOSPACE,
+                    Typeface.BOLD
+                )
+                textAlign =
+                    Paint.Align.CENTER
+                textSize =
+                    9.5f * u
+                setShadowLayer(
+                    2.2f * u,
+                    0.6f * u,
+                    0.6f * u,
+                    0xE6000000.toInt()
+                )
+            }
+
+        canvas.drawCircle(
+            centerX,
+            centerY,
+            radius,
+            ring
+        )
+        canvas.drawCircle(
+            centerX,
+            centerY,
+            radius - (4f * u),
+            accentPaint
+        )
+
+        val headingValue =
+            compassAzimuthDeg
+        val headingDeg =
+            headingValue ?: 0f
+
+        for (index in 0 until 24) {
+            val absoluteDeg =
+                index * 15f
+            val relativeDeg =
+                absoluteDeg - headingDeg
+
+            val rad =
+                Math.toRadians(
+                    (relativeDeg - 90f)
+                        .toDouble()
+                )
+
+            val outer =
+                radius - (3f * u)
+
+            val inner =
+                when {
+                    index % 6 == 0 ->
+                        radius - (12f * u)
+
+                    index % 3 == 0 ->
+                        radius - (9f * u)
+
+                    else ->
+                        radius - (6f * u)
+                }
+
+            val x1 =
+                centerX +
+                    (cos(rad) * inner)
+                        .toFloat()
+            val y1 =
+                centerY +
+                    (sin(rad) * inner)
+                        .toFloat()
+            val x2 =
+                centerX +
+                    (cos(rad) * outer)
+                        .toFloat()
+            val y2 =
+                centerY +
+                    (sin(rad) * outer)
+                        .toFloat()
+
+            canvas.drawLine(
+                x1,
+                y1,
+                x2,
+                y2,
+                tickPaint
+            )
+        }
+
+        listOf(
+            "N" to 0f,
+            "E" to 90f,
+            "S" to 180f,
+            "W" to 270f
+        ).forEach { item ->
+            val relativeDeg =
+                item.second - headingDeg
+
+            val rad =
+                Math.toRadians(
+                    (relativeDeg - 90f)
+                        .toDouble()
+                )
+
+            val labelRadius =
+                radius - (20f * u)
+
+            val x =
+                centerX +
+                    (cos(rad) * labelRadius)
+                        .toFloat()
+            val y =
+                centerY +
+                    (sin(rad) * labelRadius)
+                        .toFloat() +
+                    (3f * u)
+
+            canvas.drawText(
+                item.first,
+                x,
+                y,
+                labelPaint
+            )
+        }
+
+        val pointer =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color =
+                    0xFFFFC21A.toInt()
+                style =
+                    Paint.Style.FILL
+            }
+
+        val triangle =
+            android.graphics.Path().apply {
+                moveTo(
+                    centerX,
+                    centerY - radius -
+                        (4f * u)
+                )
+                lineTo(
+                    centerX - (5f * u),
+                    centerY - radius +
+                        (5f * u)
+                )
+                lineTo(
+                    centerX + (5f * u),
+                    centerY - radius +
+                        (5f * u)
+                )
+                close()
+            }
+
+        canvas.drawPath(
+            triangle,
+            pointer
+        )
+
+        val headingText =
+            headingValue?.let {
+                String.format(
+                    Locale.US,
+                    "%.0f° %s",
+                    it,
+                    cardinalDirection(it)
+                )
+            } ?: "--° --"
+
+        canvas.drawText(
+            headingText,
+            centerX,
+            centerY + (3f * u),
+            valuePaint
+        )
+
+        valuePaint.textSize =
+            7.6f * u
+        valuePaint.color =
+            stateColor
+
+        canvas.drawText(
+            "COMPASS",
+            centerX,
+            centerY + (16f * u),
+            valuePaint
+        )
+    }
+
+    private fun drawAudioMeterInstrument(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        width: Float,
+        height: Float,
+        u: Float
+    ) {
+        val bg =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color =
+                    0x35000000
+                style =
+                    Paint.Style.FILL
+            }
+
+        val outline =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color =
+                    0xBFFFFFFF.toInt()
+                style =
+                    Paint.Style.STROKE
+                strokeWidth =
+                    1f * u
+            }
+
+        canvas.drawRoundRect(
+            left,
+            top,
+            left + width,
+            top + height,
+            height / 2f,
+            height / 2f,
+            bg
+        )
+        canvas.drawRoundRect(
+            left,
+            top,
+            left + width,
+            top + height,
+            height / 2f,
+            height / 2f,
+            outline
+        )
+
+        val level =
+            if (recording != null) {
+                audioAmplitude
+                    .coerceIn(
+                        0.0,
+                        1.0
+                    )
+                    .toFloat()
+            } else {
+                0f
+            }
+
+        val fillColor =
+            when {
+                level >= 0.92f ->
+                    0xFFFF4138.toInt()
+
+                level >= 0.72f ->
+                    0xFFFFC21A.toInt()
+
+                else ->
+                    0xFF76E39A.toInt()
+            }
+
+        val fill =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = fillColor
+                style =
+                    Paint.Style.FILL
+            }
+
+        val inner =
+            2f * u
+        val usable =
+            (width - (inner * 2f))
+                .coerceAtLeast(0f)
+
+        canvas.drawRoundRect(
+            left + inner,
+            top + inner,
+            left + inner +
+                (usable * level),
+            top + height - inner,
+            (height - (inner * 2f)) / 2f,
+            (height - (inner * 2f)) / 2f,
+            fill
+        )
+
+        val label =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                typeface = Typeface.create(
+                    Typeface.MONOSPACE,
+                    Typeface.BOLD
+                )
+                textSize =
+                    7.2f * u
+                setShadowLayer(
+                    1.8f * u,
+                    0.5f * u,
+                    0.5f * u,
+                    0xDD000000.toInt()
+                )
+            }
+
+        val pct =
+            (level * 100f)
+                .roundToInt()
+
+        canvas.drawText(
+            "MIC $pct%",
+            left,
+            top - (4f * u),
+            label
+        )
+    }
+
+    private fun drawLevelInstrument(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        width: Float,
+        height: Float,
+        u: Float
+    ) {
+        val roll =
+            phoneRollDeg
+        val pitch =
+            phonePitchDeg
+
+        val stateColor =
+            when {
+                roll == null ->
+                    0xFFFF5A52.toInt()
+
+                kotlin.math.abs(roll) <= 1f ->
+                    0xFF76E39A.toInt()
+
+                kotlin.math.abs(roll) <= 3f ->
+                    0xFFFFC21A.toInt()
+
+                else ->
+                    0xFFFF6B57.toInt()
+            }
+
+        val framePaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color =
+                    0xBFFFFFFF.toInt()
+                style =
+                    Paint.Style.STROKE
+                strokeWidth =
+                    1f * u
+            }
+
+        val levelPaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = stateColor
+                strokeWidth =
+                    2f * u
+            }
+
+        val halfW =
+            width / 2f
+        val halfH =
+            height / 2f
+
+        canvas.drawRoundRect(
+            centerX - halfW,
+            centerY - halfH,
+            centerX + halfW,
+            centerY + halfH,
+            5f * u,
+            5f * u,
+            framePaint
+        )
+
+        val rollValue =
+            (roll ?: 0f)
+                .coerceIn(
+                    -30f,
+                    30f
+                )
+
+        val rad =
+            Math.toRadians(
+                rollValue.toDouble()
+            )
+
+        val lineHalf =
+            halfW - (10f * u)
+
+        val dx =
+            (cos(rad) * lineHalf)
+                .toFloat()
+        val dy =
+            (sin(rad) * lineHalf)
+                .toFloat()
+
+        canvas.drawLine(
+            centerX - dx,
+            centerY - dy,
+            centerX + dx,
+            centerY + dy,
+            levelPaint
+        )
+
+        canvas.drawLine(
+            centerX - (6f * u),
+            centerY,
+            centerX + (6f * u),
+            centerY,
+            framePaint
+        )
+
+        val label =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = stateColor
+                typeface = Typeface.create(
+                    Typeface.MONOSPACE,
+                    Typeface.BOLD
+                )
+                textAlign =
+                    Paint.Align.CENTER
+                textSize =
+                    7.0f * u
+                setShadowLayer(
+                    1.8f * u,
+                    0.5f * u,
+                    0.5f * u,
+                    0xDD000000.toInt()
+                )
+            }
+
+        val value =
+            String.format(
+                Locale.US,
+                "ROLL %s • TILT %s",
+                roll?.let {
+                    String.format(
+                        Locale.US,
+                        "%.1f°",
+                        it
+                    )
+                } ?: "--",
+                pitch?.let {
+                    String.format(
+                        Locale.US,
+                        "%.1f°",
+                        it
+                    )
+                } ?: "--"
+            )
+
+        canvas.drawText(
+            value,
+            centerX,
+            centerY + halfH +
+                (10f * u),
+            label
+        )
+    }
+
+    private fun nextClipSequence(): Int {
+        val prefs =
+            getSharedPreferences(
+                "develop_uganda_reporter",
+                Context.MODE_PRIVATE
+            )
+
+        val next =
+            prefs.getInt(
+                "clip_sequence",
+                0
+            ) + 1
+
+        prefs.edit()
+            .putInt(
+                "clip_sequence",
+                next
+            )
+            .apply()
+
+        return next
+    }
+
+    private fun clipSequenceText(): String {
+        return String.format(
+            Locale.US,
+            "%04d",
+            clipSequence
+        )
     }
 
     private fun utcClockText(): String {
@@ -1799,11 +2407,16 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun newReportId(): String {
+        clipSequence =
+            nextClipSequence()
+
         return "DU-" +
             SimpleDateFormat(
                 "yyMMdd-HHmmss",
                 Locale.US
-            ).format(Date())
+            ).format(Date()) +
+            "-" +
+            clipSequenceText()
     }
 
     private fun identityButtonText(): String {
@@ -2023,6 +2636,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
 
         reportId = newReportId()
+        recordStartUtc = "--"
 
         baseName = "DEVELOP_UGANDA_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
@@ -2076,6 +2690,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             when (event) {
                 is VideoRecordEvent.Start -> {
                     recStarted = System.currentTimeMillis()
+                    recordStartUtc =
+                        Instant.ofEpochMilli(
+                            recStarted
+                        ).toString()
                     distanceTravelledM = 0f
                     audioAmplitude = 0.0
                     audioStateLabel = "MIC REC"
@@ -2159,6 +2777,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
 
         reportId = newReportId()
+        recordStartUtc =
+            Instant.now().toString()
 
         val photoName =
             "DEVELOP_UGANDA_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +

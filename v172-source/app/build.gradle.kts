@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 17800
-        versionName = "178.0-broadcast-instruments"
+        versionCode = 17900
+        versionName = "179.0-broadcast-compass-pro"
     }
 
     buildTypes {
