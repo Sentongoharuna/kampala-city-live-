@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 17605
-        versionName = "176.5-field-cinema-fixed"
+        versionCode = 17700
+        versionName = "177.0-field-broadcast-pro"
     }
 
     buildTypes {

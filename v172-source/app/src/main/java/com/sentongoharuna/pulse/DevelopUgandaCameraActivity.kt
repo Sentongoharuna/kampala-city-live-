@@ -119,7 +119,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         "MOVIE",
         "OUTDOOR",
         "INDOOR",
-        "NIGHT"
+        "NIGHT",
+        "INTERVIEW",
+        "DOCUMENTARY"
     )
     private val lookModes = listOf(
         "CLEAN",
@@ -158,6 +160,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
     @Volatile private var heading: Float? = null
     @Volatile private var placeName = "Locating…"
     @Volatile private var estimatedUploadKbps: Int? = null
+    @Volatile private var lastGpsUpdateMs = 0L
+    @Volatile private var distanceTravelledM = 0f
+    @Volatile private var previousTrackLat: Double? = null
+    @Volatile private var previousTrackLon: Double? = null
 
     private var recStarted = 0L
     private var lastWeatherAt = 0L
@@ -187,6 +193,38 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             heading = if (l.hasBearing()) l.bearing else null
 
             val now = System.currentTimeMillis()
+            lastGpsUpdateMs = now
+
+            if (recording != null) {
+                val pLat = previousTrackLat
+                val pLon = previousTrackLon
+
+                if (pLat != null && pLon != null) {
+                    val result = FloatArray(1)
+                    android.location.Location.distanceBetween(
+                        pLat,
+                        pLon,
+                        l.latitude,
+                        l.longitude,
+                        result
+                    )
+
+                    val segmentM = result[0]
+                    val goodEnough =
+                        (accuracy ?: 999f) <= 60f
+
+                    if (
+                        goodEnough &&
+                        segmentM >= 0.7f &&
+                        segmentM <= 250f
+                    ) {
+                        distanceTravelledM += segmentM
+                    }
+                }
+
+                previousTrackLat = l.latitude
+                previousTrackLon = l.longitude
+            }
 
             if (now - lastPlaceAt > 15_000L) {
                 lastPlaceAt = now
@@ -852,14 +890,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             finalHeight
         ) / 1000f
 
-        // Cross-platform social-safe HUD:
-        // keep clear of TikTok/Reels top chrome and right-side action rail.
+        // V177 social-safe broadcast HUD:
+        // all telemetry is retained, but reorganized into deliberate rows.
+        // Values such as LAT/LON/ALT/HDG/SPD/FIX/DIST continue changing live.
         val safeLeft =
-            finalWidth * 0.22f
+            finalWidth * 0.12f
         val safeTop =
-            finalHeight * 0.085f
+            finalHeight * 0.10f
         val maxWidth =
-            finalWidth * 0.60f
+            finalWidth * 0.70f
 
         var y = safeTop
 
@@ -872,14 +911,35 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             )
 
             setShadowLayer(
-                2.2f * u,
-                0.7f * u,
-                0.7f * u,
-                0xE0000000.toInt()
+                2.8f * u,
+                0.8f * u,
+                0.8f * u,
+                0xED000000.toInt()
             )
         }
 
-        // Signature brand line.
+        // Minimal broadcast signature: no black panel, only a brand rail.
+        val rail = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
+            color =
+                if (recording != null) {
+                    0xFFFF4138.toInt()
+                } else {
+                    0xFFFFC21A.toInt()
+                }
+            strokeWidth = 3.2f * u
+        }
+
+        c.drawLine(
+            safeLeft - (10f * u),
+            y - (4f * u),
+            safeLeft - (10f * u),
+            y + (126f * u),
+            rail
+        )
+
+        // 1. Signature.
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
@@ -887,7 +947,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            30f * u
+            31f * u
 
         val brand = "develop.uganda"
 
@@ -903,14 +963,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         text.color = Color.WHITE
         text.textSize =
-            11.5f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
+            11.8f * u
 
         c.drawText(
-            "FIELD REPORT",
+            sceneTag(),
             safeLeft +
                 brandWidth +
                 (16f * u),
@@ -924,30 +980,29 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             color =
                 0xB3FFC21A.toInt()
             strokeWidth =
-                1.3f * u
+                1.35f * u
         }
 
         c.drawLine(
             safeLeft,
-            y + (7f * u),
+            y + (8f * u),
             safeLeft + maxWidth,
-            y + (7f * u),
+            y + (8f * u),
             accent
         )
 
-        // REC / time / date / timezone.
-        y += 28f * u
-        text.textSize =
-            12f * u
+        // 2. REC / timecode / local / UTC.
+        y += 29f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
+        text.textSize = 12.6f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
             } else {
-                0xFFDCE7E9.toInt()
+                0xFFE6EEF0.toInt()
             }
 
         val recState =
@@ -959,43 +1014,39 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         drawFitText(
             c,
-            "$recState • TC ${tc()} • ${clock.format(Date())} • ${ZoneId.systemDefault().id}",
+            "$recState • TC ${tc()} • ${clock.format(Date())} • ${ZoneId.systemDefault().id} • UTC ${utcClockText()}",
             safeLeft,
             y,
             maxWidth,
             text,
-            9.2f * u
+            9.5f * u
         )
 
-        // Editorial identity: reporter/news/cinema unit.
-        y += 17f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
-        text.color = 0xFFFFC21A.toInt()
-        text.textSize = 10.8f * u
+        // 3. Editorial / camera identity.
+        y += 18f * u
+        text.color =
+            0xFFFFC21A.toInt()
+        text.textSize =
+            11.2f * u
 
         drawFitText(
             c,
-            "${sceneTag()} • ${lookModes[lookIndex]} • ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}",
+            "SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}",
             safeLeft,
             y,
             maxWidth,
             text,
-            8.2f * u
+            8.5f * u
         )
 
-        // Place.
-        y += 17f * u
+        // 4. Place name.
+        y += 18f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.NORMAL
         )
-        text.color =
-            Color.WHITE
-        text.textSize =
-            11.2f * u
+        text.color = Color.WHITE
+        text.textSize = 11.5f * u
 
         drawFitText(
             c,
@@ -1004,19 +1055,36 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            8.5f * u
+            8.8f * u
         )
 
-        // Coordinates.
-        y += 16f * u
+        // 5. Live coordinates.
+        y += 17f * u
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            10.7f * u
+            11f * u
 
         drawFitText(
             c,
-            coordinateOverlay(),
+            coordinatePrimaryOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            8.4f * u
+        )
+
+        // 6. Live movement + GPS quality.
+        y += 17f * u
+        text.color =
+            0xFF7FE8FF.toInt()
+        text.textSize =
+            10.8f * u
+
+        drawFitText(
+            c,
+            movementOverlay(),
             safeLeft,
             y,
             maxWidth,
@@ -1024,12 +1092,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             8.2f * u
         )
 
-        // Weather.
-        y += 16f * u
+        // 7. Weather.
+        y += 17f * u
         text.color =
             0xFF8ECFFF.toInt()
         text.textSize =
-            10.5f * u
+            10.7f * u
 
         drawFitText(
             c,
@@ -1038,15 +1106,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            8f * u
+            8.1f * u
         )
 
-        // System status.
-        y += 16f * u
+        // 8. Mic / network / battery / storage / uplink estimate.
+        y += 17f * u
         text.color =
             0xFF76E39A.toInt()
         text.textSize =
-            10.3f * u
+            10.6f * u
 
         drawFitText(
             c,
@@ -1055,11 +1123,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            7.9f * u
+            8f * u
         )
 
-        // Scene / look / camera status.
-        y += 17f * u
+        // 9. Active camera state.
+        y += 18f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
@@ -1067,7 +1135,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            10.5f * u
+            10.7f * u
 
         drawFitText(
             c,
@@ -1076,11 +1144,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            7.8f * u
+            8f * u
         )
 
-        // Truthful professional state.
-        y += 16f * u
+        // 10. Truthful automatic/manual-capability state.
+        y += 17f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.NORMAL
@@ -1088,7 +1156,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         text.color =
             0xFFDDE8EA.toInt()
         text.textSize =
-            9.6f * u
+            9.9f * u
 
         drawFitText(
             c,
@@ -1097,10 +1165,167 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             y,
             maxWidth,
             text,
-            7.3f * u
+            7.5f * u
         )
 
         c.restore()
+    }
+
+    private fun utcClockText(): String {
+        val iso = Instant.now().toString()
+        return if (iso.length >= 19) {
+            iso.substring(11, 19) + "Z"
+        } else {
+            iso
+        }
+    }
+
+    private fun coordinatePrimaryOverlay(): String {
+        return if (lat != null && lon != null) {
+            String.format(
+                Locale.US,
+                "GPS LIVE • LAT %.5f • LON %.5f",
+                lat,
+                lon
+            )
+        } else {
+            "GPS ACQUIRING • LAT -- • LON --"
+        }
+    }
+
+    private fun movementOverlay(): String {
+        val altText =
+            alt?.let {
+                String.format(
+                    Locale.US,
+                    "ALT %.0fm",
+                    it
+                )
+            } ?: "ALT --"
+
+        val accText =
+            accuracy?.let {
+                String.format(
+                    Locale.US,
+                    "ACC ±%.0fm",
+                    it
+                )
+            } ?: "ACC --"
+
+        val headingText =
+            heading?.let {
+                String.format(
+                    Locale.US,
+                    "HDG %.0f° %s",
+                    it,
+                    cardinalDirection(it)
+                )
+            } ?: "HDG --"
+
+        val speedText =
+            speedKmh?.let {
+                String.format(
+                    Locale.US,
+                    "SPD %.1fkm/h",
+                    it
+                )
+            } ?: "SPD --"
+
+        val distanceText =
+            if (recording != null) {
+                if (distanceTravelledM >= 1000f) {
+                    String.format(
+                        Locale.US,
+                        "DIST %.2fkm",
+                        distanceTravelledM / 1000f
+                    )
+                } else {
+                    String.format(
+                        Locale.US,
+                        "DIST %.0fm",
+                        distanceTravelledM
+                    )
+                }
+            } else {
+                "DIST STBY"
+            }
+
+        return "$altText • $accText • $headingText • $speedText • ${motionLabel()} • ${gpsQualityLabel()} • FIX ${gpsFixAgeText()} • $distanceText"
+    }
+
+    private fun gpsFixAgeText(): String {
+        if (lastGpsUpdateMs <= 0L) {
+            return "--"
+        }
+
+        val ageMs =
+            (
+                System.currentTimeMillis() -
+                    lastGpsUpdateMs
+                ).coerceAtLeast(0L)
+
+        return if (ageMs < 10_000L) {
+            String.format(
+                Locale.US,
+                "%.1fs",
+                ageMs / 1000f
+            )
+        } else {
+            "${ageMs / 1000L}s"
+        }
+    }
+
+    private fun gpsQualityLabel(): String {
+        val a = accuracy
+            ?: return "FIX WAIT"
+
+        return when {
+            a <= 8f -> "FIX EXCELLENT"
+            a <= 20f -> "FIX GOOD"
+            a <= 50f -> "FIX FAIR"
+            else -> "FIX LOW"
+        }
+    }
+
+    private fun motionLabel(): String {
+        val s = speedKmh
+            ?: return "MOTION --"
+
+        return when {
+            s < 1.2f -> "STILL"
+            s < 8f -> "WALK"
+            s < 25f -> "MOVE"
+            else -> "VEHICLE"
+        }
+    }
+
+    private fun cardinalDirection(
+        degrees: Float
+    ): String {
+        val dirs = arrayOf(
+            "N",
+            "NE",
+            "E",
+            "SE",
+            "S",
+            "SW",
+            "W",
+            "NW"
+        )
+
+        val normalized =
+            (
+                (degrees % 360f) +
+                    360f
+                ) % 360f
+
+        val index =
+            (
+                (normalized + 22.5f) /
+                    45f
+                ).toInt() % 8
+
+        return dirs[index]
     }
 
     private fun coordinateOverlay(): String {
@@ -1280,6 +1505,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             when (event) {
                 is VideoRecordEvent.Start -> {
                     recStarted = System.currentTimeMillis()
+                    distanceTravelledM = 0f
+                    previousTrackLat = lat
+                    previousTrackLon = lon
                     statusView.text = "● REC"
                     statusView.setTextColor(
                         0xFFFF4138.toInt()
@@ -1566,6 +1794,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             "OUTDOOR" -> "OUTDOOR UNIT"
             "INDOOR" -> "INTERIOR UNIT"
             "NIGHT" -> "NIGHT DESK"
+            "INTERVIEW" -> "INTERVIEW UNIT"
+            "DOCUMENTARY" -> "DOCUMENTARY UNIT"
             else -> "FIELD REPORT"
         }
     }
@@ -1620,6 +1850,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
                 "OUTDOOR" -> -1
                 "INDOOR" -> 1
                 "NIGHT" -> 2
+                "INTERVIEW" -> 0
+                "DOCUMENTARY" -> 0
                 else -> 0
             }
 
@@ -1854,7 +2086,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             "MIC OFF"
         }
 
-        return "$mic • NET ${networkType()}" +
+        val net = networkType()
+        val uplink =
+            estimatedUploadKbps?.let {
+                " • UP~${it}kbps"
+            } ?: ""
+
+        return "$mic • NET $net$uplink" +
             " • BAT ${batteryPct() ?: "--"}%" +
             " • FREE ${freeStorageGb() ?: "--"}GB"
     }
