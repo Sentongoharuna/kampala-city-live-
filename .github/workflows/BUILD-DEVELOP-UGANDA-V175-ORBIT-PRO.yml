@@ -1,0 +1,153 @@
+name: Build develop.uganda V175 Orbit Pro Camera
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V175 source file
+        run: |
+          set -e
+          test -f DevelopUgandaCameraActivityV175.kt
+          test -d v172-source
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/TelemetryRecorder.kt
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/WeatherRepository.kt
+          echo "V175 Orbit Pro source found"
+
+      - name: Install V175 direct source
+        run: |
+          set -e
+          cp DevelopUgandaCameraActivityV175.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt
+
+          cat > v172-source/app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.sentongoharuna.pulse"
+              compileSdk = 36
+
+              defaultConfig {
+                  applicationId = "com.sentongoharuna.pulse"
+                  minSdk = 23
+                  targetSdk = 36
+                  versionCode = 17500
+                  versionName = "175.0-orbit-pro-camera"
+              }
+
+              buildTypes {
+                  release {
+                      isMinifyEnabled = false
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+
+          dependencies {
+              val camerax = "1.6.1"
+              implementation("androidx.appcompat:appcompat:1.8.0")
+              implementation("androidx.core:core-ktx:1.17.0")
+              implementation("androidx.camera:camera-core:$camerax")
+              implementation("androidx.camera:camera-camera2:$camerax")
+              implementation("androidx.camera:camera-lifecycle:$camerax")
+              implementation("androidx.camera:camera-video:$camerax")
+              implementation("androidx.camera:camera-view:$camerax")
+              implementation("androidx.camera:camera-effects:$camerax")
+              implementation("com.google.android.gms:play-services-location:21.4.0")
+          }
+          EOF
+
+      - name: Commit V175 actual source
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V175 source already committed"
+          else
+            git commit -m "Add develop.uganda V175 Orbit Pro camera"
+            git push
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V175 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v175-build.log
+
+      - name: Print useful compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          grep -Ein \
+            "(^e:|error:|unresolved reference|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v175-build.log \
+            | head -220 \
+            || true
+
+      - name: Prepare APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V175-ORBIT-PRO.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V175-ORBIT-PRO
+          path: DEVELOP-UGANDA-V175-ORBIT-PRO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V175-BUILD-LOG
+          path: v172-source/v175-build.log
+          if-no-files-found: warn
+          retention-days: 7
