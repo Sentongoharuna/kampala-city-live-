@@ -1,0 +1,60 @@
+name: Build PULSE Phase 4 Advanced Telemetry
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify Phase 4 source package
+        run: test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack cumulative Phase 4 project
+        run: |
+          rm -rf phase4-build
+          mkdir phase4-build
+          unzip -q PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip -d phase4-build
+          test -f phase4-build/pulse-phase4-production/gradle.properties
+          test -f phase4-build/pulse-phase4-production/app/build.gradle.kts
+          test -f phase4-build/pulse-phase4-production/app/src/main/AndroidManifest.xml
+          grep -q "android.useAndroidX=true" phase4-build/pulse-phase4-production/gradle.properties
+          test -f phase4-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+      - name: Build PULSE Phase 4 APK
+        working-directory: phase4-build/pulse-phase4-production
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Prepare installable APK
+        run: |
+          cp phase4-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk PULSE-PHASE4-ADVANCED-TELEMETRY.apk
+          ls -lh PULSE-PHASE4-ADVANCED-TELEMETRY.apk
+
+      - name: Upload Phase 4 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSE-PHASE4-ADVANCED-TELEMETRY
+          path: PULSE-PHASE4-ADVANCED-TELEMETRY.apk
+          if-no-files-found: error
+          retention-days: 14
