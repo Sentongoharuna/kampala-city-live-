@@ -1,0 +1,141 @@
+name: Fix3 and Build develop.uganda V176 Field Cinema
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V176 FIX3 source
+        run: |
+          set -e
+          test -f DevelopUgandaCameraActivityV176FIX3.kt
+          test -d v172-source
+          echo "V176 FIX3 source found"
+
+      - name: Install V176 FIX3 source
+        run: |
+          set -e
+
+          cp DevelopUgandaCameraActivityV176FIX3.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("v172-source/app/build.gradle.kts")
+          text = p.read_text(encoding="utf-8")
+
+          for old in (
+              'versionCode = 17600',
+              'versionCode = 17601',
+              'versionCode = 17602'
+          ):
+              text = text.replace(old, 'versionCode = 17603')
+
+          for old in (
+              'versionName = "176.0-field-cinema"',
+              'versionName = "176.1-field-cinema-fixed"',
+              'versionName = "176.2-field-cinema-fixed"'
+          ):
+              text = text.replace(
+                  old,
+                  'versionName = "176.3-field-cinema-fixed"'
+              )
+
+          p.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit V176 FIX3 source
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V176 FIX3 already committed"
+          else
+            git commit -m "Fix V176 Field Cinema touch listener dispatch"
+            git push
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V176 FIX3 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v176-fix3-build.log
+
+      - name: Print compiler error context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          echo "===== IMPORTANT ERROR LINES ====="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v176-fix3-build.log \
+            | head -260 \
+            || true
+
+          echo "===== CONTEXT AROUND FIRST KOTLIN ERROR ====="
+          first="$(grep -n -m1 '^e:' v176-fix3-build.log | cut -d: -f1 || true)"
+          if [ -n "$first" ]; then
+            start=$((first-3))
+            if [ "$start" -lt 1 ]; then start=1; fi
+            end=$((first+12))
+            sed -n "${start},${end}p" v176-fix3-build.log
+          fi
+
+      - name: Prepare APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V176-FIELD-CINEMA-FIX3.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V176-FIELD-CINEMA-FIX3
+          path: DEVELOP-UGANDA-V176-FIELD-CINEMA-FIX3.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V176-FIX3-BUILD-LOG
+          path: v172-source/v176-fix3-build.log
+          if-no-files-found: warn
+          retention-days: 7
