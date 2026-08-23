@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 18000
-        versionName = "180.0-safe-frame-hud"
+        versionCode = 18100
+        versionName = "181.0-wysiwyg-preview"
     }
 
     buildTypes {

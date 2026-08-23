@@ -321,7 +321,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         previewView = PreviewView(this).apply {
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-            scaleType = PreviewView.ScaleType.FILL_CENTER
+
+            // V181: show the full 9:16 recording canvas in the live camera.
+            // FILL_CENTER was cropping the left/right sides of the preview,
+            // even though the exported video was correct. FIT_START keeps the
+            // entire recorded frame visible and places any spare screen space
+            // below it, where the operator controls already live.
+            scaleType = PreviewView.ScaleType.FIT_START
         }
 
         root.addView(
@@ -960,7 +966,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // Values such as LAT/LON/ALT/HDG/SPD/FIX/DIST continue changing live.
         // V178 uses a deeper social-safe inset. The previous transform
         // placed the left edge too close to the exported crop on some phones.
-        // V180 broadcast-safe layout:
+        // V181 WYSIWYG preview + V180 broadcast-safe recorded layout:
         // identity stays inside social-media safe margins while the
         // upper-right is reserved for the live compass/level instruments.
         // V180: deliberately deeper safe margins for both the CameraX
@@ -3808,11 +3814,20 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
             if (w <= 0f || h <= 0f) return
 
+            // V181: guides belong to the actual 9:16 capture frame.
+            // PreviewView uses FIT_START, so the capture frame begins at the
+            // top of the view and any unused screen area sits underneath it.
+            val frameH =
+                minOf(
+                    h,
+                    w * (16f / 9f)
+                )
+
             canvas.drawLine(
                 w / 3f,
                 0f,
                 w / 3f,
-                h,
+                frameH,
                 gridPaint
             )
 
@@ -3820,27 +3835,37 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 w * 2f / 3f,
                 0f,
                 w * 2f / 3f,
-                h,
+                frameH,
                 gridPaint
             )
 
             canvas.drawLine(
                 0f,
-                h / 3f,
+                frameH / 3f,
                 w,
-                h / 3f,
+                frameH / 3f,
                 gridPaint
             )
 
             canvas.drawLine(
                 0f,
-                h * 2f / 3f,
+                frameH * 2f / 3f,
                 w,
-                h * 2f / 3f,
+                frameH * 2f / 3f,
                 gridPaint
             )
 
-            val cy = h / 2f
+            // Thin capture boundary: everything above this line is the exact
+            // 9:16 frame that will be exported.
+            canvas.drawLine(
+                0f,
+                frameH - dp(1),
+                w,
+                frameH - dp(1),
+                levelPaint
+            )
+
+            val cy = frameH / 2f
             val cx = w / 2f
 
             canvas.drawLine(
