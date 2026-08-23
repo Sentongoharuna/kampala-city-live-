@@ -1,0 +1,404 @@
+name: Build PULSE Phase 5 Professional HUD
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify Phase 4 cumulative source
+        run: |
+          test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack Phase 4 as Phase 5 base
+        run: |
+          rm -rf phase5-build
+          mkdir phase5-build
+          unzip -q PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip -d phase5-build
+
+          test -f phase5-build/pulse-phase4-production/app/build.gradle.kts
+          test -f phase5-build/pulse-phase4-production/app/src/main/AndroidManifest.xml
+
+      - name: Preserve Phase 4 cellular telemetry compatibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path(
+              "phase5-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          )
+
+          text = p.read_text(encoding="utf-8")
+
+          if "cellularGenerationCompat" not in text:
+              text = re.sub(
+                  r'\bcellularGeneration\s*\(\s*\)',
+                  'cellularGenerationCompat(this@LiveActivity)',
+                  text
+              )
+
+              text = re.sub(
+                  r'\bcellularGeneration\b',
+                  'cellularGenerationCompat(this@LiveActivity)',
+                  text
+              )
+
+              helper = r'''
+
+          private fun cellularGenerationCompat(
+              context: android.content.Context
+          ): String {
+              val connectivity =
+                  context.getSystemService(
+                      android.content.Context.CONNECTIVITY_SERVICE
+                  ) as android.net.ConnectivityManager
+
+              val network =
+                  connectivity.activeNetwork ?: return "OFFLINE"
+
+              val caps =
+                  connectivity.getNetworkCapabilities(network)
+                      ?: return "UNKNOWN"
+
+              if (
+                  caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_WIFI
+                  )
+              ) {
+                  return "Wi-Fi"
+              }
+
+              if (
+                  !caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+                  )
+              ) {
+                  return "NETWORK"
+              }
+
+              val telephony =
+                  context.getSystemService(
+                      android.content.Context.TELEPHONY_SERVICE
+                  ) as android.telephony.TelephonyManager
+
+              val type = try {
+                  if (
+                      android.os.Build.VERSION.SDK_INT >=
+                      android.os.Build.VERSION_CODES.N
+                  ) {
+                      telephony.dataNetworkType
+                  } else {
+                      @Suppress("DEPRECATION")
+                      telephony.networkType
+                  }
+              } catch (_: Exception) {
+                  return "CELLULAR"
+              }
+
+              return when (type) {
+                  android.telephony.TelephonyManager.NETWORK_TYPE_NR ->
+                      "5G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_LTE ->
+                      "4G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_UMTS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_0,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_A,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_B,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EHRPD ->
+                      "3G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GPRS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EDGE,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_CDMA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_1xRTT,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GSM ->
+                      "2G"
+
+                  else -> "CELLULAR"
+              }
+          }
+          '''
+
+              text += helper
+              p.write_text(text, encoding="utf-8")
+
+          print("Phase 4 network telemetry preserved")
+          PY
+
+      - name: Create Phase 5 compact professional HUD
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path(
+              "phase5-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse"
+          )
+
+          kt_files = list(root.rglob("*.kt"))
+
+          telemetry_words = [
+              "PULSE",
+              "CITIZEN REPORT",
+              "REPORTER",
+              "LAT",
+              "LON",
+              "ALT",
+              "UHD",
+              "HDR10",
+              "HEVC",
+              "REC"
+          ]
+
+          changed = []
+
+          for path in kt_files:
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              if not any(
+                  word in text
+                  for word in telemetry_words
+              ):
+                  continue
+
+              original = text
+
+              # -----------------------------------
+              # PHASE 5 HUD SCALE
+              # -----------------------------------
+              # Reduce telemetry typography while
+              # retaining every technical label.
+              def shrink_text_size(match):
+                  prefix = match.group(1)
+                  value = float(match.group(2))
+
+                  # Do not make already-small text
+                  # unreadable.
+                  if value <= 12:
+                      return match.group(0)
+
+                  new_value = max(
+                      10.0,
+                      round(value * 0.58, 1)
+                  )
+
+                  return (
+                      prefix +
+                      str(new_value).rstrip("0").rstrip(".") +
+                      "f"
+                  )
+
+              text = re.sub(
+                  r'(textSize\s*=\s*)([0-9]+(?:\.[0-9]+)?)f',
+                  shrink_text_size,
+                  text
+              )
+
+              # Android setTextSize(..., 24f)
+              def shrink_set_text(match):
+                  start = match.group(1)
+                  value = float(match.group(2))
+                  end = match.group(3)
+
+                  if value <= 12:
+                      return match.group(0)
+
+                  new_value = max(
+                      10.0,
+                      round(value * 0.58, 1)
+                  )
+
+                  value_text = (
+                      str(new_value)
+                      .rstrip("0")
+                      .rstrip(".")
+                  )
+
+                  return (
+                      start +
+                      value_text +
+                      "f" +
+                      end
+                  )
+
+              text = re.sub(
+                  r'(setTextSize\([^,]+,\s*)'
+                  r'([0-9]+(?:\.[0-9]+)?)f'
+                  r'(\s*\))',
+                  shrink_set_text,
+                  text
+              )
+
+              # -----------------------------------
+              # SEMI-TRANSPARENT PROFESSIONAL BLACK
+              # -----------------------------------
+              # Large nearly-opaque blacks become
+              # lighter broadcast-style panels.
+              replacements = {
+                  "0xFF000000": "0xA6000000",
+                  "0xEE000000": "0x92000000",
+                  "0xE6000000": "0x92000000",
+                  "0xDD000000": "0x88000000",
+                  "0xD9000000": "0x88000000",
+                  "0xCC000000": "0x80000000",
+                  "0xC0000000": "0x78000000",
+              }
+
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+
+              # Reduce very wide telemetry panels.
+              text = re.sub(
+                  r'width\s*\*\s*0\.4[0-9]f',
+                  'width * 0.18f',
+                  text
+              )
+
+              text = re.sub(
+                  r'width\s*\*\s*0\.3[0-9]f',
+                  'width * 0.18f',
+                  text
+              )
+
+              text = re.sub(
+                  r'width\s*\*\s*0\.2[5-9]f',
+                  'width * 0.18f',
+                  text
+              )
+
+              # Preserve the existing PULSE colour
+              # hierarchy:
+              # red = REC/critical
+              # white = normal metadata
+              # yellow/gold = camera modes
+              # cyan = GPS / telemetry
+              # green = positive statuses.
+              #
+              # Existing coloured labels remain;
+              # Phase 5 mainly compresses the HUD.
+
+              if text != original:
+                  path.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
+                  changed.append(str(path))
+
+          if not changed:
+              raise SystemExit(
+                  "No telemetry source was changed. "
+                  "Refusing to build the wrong project."
+              )
+
+          print("PHASE 5 HUD PATCHED FILES:")
+          for item in changed:
+              print(" -", item)
+          PY
+
+      - name: Add Phase 5 continuity marker
+        run: |
+          cat >> phase5-build/pulse-phase4-production/PHASE-CONTINUITY.md <<'EOF'
+
+          ## Phase 5 — Professional Compact Telemetry HUD
+
+          Phase 5 continues Phases 1, 2, 3 and 4.
+
+          No previous camera, recording, telemetry,
+          GPS, weather, microphone, network,
+          storage, battery or reporting feature
+          is intentionally removed.
+
+          Phase 5 reduces the visual footprint of
+          the permanent video telemetry HUD and
+          preserves the professional colour system.
+
+          Red:
+          recording and critical warnings.
+
+          White:
+          normal reporting metadata.
+
+          Yellow / Gold:
+          PULSE branding and camera modes.
+
+          Cyan:
+          GPS, coordinates and telemetry.
+
+          Green:
+          healthy microphone, battery, storage,
+          network and stabilization states.
+          EOF
+
+      - name: Build PULSE Phase 5 APK
+        working-directory: phase5-build/pulse-phase4-production
+        run: |
+          gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Prepare Phase 5 installable APK
+        run: |
+          cp \
+          phase5-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk \
+          PULSE-PHASE5-PROFESSIONAL-HUD.apk
+
+          ls -lh PULSE-PHASE5-PROFESSIONAL-HUD.apk
+
+      - name: Package Phase 5 source
+        run: |
+          cd phase5-build
+          zip -qr \
+          ../PULSE-PHASE5-PROFESSIONAL-HUD-SOURCE.zip \
+          pulse-phase4-production
+
+      - name: Upload Phase 5 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSE-PHASE5-PROFESSIONAL-HUD
+          path: PULSE-PHASE5-PROFESSIONAL-HUD.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Phase 5 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSE-PHASE5-PROFESSIONAL-HUD-SOURCE
+          path: PULSE-PHASE5-PROFESSIONAL-HUD-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
