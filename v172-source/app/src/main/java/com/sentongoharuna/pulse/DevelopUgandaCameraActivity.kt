@@ -414,7 +414,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             "LIGHT\nOFF",
             0xFFE8F1F2.toInt()
         )
-        recordButton = recordButton()
+        recordButton = makeRecordButton()
 
         actionRow.addView(
             lensButton,
@@ -2234,7 +2234,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
         )
     }
 
-    private fun recordButton(): Button {
+    private fun makeRecordButton(): Button {
         return Button(this).apply {
             text = "● RECORD"
             textSize = 9.5f
