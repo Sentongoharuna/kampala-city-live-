@@ -439,56 +439,42 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        sceneButton.setOnClickListener(
-            android.view.View.OnClickListener {
-                cycleScene()
-            }
-        )
+        installTap(sceneButton) {
+            cycleScene()
+        }
 
-        lookButton.setOnClickListener(
-            android.view.View.OnClickListener {
-                cycleLook()
-            }
-        )
+        installTap(lookButton) {
+            cycleLook()
+        }
 
-        qualityButton.setOnClickListener(
-            android.view.View.OnClickListener {
-                cycleQuality()
-            }
-        )
+        installTap(qualityButton) {
+            cycleQuality()
+        }
 
-        captureModeButton.setOnClickListener(
-            android.view.View.OnClickListener {
-                cycleCaptureMode()
-            }
-        )
+        installTap(captureModeButton) {
+            cycleCaptureMode()
+        }
 
-        lensButton.setOnClickListener(
-            android.view.View.OnClickListener {
-                if (recording == null) {
-                    useFront = !useFront
-                    lensButton.text =
-                        "LENS\n${if (useFront) "FRONT" else "BACK"}"
-                    bindCamera()
-                } else {
-                    toast(
-                        "Stop recording before changing lens"
-                    )
-                }
+        installTap(lensButton) {
+            if (recording == null) {
+                useFront = !useFront
+                lensButton.text =
+                    "LENS\n${if (useFront) "FRONT" else "BACK"}"
+                bindCamera()
+            } else {
+                toast(
+                    "Stop recording before changing lens"
+                )
             }
-        )
+        }
 
-        torchButton.setOnClickListener(
-            android.view.View.OnClickListener {
-                toggleTorch()
-            }
-        )
+        installTap(torchButton) {
+            toggleTorch()
+        }
 
-        recordButton.setOnClickListener(
-            android.view.View.OnClickListener {
-                toggleRecording()
-            }
-        )
+        installTap(recordButton) {
+            toggleRecording()
+        }
 
         zoomSeek.setOnSeekBarChangeListener(
             simpleSeek {
@@ -2067,6 +2053,41 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
             toast("Focus")
         } catch (_: Exception) {
         }
+    }
+
+    private fun installTap(
+        view: View,
+        action: () -> Unit
+    ) {
+        view.setOnTouchListener(
+            object : View.OnTouchListener {
+                override fun onTouch(
+                    v: View?,
+                    event: MotionEvent
+                ): Boolean {
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            v?.alpha = 0.82f
+                            return true
+                        }
+
+                        MotionEvent.ACTION_CANCEL -> {
+                            v?.alpha = 1f
+                            return true
+                        }
+
+                        MotionEvent.ACTION_UP -> {
+                            v?.alpha = 1f
+                            v?.performClick()
+                            action.invoke()
+                            return true
+                        }
+                    }
+
+                    return true
+                }
+            }
+        )
     }
 
     private fun simpleSeek(
