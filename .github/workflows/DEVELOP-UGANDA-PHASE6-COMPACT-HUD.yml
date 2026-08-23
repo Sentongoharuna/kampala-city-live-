@@ -1,0 +1,723 @@
+name: Build develop.uganda Phase 6 Compact Colour HUD
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify cumulative Phase 4 source
+        run: |
+          test -f PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unpack cumulative project
+        run: |
+          rm -rf phase6-build
+          mkdir phase6-build
+
+          unzip -q \
+            PULSE-PHASE4-ADVANCED-TELEMETRY-SOURCE.zip \
+            -d phase6-build
+
+          test -f phase6-build/pulse-phase4-production/app/build.gradle.kts
+          test -f phase6-build/pulse-phase4-production/app/src/main/AndroidManifest.xml
+          test -f phase6-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          test -f phase6-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt
+
+      - name: Preserve cellular telemetry compatibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path(
+              "phase6-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt"
+          )
+
+          text = path.read_text(encoding="utf-8")
+
+          if "cellularGenerationCompat" not in text:
+
+              text = re.sub(
+                  r'\bcellularGeneration\s*\(\s*\)',
+                  'cellularGenerationCompat(this@LiveActivity)',
+                  text
+              )
+
+              helper = '''
+
+          private fun cellularGenerationCompat(
+              context: android.content.Context
+          ): String {
+
+              val connectivity =
+                  context.getSystemService(
+                      android.content.Context.CONNECTIVITY_SERVICE
+                  ) as android.net.ConnectivityManager
+
+              val network =
+                  connectivity.activeNetwork
+                      ?: return "OFFLINE"
+
+              val caps =
+                  connectivity.getNetworkCapabilities(network)
+                      ?: return "UNKNOWN"
+
+              if (
+                  caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_WIFI
+                  )
+              ) {
+                  return "Wi-Fi"
+              }
+
+              if (
+                  !caps.hasTransport(
+                      android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+                  )
+              ) {
+                  return "NETWORK"
+              }
+
+              val telephony =
+                  context.getSystemService(
+                      android.content.Context.TELEPHONY_SERVICE
+                  ) as android.telephony.TelephonyManager
+
+              val type = try {
+
+                  if (
+                      android.os.Build.VERSION.SDK_INT >=
+                      android.os.Build.VERSION_CODES.N
+                  ) {
+                      telephony.dataNetworkType
+                  } else {
+                      @Suppress("DEPRECATION")
+                      telephony.networkType
+                  }
+
+              } catch (_: Exception) {
+                  return "CELLULAR"
+              }
+
+              return when (type) {
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_NR ->
+                      "5G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_LTE ->
+                      "4G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_UMTS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_0,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_A,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_B,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EHRPD ->
+                      "3G"
+
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GPRS,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_EDGE,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_CDMA,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_1xRTT,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_IDEN,
+                  android.telephony.TelephonyManager.NETWORK_TYPE_GSM ->
+                      "2G"
+
+                  else ->
+                      "CELLULAR"
+              }
+          }
+          '''
+
+              text += helper
+              path.write_text(text, encoding="utf-8")
+
+          print("Cellular telemetry preserved")
+          PY
+
+      - name: Rename visible brand to develop.uganda
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          project = Path(
+              "phase6-build/pulse-phase4-production"
+          )
+
+          app_src = project / "app/src/main"
+
+          string_pattern = re.compile(
+              r'"(?:\\.|[^"\\])*"'
+          )
+
+          for path in app_src.rglob("*.kt"):
+
+              text = path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
+
+              original = text
+
+              def replace_string(match):
+
+                  token = match.group(0)
+                  value = token[1:-1]
+
+                  # Remove old large side-only reporter label.
+                  # REPORTER is retained in the compact top heading.
+                  if value.strip() in (
+                      "REPORTER",
+                      "PULSE REPORTER"
+                  ):
+                      return '""'
+
+                  if value.strip() == "CITIZEN REPORT":
+                      value = "REPORTER • CITIZEN REPORT"
+
+                  value = value.replace(
+                      "PULSE NEWS",
+                      "develop.uganda"
+                  )
+
+                  value = value.replace(
+                      "PULSE",
+                      "develop.uganda"
+                  )
+
+                  value = value.replace(
+                      "Pulse",
+                      "develop.uganda"
+                  )
+
+                  return '"' + value + '"'
+
+              text = string_pattern.sub(
+                  replace_string,
+                  text
+              )
+
+              if text != original:
+                  path.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
+
+          # Update visible Android resource strings.
+          values = app_src / "res/values"
+
+          if values.exists():
+
+              for path in values.rglob("*.xml"):
+
+                  text = path.read_text(
+                      encoding="utf-8",
+                      errors="ignore"
+                  )
+
+                  original = text
+
+                  text = re.sub(
+                      r'>([^<]*PULSE[^<]*)<',
+                      lambda m:
+                          ">" +
+                          m.group(1).replace(
+                              "PULSE",
+                              "develop.uganda"
+                          ) +
+                          "<",
+                      text
+                  )
+
+                  text = re.sub(
+                      r'>([^<]*Pulse[^<]*)<',
+                      lambda m:
+                          ">" +
+                          m.group(1).replace(
+                              "Pulse",
+                              "develop.uganda"
+                          ) +
+                          "<",
+                      text
+                  )
+
+                  if text != original:
+                      path.write_text(
+                          text,
+                          encoding="utf-8"
+                      )
+
+          manifest = app_src / "AndroidManifest.xml"
+
+          if manifest.exists():
+
+              text = manifest.read_text(
+                  encoding="utf-8"
+              )
+
+              text = re.sub(
+                  r'android:label="PULSE[^"]*"',
+                  'android:label="develop.uganda"',
+                  text
+              )
+
+              manifest.write_text(
+                  text,
+                  encoding="utf-8"
+              )
+
+          print(
+              "Visible branding changed to develop.uganda"
+          )
+          PY
+
+      - name: Build Phase 6 tiny 9x16 colour telemetry HUD
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          overlay = Path(
+              "phase6-build/pulse-phase4-production/"
+              "app/src/main/java/com/sentongoharuna/pulse/"
+              "ProMonitorOverlayView.kt"
+          )
+
+          text = overlay.read_text(
+              encoding="utf-8"
+          )
+
+          original = text
+
+          # -------------------------------------------------
+          # 1. REMOVE VERTICAL / ROTATED WORDS
+          # -------------------------------------------------
+
+          # No TikTok portrait HUD text should be rotated.
+          text = re.sub(
+              r'canvas\.rotate\([^;\n]*\)',
+              '/* Phase 6: rotation removed */',
+              text
+          )
+
+          # -------------------------------------------------
+          # 2. VERY SMALL PROFESSIONAL TEXT
+          # -------------------------------------------------
+
+          def shrink(match):
+
+              prefix = match.group(1)
+              value = float(match.group(2))
+
+              if value <= 8:
+                  return match.group(0)
+
+              new = max(
+                  7.5,
+                  round(value * 0.40, 1)
+              )
+
+              number = (
+                  str(new)
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return prefix + number + "f"
+
+          text = re.sub(
+              r'((?:\.?textSize)\s*=\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f',
+              shrink,
+              text
+          )
+
+          # Also catch Android setTextSize calls.
+          def shrink_set(match):
+
+              start = match.group(1)
+              value = float(match.group(2))
+              end = match.group(3)
+
+              new = max(
+                  7.5,
+                  round(value * 0.40, 1)
+              )
+
+              number = (
+                  str(new)
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return start + number + "f" + end
+
+          text = re.sub(
+              r'(setTextSize\([^,]+,\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f'
+              r'(\s*\))',
+              shrink_set,
+              text
+          )
+
+          # -------------------------------------------------
+          # 3. COMPRESS LINE SPACING / ROW HEIGHT
+          # -------------------------------------------------
+
+          def compress_dimension(match):
+
+              prefix = match.group(1)
+              value = float(match.group(2))
+
+              new = max(
+                  9.0,
+                  round(value * 0.48, 1)
+              )
+
+              number = (
+                  str(new)
+                  .rstrip("0")
+                  .rstrip(".")
+              )
+
+              return prefix + number + "f"
+
+          text = re.sub(
+              r'(\b(?:line|row|hud|meta|telemetry)'
+              r'[A-Za-z0-9_]*(?:Gap|Spacing|Height)'
+              r'\s*=\s*)'
+              r'([0-9]+(?:\.[0-9]+)?)f',
+              compress_dimension,
+              text,
+              flags=re.IGNORECASE
+          )
+
+          # -------------------------------------------------
+          # 4. NO STRIPS / NO LARGE BLACK PANELS
+          # -------------------------------------------------
+
+          # Old dark block colours become fully transparent.
+          dark_colours = [
+              "0xFF000000",
+              "0xF5000000",
+              "0xEE000000",
+              "0xE6000000",
+              "0xDD000000",
+              "0xD9000000",
+              "0xCC000000",
+              "0xC0000000",
+              "0xB8000000",
+              "0xB0000000",
+              "0xA6000000",
+              "0xA0000000",
+              "0x98000000",
+              "0x92000000",
+              "0x8C000000",
+              "0x88000000",
+              "0x80000000",
+              "0x78000000"
+          ]
+
+          for colour in dark_colours:
+              text = text.replace(
+                  colour,
+                  "0x00000000"
+              )
+
+          # Explicitly make paints named as backgrounds,
+          # panels, strips or sidebars transparent.
+          text = re.sub(
+              r'(\b[A-Za-z_][A-Za-z0-9_]*'
+              r'(?:panel|background|bg|strip|sidebar|sidebarPaint)'
+              r'[A-Za-z0-9_]*\.color\s*=\s*)'
+              r'[^\n]+',
+              r'\1android.graphics.Color.TRANSPARENT',
+              text,
+              flags=re.IGNORECASE
+          )
+
+          # -------------------------------------------------
+          # 5. REDUCE OLD SIDE PANEL WIDTHS TO NEAR ZERO
+          # -------------------------------------------------
+
+          text = re.sub(
+              r'width\s*\*\s*0\.(?:1[5-9]|2[0-9]|3[0-9]|4[0-9])f',
+              'width * 0.01f',
+              text
+          )
+
+          # -------------------------------------------------
+          # 6. PROFESSIONAL COLOUR SYSTEM
+          # -------------------------------------------------
+
+          colours = {
+              "brand": "android.graphics.Color.rgb(255,193,7)",
+              "pulse": "android.graphics.Color.rgb(255,193,7)",
+              "title": "android.graphics.Color.rgb(255,255,255)",
+
+              "rec": "android.graphics.Color.rgb(244,67,54)",
+              "record": "android.graphics.Color.rgb(244,67,54)",
+
+              "gps": "android.graphics.Color.rgb(0,229,255)",
+              "coord": "android.graphics.Color.rgb(0,229,255)",
+              "lat": "android.graphics.Color.rgb(0,229,255)",
+              "lon": "android.graphics.Color.rgb(0,229,255)",
+              "alt": "android.graphics.Color.rgb(0,229,255)",
+
+              "weather": "android.graphics.Color.rgb(64,196,255)",
+              "wind": "android.graphics.Color.rgb(64,196,255)",
+              "temp": "android.graphics.Color.rgb(64,196,255)",
+              "humidity": "android.graphics.Color.rgb(64,196,255)",
+              "wx": "android.graphics.Color.rgb(64,196,255)",
+
+              "mic": "android.graphics.Color.rgb(76,175,80)",
+              "network": "android.graphics.Color.rgb(76,175,80)",
+              "battery": "android.graphics.Color.rgb(76,175,80)",
+              "storage": "android.graphics.Color.rgb(76,175,80)",
+              "health": "android.graphics.Color.rgb(76,175,80)",
+              "status": "android.graphics.Color.rgb(76,175,80)",
+
+              "camera": "android.graphics.Color.rgb(255,213,79)",
+              "codec": "android.graphics.Color.rgb(255,213,79)",
+              "hdr": "android.graphics.Color.rgb(255,213,79)",
+              "fps": "android.graphics.Color.rgb(255,213,79)",
+              "uhd": "android.graphics.Color.rgb(255,213,79)",
+              "hevc": "android.graphics.Color.rgb(255,213,79)",
+              "mode": "android.graphics.Color.rgb(255,213,79)"
+          }
+
+          for key, colour in colours.items():
+
+              # Paint.color = ...
+              pattern = (
+                  r'(\b[A-Za-z_][A-Za-z0-9_]*'
+                  + re.escape(key) +
+                  r'[A-Za-z0-9_]*\.color\s*=\s*)'
+                  r'[^\n]+'
+              )
+
+              text = re.sub(
+                  pattern,
+                  lambda m:
+                      m.group(1) + colour,
+                  text,
+                  flags=re.IGNORECASE
+              )
+
+          # -------------------------------------------------
+          # 7. KEEP TEXT READABLE WITHOUT BOXES
+          # -------------------------------------------------
+
+          # Add subtle text shadow where a normal telemetry
+          # paint is created, if the source already uses shadow.
+          text = text.replace(
+              "setShadowLayer(0f",
+              "setShadowLayer(2f"
+          )
+
+          # -------------------------------------------------
+          # 8. BRAND HEADING
+          # -------------------------------------------------
+
+          # Keep reporter information in the compact heading,
+          # not as a vertical side word.
+          text = text.replace(
+              '"CITIZEN REPORT"',
+              '"REPORTER • CITIZEN REPORT"'
+          )
+
+          text = text.replace(
+              '"PULSE"',
+              '"develop.uganda"'
+          )
+
+          text = text.replace(
+              '"PULSE NEWS"',
+              '"develop.uganda"'
+          )
+
+          if text == original:
+              raise SystemExit(
+                  "Phase 6 HUD source was not modified"
+              )
+
+          overlay.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print(
+              "Phase 6 compact 9:16 colour HUD applied"
+          )
+          PY
+
+      - name: Add Phase 6 continuity record
+        run: |
+          cat >> phase6-build/pulse-phase4-production/PHASE-CONTINUITY.md <<'EOF'
+
+          ## Phase 6 — develop.uganda Compact Colour HUD
+
+          Phase 6 is cumulative.
+
+          Phase 1 remains included.
+          Phase 2 remains included.
+          Phase 3 remains included.
+          Phase 4 remains included.
+          Phase 5 remains included.
+
+          Visible public branding is now:
+
+          develop.uganda
+
+          The internal Android package remains unchanged
+          so the application continues as the same app.
+
+          The Phase 6 recorded telemetry HUD is designed
+          primarily for upright 9:16 social video.
+
+          There are no vertical words.
+          There is no vertical reporter strip.
+          There is no bottom information strip.
+          There are no large black telemetry panels.
+
+          Telemetry is compressed into a very small
+          professional text cluster.
+
+          All reporting information is retained:
+
+          reporter status
+          citizen report status
+          recording status
+          timecode
+          date
+          local time
+          timezone
+          full location
+          latitude
+          longitude
+          altitude
+          GPS accuracy
+          temperature
+          weather condition
+          humidity
+          wind speed
+          wind direction
+          microphone state
+          audio level
+          microphone source
+          network state
+          cellular generation
+          battery
+          available storage
+          camera mode
+          UHD / 4K
+          frame rate
+          HDR10
+          HEVC
+          stabilization
+          recording information
+
+          Colour hierarchy:
+
+          GOLD:
+          develop.uganda branding and camera modes.
+
+          RED:
+          REC and critical recording information.
+
+          WHITE:
+          general metadata, location, date and time.
+
+          CYAN:
+          GPS, coordinates and altitude.
+
+          LIGHT BLUE:
+          weather and atmospheric telemetry.
+
+          GREEN:
+          microphone, network, battery,
+          storage and healthy status information.
+
+          The camera image remains dominant.
+          EOF
+
+      - name: Verify Phase 6 cumulative project
+        run: |
+          test -f phase6-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/MainActivity.kt
+          test -f phase6-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/LiveActivity.kt
+          test -f phase6-build/pulse-phase4-production/app/src/main/java/com/sentongoharuna/pulse/ProMonitorOverlayView.kt
+          test -f phase6-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+          grep -q "Phase 1" phase6-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 4" phase6-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 5" phase6-build/pulse-phase4-production/PHASE-CONTINUITY.md
+          grep -q "Phase 6" phase6-build/pulse-phase4-production/PHASE-CONTINUITY.md
+
+      - name: Build develop.uganda Phase 6 APK
+        working-directory: phase6-build/pulse-phase4-production
+        run: |
+          gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Prepare installable APK
+        run: |
+          cp \
+          phase6-build/pulse-phase4-production/app/build/outputs/apk/debug/app-debug.apk \
+          DEVELOP-UGANDA-PHASE6-COMPACT-HUD.apk
+
+          ls -lh DEVELOP-UGANDA-PHASE6-COMPACT-HUD.apk
+
+      - name: Package Phase 6 source
+        run: |
+          cd phase6-build
+
+          zip -qr \
+          ../DEVELOP-UGANDA-PHASE6-COMPACT-HUD-SOURCE.zip \
+          pulse-phase4-production
+
+      - name: Upload Phase 6 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-PHASE6-COMPACT-HUD
+          path: DEVELOP-UGANDA-PHASE6-COMPACT-HUD.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Phase 6 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-PHASE6-COMPACT-HUD-SOURCE
+          path: DEVELOP-UGANDA-PHASE6-COMPACT-HUD-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
