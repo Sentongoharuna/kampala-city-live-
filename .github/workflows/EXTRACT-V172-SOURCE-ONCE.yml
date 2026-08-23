@@ -1,0 +1,54 @@
+name: Extract V172 Native Source Once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/EXTRACT-V172-SOURCE-ONCE.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify native source archive
+        run: |
+          set -e
+          test -f pulse-v172-native-android-project-fixed.zip
+          echo "V172 native source archive found"
+
+      - name: Extract native source
+        run: |
+          set -e
+          rm -rf v172-source
+          mkdir -p v172-source
+          unzip -q pulse-v172-native-android-project-fixed.zip -d v172-source
+
+          test -f v172-source/app/build.gradle.kts
+          test -f v172-source/app/src/main/AndroidManifest.xml
+
+          echo "V172 native source extracted"
+          find v172-source -maxdepth 6 -type f | sort
+
+      - name: Commit extracted source into repository
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add v172-source
+
+          if git diff --cached --quiet; then
+            echo "Source is already present. Nothing to commit."
+          else
+            git commit -m "Extract V172 native source for direct development"
+            git push
+          fi
