@@ -439,42 +439,56 @@ class DevelopUgandaCameraActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        sceneButton.setOnClickListener {
-            cycleScene()
-        }
-
-        lookButton.setOnClickListener {
-            cycleLook()
-        }
-
-        qualityButton.setOnClickListener {
-            cycleQuality()
-        }
-
-        captureModeButton.setOnClickListener {
-            cycleCaptureMode()
-        }
-
-        lensButton.setOnClickListener {
-            if (recording == null) {
-                useFront = !useFront
-                lensButton.text =
-                    "LENS\n${if (useFront) "FRONT" else "BACK"}"
-                bindCamera()
-            } else {
-                toast(
-                    "Stop recording before changing lens"
-                )
+        sceneButton.setOnClickListener(
+            android.view.View.OnClickListener {
+                cycleScene()
             }
-        }
+        )
 
-        torchButton.setOnClickListener {
-            toggleTorch()
-        }
+        lookButton.setOnClickListener(
+            android.view.View.OnClickListener {
+                cycleLook()
+            }
+        )
 
-        recordButton.setOnClickListener {
-            toggleRecording()
-        }
+        qualityButton.setOnClickListener(
+            android.view.View.OnClickListener {
+                cycleQuality()
+            }
+        )
+
+        captureModeButton.setOnClickListener(
+            android.view.View.OnClickListener {
+                cycleCaptureMode()
+            }
+        )
+
+        lensButton.setOnClickListener(
+            android.view.View.OnClickListener {
+                if (recording == null) {
+                    useFront = !useFront
+                    lensButton.text =
+                        "LENS\n${if (useFront) "FRONT" else "BACK"}"
+                    bindCamera()
+                } else {
+                    toast(
+                        "Stop recording before changing lens"
+                    )
+                }
+            }
+        )
+
+        torchButton.setOnClickListener(
+            android.view.View.OnClickListener {
+                toggleTorch()
+            }
+        )
+
+        recordButton.setOnClickListener(
+            android.view.View.OnClickListener {
+                toggleRecording()
+            }
+        )
 
         zoomSeek.setOnSeekBarChangeListener(
             simpleSeek {
