@@ -960,15 +960,18 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // Values such as LAT/LON/ALT/HDG/SPD/FIX/DIST continue changing live.
         // V178 uses a deeper social-safe inset. The previous transform
         // placed the left edge too close to the exported crop on some phones.
-        // V179 broadcast-safe layout:
+        // V180 broadcast-safe layout:
         // identity stays inside social-media safe margins while the
         // upper-right is reserved for the live compass/level instruments.
+        // V180: deliberately deeper safe margins for both the CameraX
+        // preview crop and the exported 9:16 video. This prevents the brand,
+        // telemetry and instruments from being clipped at the phone edges.
         val safeLeft =
-            finalWidth * 0.095f
+            finalWidth * 0.19f
         val safeTop =
-            finalHeight * 0.115f
+            finalHeight * 0.125f
         val maxWidth =
-            finalWidth * 0.61f
+            finalWidth * 0.43f
 
         var y = safeTop
 
@@ -1005,7 +1008,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             safeLeft - (10f * u),
             y - (4f * u),
             safeLeft - (10f * u),
-            y + (216f * u),
+            y + (246f * u),
             rail
         )
 
@@ -1028,19 +1031,16 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             text
         )
 
-        val brandWidth =
-            text.measureText(brand)
-
+        // V180: FIELD REPORT sits under the brand instead of extending to
+        // the right edge. This keeps the full identity visible on every crop.
         text.color = Color.WHITE
         text.textSize =
-            11.8f * u
+            11.6f * u
 
         c.drawText(
             sceneTag(),
-            safeLeft +
-                brandWidth +
-                (16f * u),
-            y,
+            safeLeft,
+            y + (17f * u),
             text
         )
 
@@ -1055,56 +1055,68 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         c.drawLine(
             safeLeft,
-            y + (8f * u),
+            y + (25f * u),
             safeLeft + maxWidth,
-            y + (8f * u),
+            y + (25f * u),
             accent
         )
 
         // Real live field instruments. These are part of the recorded HUD.
         val instrumentCenterX =
-            finalWidth * 0.82f
+            finalWidth * 0.69f
         val compassCenterY =
-            safeTop + (58f * u)
+            safeTop + (61f * u)
 
         drawCompassInstrument(
             c,
             instrumentCenterX,
             compassCenterY,
-            48f * u,
+            39f * u,
             u
         )
 
         drawAudioMeterInstrument(
             c,
-            finalWidth * 0.745f,
-            safeTop + (119f * u),
-            finalWidth * 0.15f,
-            10f * u,
+            finalWidth * 0.625f,
+            safeTop + (117f * u),
+            finalWidth * 0.13f,
+            9f * u,
             u
         )
 
         drawLevelInstrument(
             c,
             instrumentCenterX,
-            safeTop + (151f * u),
-            92f * u,
-            30f * u,
+            safeTop + (149f * u),
+            78f * u,
+            26f * u,
             u
         )
 
-        // 2. Report identity. Always visible in preview and saved media.
-        y += 25f * u
+        // 2. Stable report identity rows. Shorter rows keep the full
+        // develop.uganda identity readable instead of shrinking off-screen.
+        y += 43f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
         text.color = Color.WHITE
-        text.textSize = 11.8f * u
+        text.textSize = 11.6f * u
 
         drawFitText(
             c,
-            "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()} • CLIP ${clipSequenceText()}",
+            "REPORT ID $reportId • CLIP ${clipSequenceText()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            9.3f * u
+        )
+
+        y += 15f * u
+        drawFitText(
+            c,
+            "REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}",
             safeLeft,
             y,
             maxWidth,
@@ -1112,13 +1124,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             9.2f * u
         )
 
-        // 3. REC / timecode / local / UTC.
+        // 3. REC / timecode / date and local clock.
         y += 17f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.textSize = 12.4f * u
+        text.textSize = 12.1f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
@@ -1135,12 +1147,24 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "$recState • TC ${tc()} • ${clock.format(Date())} • ${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
+            "$recState • TC ${tc()} • ${clock.format(Date())}",
             safeLeft,
             y,
             maxWidth,
             text,
-            9.4f * u
+            9.5f * u
+        )
+
+        y += 15f * u
+        text.textSize = 10.6f * u
+        drawFitText(
+            c,
+            "${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            8.3f * u
         )
 
         // 4. Editorial / camera identity.
