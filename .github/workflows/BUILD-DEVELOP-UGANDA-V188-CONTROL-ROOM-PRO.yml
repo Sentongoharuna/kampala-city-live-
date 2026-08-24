@@ -1,0 +1,193 @@
+name: Build develop.uganda V188 Control Room Pro
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V188 source bundle
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V188-CONTROL-ROOM-PRO-SOURCE.zip
+          test -d v172-source
+          echo "V188 source bundle found"
+
+      - name: Install V188 source
+        run: |
+          set -e
+
+          rm -rf /tmp/develop-v188
+          mkdir -p /tmp/develop-v188
+
+          unzip -q \
+            DEVELOP-UGANDA-V188-CONTROL-ROOM-PRO-SOURCE.zip \
+            -d /tmp/develop-v188
+
+          cp -R /tmp/develop-v188/app/. \
+            v172-source/app/
+
+      - name: Verify V188 Control Room Pro
+        run: |
+          set -e
+
+          BASE="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          REPORT="$BASE/DevelopUgandaCameraActivity.kt"
+          LIVE="$BASE/DevelopUgandaLiveActivity.kt"
+
+          # V187 safe preview/output separation must remain.
+          grep -q 'previewNarrationPanel' "$REPORT"
+          grep -q 'CameraEffect.VIDEO_CAPTURE' "$REPORT"
+          grep -q 'livePreviewMeta' "$LIVE"
+
+          # FIELD REPORT V188.
+          grep -q 'ACTION_AUTO_UI' "$REPORT"
+          grep -q 'ACTION_INTEGRITY' "$REPORT"
+          grep -q 'MessageDigest.getInstance' "$REPORT"
+          grep -q '"SHA-256"' "$REPORT"
+          grep -q 'showCameraCapabilities' "$REPORT"
+          grep -q 'setReportOperatorControlsHidden' "$REPORT"
+
+          # LIVE V188.
+          grep -q 'COUNTDOWN' "$LIVE"
+          grep -q 'runCountdownStep' "$LIVE"
+          grep -q 'addLiveMarker' "$LIVE"
+          grep -q 'MARKERS' "$LIVE"
+          grep -q 'lowerThirdStyles' "$LIVE"
+          grep -q 'liveControlsLocked' "$LIVE"
+
+          grep -q 'versionCode = 18800' \
+            v172-source/app/build.gradle.kts
+
+          echo "V188 requested implementation verified"
+
+      - name: Commit V188 actual source
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaEditorActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V188 source already committed"
+          else
+            git commit -m "Add develop.uganda V188 Control Room Pro"
+            git push
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V188 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v188-build.log
+
+      - name: Print exact compiler error and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          echo "===== IMPORTANT ERROR LINES ====="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v188-build.log \
+            | head -480 \
+            || true
+
+          echo "===== FIRST KOTLIN SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v188-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          m = re.search(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )
+
+          if not m:
+              print("No Kotlin source line found in log.")
+              raise SystemExit(0)
+
+          filename = m.group(1)
+          line_no = int(m.group(2))
+
+          matches = list(
+              Path("app/src/main/java").rglob(filename)
+          )
+
+          if not matches:
+              print("Source file not found:", filename)
+              raise SystemExit(0)
+
+          lines = matches[0].read_text(
+              encoding="utf-8"
+          ).splitlines()
+
+          for n in range(
+              max(1, line_no - 16),
+              min(len(lines), line_no + 24) + 1
+          ):
+              mark = ">>" if n == line_no else "  "
+              print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Prepare APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V188-CONTROL-ROOM-PRO.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V188-CONTROL-ROOM-PRO
+          path: DEVELOP-UGANDA-V188-CONTROL-ROOM-PRO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V188-BUILD-LOG
+          path: v172-source/v188-build.log
+          if-no-files-found: warn
+          retention-days: 7
