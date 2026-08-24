@@ -75,7 +75,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
         root.addView(
             text(
-                "develop.uganda  EDIT",
+                "develop.uganda  EDIT DESK",
                 22f,
                 0xFFFFC21A.toInt(),
                 true
@@ -84,7 +84,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
         root.addView(
             text(
-                "Lossless field-report trim editor",
+                "SOCIAL CUT • REPORT PACKAGE • SHARE",
                 12f,
                 0xFFB7C3C9.toInt(),
                 false
@@ -108,7 +108,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
         statusView =
             text(
-                "Choose a video to edit.",
+                "Choose a clip • preview • trim • save • publish",
                 12f,
                 0xFFB7C3C9.toInt(),
                 false
@@ -174,7 +174,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
         }
 
         controls.addView(
-            action("CHOOSE", 0xFFFFC21A.toInt()) {
+            action("OPEN CLIP", 0xFFFFC21A.toInt()) {
                 picker.launch(
                     arrayOf("video/*")
                 )
@@ -183,7 +183,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
         )
 
         controls.addView(
-            action("PLAY", 0xFF7FE8FF.toInt()) {
+            action("PREVIEW", 0xFF7FE8FF.toInt()) {
                 if (sourceUri == null) {
                     toast("Choose a video first")
                 } else {
@@ -198,7 +198,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
         )
 
         controls.addView(
-            action("TRIM & SAVE", 0xFF76E39A.toInt()) {
+            action("TRIM + SAVE", 0xFF76E39A.toInt()) {
                 exportTrim()
             },
             weight()
@@ -214,7 +214,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
         root.addView(
             action(
-                "SHARE LAST EXPORT",
+                "PUBLISH / SHARE LAST EXPORT",
                 0xFFFF5A52.toInt()
             ) {
                 shareExport()

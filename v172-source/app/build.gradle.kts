@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 18200
-        versionName = "182.0-mobile-newsroom"
+        versionCode = 18300
+        versionName = "183.0-dual-camera-live-studio"
     }
 
     buildTypes {
