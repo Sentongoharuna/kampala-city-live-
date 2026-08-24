@@ -93,6 +93,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var liveLockButton: Button
     private lateinit var liveHudSizeButton: Button
     private lateinit var liveHudContrastButton: Button
+    private lateinit var liveHudBackingButton: Button
+    private lateinit var liveEffectButton: Button
     private lateinit var livePresetButton: Button
     private lateinit var liveSafeInfoButton: Button
     private lateinit var countdownView: TextView
@@ -121,6 +123,29 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
     private var liveHudContrastIndex = 1
+
+    private val liveHudBackingLabels =
+        arrayOf(
+            "NONE",
+            "SOFT",
+            "STRONG"
+        )
+
+    private var liveHudBackingIndex = 1
+
+    private val liveEffectLabels =
+        arrayOf(
+            "CLEAN",
+            "NATURAL",
+            "WARM",
+            "COOL",
+            "TEAL",
+            "GOLD",
+            "SOFT",
+            "NIGHT"
+        )
+
+    private var liveEffectIndex = 0
 
     private val livePresetLabels =
         arrayOf(
@@ -1019,6 +1044,71 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             displayRow
         )
 
+        val outputRow =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(5),
+                    0,
+                    0
+                )
+            }
+
+        liveHudBackingButton =
+            liveSettingButton(
+                "HUD BACKING ▾\n${liveHudBackingLabels[liveHudBackingIndex]}",
+                0xFF6F9C7C.toInt()
+            ) {
+                showLiveHudBackingDropdown(
+                    liveHudBackingButton
+                )
+            }.apply {
+                isSelected =
+                    liveHudBackingIndex !=
+                        0
+            }
+
+        liveEffectButton =
+            liveSettingButton(
+                "VIDEO FX ▾\n${liveEffectLabels[liveEffectIndex]}",
+                0xFF6D88A4.toInt()
+            ) {
+                showLiveEffectDropdown(
+                    liveEffectButton
+                )
+            }.apply {
+                isSelected =
+                    liveEffectIndex !=
+                        0
+            }
+
+        listOf(
+            liveHudBackingButton,
+            liveEffectButton,
+            liveSafeInfoButton
+        ).forEachIndexed { index, button ->
+            outputRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(40),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart =
+                            dp(6)
+                    }
+                }
+            )
+        }
+
+        liveDeck.addView(
+            outputRow
+        )
+
         val recordArea =
             FrameLayout(this).apply {
                 setPadding(
@@ -1358,6 +1448,24 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 )
                 append("\n")
 
+                append("HUD BACKING: ")
+                append(
+                    liveHudBackingLabels[
+                        liveHudBackingIndex
+                    ]
+                )
+                append("\n")
+
+                append("VIDEO FX: ")
+                append(
+                    liveEffectLabels[
+                        liveEffectIndex
+                    ]
+                )
+                append("\n")
+
+                append("SOCIAL CAMERA: FHD PREFERRED • 20Mbps @ FHD • DEVICE AE/AF/AWB\n")
+
                 append("PRESET: ")
                 append(
                     livePresetLabels[
@@ -1518,6 +1626,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                                 quality
                             )
                         )
+                        .setTargetVideoEncodingBitRate(
+                            if (
+                                quality ==
+                                Quality.FHD
+                            ) {
+                                20_000_000
+                            } else {
+                                10_000_000
+                            }
+                        )
                         .build()
 
                 videoCapture =
@@ -1576,6 +1694,27 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         session
                     )
 
+                // V200 social camera tuning: keep CameraX/device automatic
+                // exposure, autofocus and white balance, while ensuring
+                // compensation starts at a neutral supported value.
+                camera
+                    ?.cameraInfo
+                    ?.exposureState
+                    ?.let { exposure ->
+                        if (
+                            exposure.isExposureCompensationSupported
+                        ) {
+                            camera
+                                ?.cameraControl
+                                ?.setExposureCompensationIndex(
+                                    0.coerceIn(
+                                        exposure.exposureCompensationRange.lower,
+                                        exposure.exposureCompensationRange.upper
+                                    )
+                                )
+                        }
+                    }
+
                 camLamp.setTextColor(
                     green
                 )
@@ -1583,6 +1722,66 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ContextCompat.getMainExecutor(
                 this
             )
+        )
+    }
+
+    private fun drawLiveVideoEffect(
+        canvas: Canvas,
+        width: Float,
+        height: Float
+    ) {
+        val color =
+            when (
+                liveEffectLabels[
+                    liveEffectIndex
+                ]
+            ) {
+                "NATURAL" ->
+                    0x05FFF4E8
+
+                "WARM" ->
+                    0x0BFF9555
+
+                "COOL" ->
+                    0x0A3E7EFF
+
+                "TEAL" ->
+                    0x0B00A7A1
+
+                "GOLD" ->
+                    0x0CF2B43C
+
+                "SOFT" ->
+                    0x08FFFFFF
+
+                "NIGHT" ->
+                    0x12092346
+
+                else ->
+                    Color.TRANSPARENT
+            }
+
+        if (
+            color ==
+            Color.TRANSPARENT
+        ) {
+            return
+        }
+
+        val grade =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                this.color =
+                    color
+            }
+
+        canvas.drawRect(
+            0f,
+            0f,
+            width,
+            height,
+            grade
         )
     }
 
@@ -1606,12 +1805,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             Color.TRANSPARENT,
             android.graphics.PorterDuff.Mode.CLEAR
         )
-
-        if (
-            !graphicsEnabled
-        ) {
-            return
-        }
 
         val rotation =
             (
@@ -1739,6 +1932,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             matrix
         )
 
+        drawLiveVideoEffect(
+            canvas,
+            finalWidth,
+            finalHeight
+        )
+
+        if (
+            !graphicsEnabled
+        ) {
+            canvas.restore()
+            return
+        }
+
         val u =
             minOf(
                 finalWidth,
@@ -1824,6 +2030,92 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             livePaint
         )
 
+        if (
+            liveOn
+        ) {
+            val badgeAlpha =
+                if (
+                    blink
+                ) {
+                    230
+                } else {
+                    95
+                }
+
+            val badgeLeft =
+                safeRight -
+                    (152f * u)
+
+            val badgeTop =
+                safeTop -
+                    (23f * u)
+
+            val badgeRight =
+                safeRight
+
+            val badgeBottom =
+                safeTop +
+                    (7f * u)
+
+            val badgeBackground =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        Color.argb(
+                            badgeAlpha,
+                            184,
+                            48,
+                            44
+                        )
+
+                    style =
+                        Paint.Style.FILL
+                }
+
+            canvas.drawRoundRect(
+                badgeLeft,
+                badgeTop,
+                badgeRight,
+                badgeBottom,
+                10f * u,
+                10f * u,
+                badgeBackground
+            )
+
+            val badgeText =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        Color.argb(
+                            if (blink) 255 else 145,
+                            255,
+                            255,
+                            255
+                        )
+
+                    textSize =
+                        15.5f *
+                            u
+
+                    typeface =
+                        Typeface.create(
+                            Typeface.MONOSPACE,
+                            Typeface.BOLD
+                        )
+                }
+
+            canvas.drawText(
+                "● LIVE REC",
+                badgeLeft +
+                    (11f * u),
+                safeTop -
+                    (2f * u),
+                badgeText
+            )
+        }
+
         paint.textSize =
             38f * u
 
@@ -1851,6 +2143,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 white
             }
 
+        paint.alpha =
+            if (
+                liveOn &&
+                !blink
+            ) {
+                125
+            } else {
+                255
+            }
+
         canvas.drawText(
             if (
                 liveOn
@@ -1864,6 +2166,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             safeTop,
             paint
         )
+
+        paint.alpha =
+            255
 
         val rule =
             Paint(
@@ -2097,6 +2402,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         y: Float,
         paint: Paint
     ) {
+        drawLiveTextBackplate(
+            canvas,
+            value,
+            x,
+            y,
+            paint
+        )
+
         val savedStyle =
             paint.style
 
@@ -2172,6 +2485,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             paint.textSize =
                 size
         }
+
+        drawLiveTextBackplate(
+            canvas,
+            value,
+            x,
+            y,
+            paint
+        )
 
         val savedStyle =
             paint.style
@@ -3718,6 +4039,26 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     liveHudContrastLabels.lastIndex
                 )
 
+        liveHudBackingIndex =
+            prefs.getInt(
+                "hud_backing",
+                liveHudBackingIndex
+            )
+                .coerceIn(
+                    0,
+                    liveHudBackingLabels.lastIndex
+                )
+
+        liveEffectIndex =
+            prefs.getInt(
+                "video_fx",
+                liveEffectIndex
+            )
+                .coerceIn(
+                    0,
+                    liveEffectLabels.lastIndex
+                )
+
         livePresetIndex =
             prefs.getInt(
                 "preset_index",
@@ -3770,6 +4111,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 liveHudContrastIndex
             )
             .putInt(
+                "hud_backing",
+                liveHudBackingIndex
+            )
+            .putInt(
+                "video_fx",
+                liveEffectIndex
+            )
+            .putInt(
                 "preset_index",
                 livePresetIndex
             )
@@ -3786,6 +4135,87 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 countdownEnabled
             )
             .apply()
+    }
+
+    private fun liveHudBackingAlpha(): Int {
+        return when (
+            liveHudBackingIndex
+        ) {
+            0 ->
+                0
+
+            2 ->
+                58
+
+            else ->
+                32
+        }
+    }
+
+    private fun drawLiveTextBackplate(
+        canvas: Canvas,
+        value: String,
+        x: Float,
+        y: Float,
+        paint: Paint
+    ) {
+        val alpha =
+            liveHudBackingAlpha()
+
+        if (
+            alpha <=
+            0
+        ) {
+            return
+        }
+
+        val metrics =
+            paint.fontMetrics
+
+        val padX =
+            paint.textSize *
+                0.22f
+
+        val padY =
+            paint.textSize *
+                0.12f
+
+        val background =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    Color.argb(
+                        alpha,
+                        0,
+                        0,
+                        0
+                    )
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        canvas.drawRoundRect(
+            x -
+                padX,
+            y +
+                metrics.ascent -
+                padY,
+            x +
+                paint.measureText(
+                    value
+                ) +
+                padX,
+            y +
+                metrics.descent +
+                padY,
+            paint.textSize *
+                0.22f,
+            paint.textSize *
+                0.22f,
+            background
+        )
     }
 
     private fun liveHudOutlineScale(): Float {
@@ -3832,6 +4262,74 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
             else ->
                 0.65f * u
+        }
+    }
+
+    private fun showLiveEffectDropdown(
+        anchor: View
+    ) {
+        if (
+            recording !=
+            null
+        ) {
+            toast(
+                "Stop LIVE REC before changing video effect"
+            )
+            return
+        }
+
+        showLivePillDropdown(
+            anchor,
+            "SAVED VIDEO EFFECT",
+            liveEffectLabels,
+            liveEffectIndex
+        ) { picked ->
+            liveEffectIndex =
+                picked
+
+            markLivePresetCustom()
+
+            liveEffectButton.text =
+                "VIDEO FX ▾\n${liveEffectLabels[liveEffectIndex]}"
+
+            liveEffectButton.isSelected =
+                liveEffectIndex !=
+                    0
+
+            saveLiveCameraPreferences()
+
+            toast(
+                "VIDEO FX ${liveEffectLabels[liveEffectIndex]}"
+            )
+        }
+    }
+
+    private fun showLiveHudBackingDropdown(
+        anchor: View
+    ) {
+        showLivePillDropdown(
+            anchor,
+            "RECORDED HUD BACKING",
+            liveHudBackingLabels,
+            liveHudBackingIndex
+        ) { picked ->
+            liveHudBackingIndex =
+                picked
+
+            markLivePresetCustom()
+
+            liveHudBackingButton.text =
+                "HUD BACKING ▾\n${liveHudBackingLabels[liveHudBackingIndex]}"
+
+            liveHudBackingButton.isSelected =
+                liveHudBackingIndex !=
+                    0
+
+            saveLiveCameraPreferences()
+
+            toast(
+                "LIVE backing ${liveHudBackingLabels[liveHudBackingIndex]}"
+            )
         }
     }
 
@@ -3919,6 +4417,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 countdownEnabled =
                     true
+
+                liveHudBackingIndex =
+                    1
+
+                liveEffectIndex =
+                    liveEffectLabels.indexOf(
+                        "CLEAN"
+                    ).coerceAtLeast(
+                        0
+                    )
             }
 
             "INTERVIEW" -> {
@@ -3948,6 +4456,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 countdownEnabled =
                     false
+
+                liveHudBackingIndex =
+                    1
+
+                liveEffectIndex =
+                    liveEffectLabels.indexOf(
+                        "NATURAL"
+                    ).coerceAtLeast(
+                        0
+                    )
             }
 
             "EVENT" -> {
@@ -3977,6 +4495,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 countdownEnabled =
                     true
+
+                liveHudBackingIndex =
+                    1
+
+                liveEffectIndex =
+                    liveEffectLabels.indexOf(
+                        "WARM"
+                    ).coerceAtLeast(
+                        0
+                    )
             }
 
             "COMMUNITY" -> {
@@ -4010,6 +4538,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
             else -> {
                 // CUSTOM leaves current values untouched.
+
+                liveHudBackingIndex =
+                    1
+
+                liveEffectIndex =
+                    liveEffectLabels.indexOf(
+                        "NATURAL"
+                    ).coerceAtLeast(
+                        0
+                    )
             }
         }
 
@@ -4031,6 +4569,20 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveHudContrastButton.text =
             "HUD CONTRAST ▾\n${liveHudContrastLabels[liveHudContrastIndex]}"
+
+        liveHudBackingButton.text =
+            "HUD BACKING ▾\n${liveHudBackingLabels[liveHudBackingIndex]}"
+
+        liveHudBackingButton.isSelected =
+            liveHudBackingIndex !=
+                0
+
+        liveEffectButton.text =
+            "VIDEO FX ▾\n${liveEffectLabels[liveEffectIndex]}"
+
+        liveEffectButton.isSelected =
+            liveEffectIndex !=
+                0
 
         audioButton.text =
             "AUDIO ▾\n" +

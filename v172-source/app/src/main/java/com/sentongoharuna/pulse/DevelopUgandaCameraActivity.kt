@@ -116,6 +116,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         const val ACTION_HUD_SIZE = 18
         const val ACTION_HUD_CONTRAST = 19
         const val ACTION_REPORT_PRESET = 20
+        const val ACTION_HUD_BACKING = 21
     }
 
 
@@ -178,6 +179,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var cleanModeButton: Button
     private lateinit var hudSizeButton: Button
     private lateinit var hudContrastButton: Button
+    private lateinit var hudBackingButton: Button
     private lateinit var reportPresetButton: Button
     private lateinit var reportDisplayRow: LinearLayout
     private lateinit var reportOutputRow: LinearLayout
@@ -218,6 +220,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
     private var reportHudContrastIndex = 1
+
+    private val reportHudBackingLabels =
+        arrayOf(
+            "NONE",
+            "SOFT",
+            "STRONG"
+        )
+
+    private var reportHudBackingIndex = 1
 
     private var halfPreviewMode = false
     private var detailedSettingsVisible = false
@@ -274,6 +285,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         "COOL",
         "TEAL",
         "GOLD",
+        "SOFT",
+        "SUNSET",
+        "BLUE HOUR",
         "NIGHT",
         "MONO"
     )
@@ -968,6 +982,16 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     true
             }
 
+        hudBackingButton =
+            deckButton(
+                "HUD BACKING ▾\n${reportHudBackingLabels[reportHudBackingIndex]}",
+                0xFF6F9C7C.toInt()
+            ).apply {
+                isSelected =
+                    reportHudBackingIndex !=
+                        0
+            }
+
         reportPresetButton =
             deckButton(
                 "PRESET ▾\n${reportPresetLabels[reportPresetIndex]}",
@@ -978,26 +1002,25 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         0
             }
 
-        reportOutputRow.addView(
+        listOf(
             hudContrastButton,
-            LinearLayout.LayoutParams(
-                0,
-                dp(34),
-                1f
+            hudBackingButton,
+            reportPresetButton
+        ).forEachIndexed { index, button ->
+            reportOutputRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(34),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart =
+                            dp(6)
+                    }
+                }
             )
-        )
-
-        reportOutputRow.addView(
-            reportPresetButton,
-            LinearLayout.LayoutParams(
-                0,
-                dp(34),
-                1f
-            ).apply {
-                marginStart =
-                    dp(7)
-            }
-        )
+        }
 
         bottomDeck.addView(
             reportOutputRow
@@ -1219,6 +1242,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         hudContrastButton.setOnTouchListener(
             DeckTouchListener(ACTION_HUD_CONTRAST)
+        )
+
+        hudBackingButton.setOnTouchListener(
+            DeckTouchListener(ACTION_HUD_BACKING)
         )
 
         reportPresetButton.setOnTouchListener(
@@ -1767,6 +1794,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     reportHudContrastIndex
                 ]
             )
+            append(" / BACKING ")
+            append(
+                reportHudBackingLabels[
+                    reportHudBackingIndex
+                ]
+            )
             append(" • PRESET ")
             append(
                 reportPresetLabels[
@@ -1775,7 +1808,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             )
             append(" • SETTINGS MEMORY ON")
             append(" • SWIPE ZOOM/EXP • DOUBLE TAP LENS")
-            append(" • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
+            append(" • SOCIAL CAMERA 1080P/HIGH BITRATE • DEVICE AE/AF/AWB • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
             append("\n")
 
             append("REPORT ID ")
@@ -2628,6 +2661,16 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     reportHudContrastLabels.lastIndex
                 )
 
+        reportHudBackingIndex =
+            prefs.getInt(
+                "hud_backing",
+                reportHudBackingIndex
+            )
+                .coerceIn(
+                    0,
+                    reportHudBackingLabels.lastIndex
+                )
+
         reportPresetIndex =
             prefs.getInt(
                 "preset_index",
@@ -2688,6 +2731,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 reportHudContrastIndex
             )
             .putInt(
+                "hud_backing",
+                reportHudBackingIndex
+            )
+            .putInt(
                 "preset_index",
                 reportPresetIndex
             )
@@ -2704,6 +2751,99 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 integrityEnabled
             )
             .apply()
+    }
+
+    private fun reportHudBackingAlpha(): Int {
+        return when (
+            reportHudBackingIndex
+        ) {
+            0 ->
+                0
+
+            2 ->
+                58
+
+            else ->
+                32
+        }
+    }
+
+    private fun drawReportTextBackplate(
+        canvas: Canvas,
+        value: String,
+        x: Float,
+        y: Float,
+        paint: Paint
+    ) {
+        val alpha =
+            reportHudBackingAlpha()
+
+        if (
+            alpha <=
+            0
+        ) {
+            return
+        }
+
+        val metrics =
+            paint.fontMetrics
+
+        val padX =
+            paint.textSize *
+                0.22f
+
+        val padY =
+            paint.textSize *
+                0.12f
+
+        val left =
+            x -
+                padX
+
+        val top =
+            y +
+                metrics.ascent -
+                padY
+
+        val right =
+            x +
+                paint.measureText(
+                    value
+                ) +
+                padX
+
+        val bottom =
+            y +
+                metrics.descent +
+                padY
+
+        val background =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    Color.argb(
+                        alpha,
+                        0,
+                        0,
+                        0
+                    )
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        canvas.drawRoundRect(
+            left,
+            top,
+            right,
+            bottom,
+            paint.textSize *
+                0.22f,
+            paint.textSize *
+                0.22f,
+            background
+        )
     }
 
     private fun reportHudOutlineScale(): Float {
@@ -3522,7 +3662,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • AF TAP",
+            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • SOCIAL HIGH BITRATE • EXP $sceneExposureTarget",
             safeLeft,
             y,
             maxWidth,
@@ -3561,6 +3701,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         y: Float,
         paint: Paint
     ) {
+        drawReportTextBackplate(
+            canvas,
+            value,
+            x,
+            y,
+            paint
+        )
+
         val savedStyle =
             paint.style
 
@@ -4889,6 +5037,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             value.substring(0, end) + ellipsis
         }
 
+        drawReportTextBackplate(
+            canvas,
+            textToDraw,
+            x,
+            y,
+            paint
+        )
+
         val savedStyle =
             paint.style
 
@@ -5440,7 +5596,43 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 10_000_000
 
             else ->
-                20_000_000
+                22_000_000
+        }
+    }
+
+    private fun socialCameraStatus(): String {
+        return buildString {
+            append("SOCIAL CAMERA • ")
+            append(
+                if (
+                    qualityModes[
+                        qualityIndex
+                    ] ==
+                    "SOCIAL FHD"
+                ) {
+                    "1080P PREFERRED"
+                } else {
+                    qualityModes[
+                        qualityIndex
+                    ]
+                }
+            )
+            append(" • HIGH BITRATE")
+            append(" • DEVICE AE/AF/AWB")
+            append(" • EXP ")
+            append(
+                if (
+                    camera
+                        ?.cameraInfo
+                        ?.exposureState
+                        ?.isExposureCompensationSupported ==
+                    true
+                ) {
+                    sceneExposureTarget
+                } else {
+                    "AUTO"
+                }
+            )
         }
     }
 
@@ -5564,6 +5756,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 "GOLD" ->
                     0x0EF2B43C
+
+                "SOFT" ->
+                    0x08FFFFFF
+
+                "SUNSET" ->
+                    0x10FF7040
+
+                "BLUE HOUR" ->
+                    0x102D62C7
 
                 "NIGHT" ->
                     0x14092346
@@ -6056,6 +6257,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         ACTION_HUD_CONTRAST ->
                             showReportHudContrastDropdown(
                                 v ?: hudContrastButton
+                            )
+
+                        ACTION_HUD_BACKING ->
+                            showReportHudBackingDropdown(
+                                v ?: hudBackingButton
                             )
 
                         ACTION_REPORT_PRESET ->
@@ -6726,6 +6932,36 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun showReportHudBackingDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "RECORDED HUD BACKING",
+            reportHudBackingLabels,
+            reportHudBackingIndex
+        ) { picked ->
+            reportHudBackingIndex =
+                picked
+
+            markReportPresetCustom()
+
+            hudBackingButton.text =
+                "HUD BACKING ▾\n${reportHudBackingLabels[reportHudBackingIndex]}"
+
+            hudBackingButton.isSelected =
+                reportHudBackingIndex !=
+                    0
+
+            saveReportCameraPreferences()
+            refreshHud()
+
+            toast(
+                "HUD backing ${reportHudBackingLabels[reportHudBackingIndex]}"
+            )
+        }
+    }
+
     private fun markReportPresetCustom() {
         if (
             reportPresetIndex !=
@@ -6819,6 +7055,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 integrityEnabled =
                     true
+
+                reportHudBackingIndex =
+                    1
             }
 
             "OUTDOOR" -> {
@@ -6857,6 +7096,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 integrityEnabled =
                     true
+
+                reportHudBackingIndex =
+                    1
             }
 
             "NIGHT" -> {
@@ -6895,6 +7137,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 integrityEnabled =
                     true
+
+                reportHudBackingIndex =
+                    1
             }
 
             "INTERVIEW" -> {
@@ -6933,6 +7178,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 integrityEnabled =
                     true
+
+                reportHudBackingIndex =
+                    1
             }
 
             "CINEMA" -> {
@@ -6975,6 +7223,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
             else -> {
                 // CUSTOM keeps the current manual values.
+
+                reportHudBackingIndex =
+                    1
             }
         }
 
@@ -6990,6 +7241,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         hudContrastButton.text =
             "HUD CONTRAST ▾\n${reportHudContrastLabels[reportHudContrastIndex]}"
+
+        hudBackingButton.text =
+            "HUD BACKING ▾\n${reportHudBackingLabels[reportHudBackingIndex]}"
+
+        hudBackingButton.isSelected =
+            reportHudBackingIndex !=
+                0
 
         guidesButton.text =
             "GUIDES ▾\n" +

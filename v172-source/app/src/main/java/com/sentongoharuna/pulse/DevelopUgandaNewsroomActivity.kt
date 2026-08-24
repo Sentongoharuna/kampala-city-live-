@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "CLEAR BURN-IN PRO • V198",
+                "SOCIAL CAMERA PRO • V200",
                 9f,
                 white,
                 true
@@ -248,8 +248,16 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             compactStatus(
                 "SAVED VIDEO VISIBILITY",
-                "LARGER TEXT • WIDER SAFE AREA • LIGHTER SHADOW • FULL-OPACITY COLOURS",
+                "LARGER TEXT • LIGHTER SHADOW • OPTIONAL SOFT BACKING • FULL-OPACITY COLOURS",
                 green
+            )
+        )
+
+        page.addView(
+            compactStatus(
+                "SOCIAL CAMERA ENGINE",
+                "1080P PREFERRED • HIGH BITRATE • DEVICE AE/AF/AWB • 9:16 PHONE CAPTURE • SAVED VIDEO FX",
+                cyan
             )
         )
 
@@ -344,7 +352,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • larger saved-video lettering • lighter shadow • wider telemetry lane • presets + HUD memory",
+                "FIELD REPORT • social 1080p/high-bitrate camera tune • expanded LOOK effects • readable burn-in • presets",
                 "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -356,7 +364,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • larger ON AIR graphics • lighter text shade • clearer lower-third • presets + MARK",
+                "LIVE STUDIO • blinking LIVE REC burned into saved video • 1080p/high-bitrate tune • VIDEO FX • MARK",
                 "Signals • reporter identity • output setup • broadcast profiles • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"

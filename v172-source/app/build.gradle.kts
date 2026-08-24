@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 19800
-        versionName = "198.0-clear-burn-in-pro"
+        versionCode = 20000
+        versionName = "200.0-social-camera-pro"
     }
 
     buildTypes {
