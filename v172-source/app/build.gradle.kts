@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 18900
-        versionName = "189.0-smart-operator-pro"
+        versionCode = 19000
+        versionName = "190.0-pill-deck-pro"
     }
 
     buildTypes {

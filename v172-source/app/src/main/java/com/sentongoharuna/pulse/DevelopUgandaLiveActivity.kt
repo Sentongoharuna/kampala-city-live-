@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -27,6 +28,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -566,35 +568,32 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         profileButton =
             liveSettingButton(
-                "PROFILE\n${profiles[profileIndex]}",
+                "PROFILE ▾\n${profiles[profileIndex]}",
                 red
             ) {
-                cycleProfile()
+                showLiveProfileDropdown(
+                    profileButton
+                )
             }
 
         qualityButton =
             liveSettingButton(
-                "QUALITY\nFHD",
+                "QUALITY ▾\nFHD",
                 cyan
             ) {
-                cycleQuality()
+                showLiveQualityDropdown(
+                    qualityButton
+                )
             }
 
         audioButton =
             liveSettingButton(
-                "AUDIO\nON",
+                "AUDIO ▾\nON",
                 green
             ) {
-                audioEnabled =
-                    !audioEnabled
-
-                audioButton.text =
-                    "AUDIO\n" +
-                        if (audioEnabled) {
-                            "ON"
-                        } else {
-                            "OFF"
-                        }
+                showLiveAudioDropdown(
+                    audioButton
+                )
             }
 
         row1.addView(
@@ -631,55 +630,32 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         graphicsButton =
             liveSettingButton(
-                "GRAPHICS\nON",
+                "GRAPHICS ▾\nON",
                 amber
             ) {
-                graphicsEnabled =
-                    !graphicsEnabled
-
-                graphicsButton.text =
-                    "GRAPHICS\n" +
-                        if (graphicsEnabled) {
-                            "ON"
-                        } else {
-                            "OFF"
-                        }
+                showLiveGraphicsDropdown(
+                    graphicsButton
+                )
             }
 
         lensButton =
             liveSettingButton(
-                "LENS\nBACK",
+                "LENS ▾\nBACK",
                 cyan
             ) {
-                if (
-                    recording ==
-                    null
-                ) {
-                    useFront =
-                        !useFront
-
-                    lensButton.text =
-                        "LENS\n" +
-                            if (useFront) {
-                                "FRONT"
-                            } else {
-                                "BACK"
-                            }
-
-                    bindCamera()
-                } else {
-                    toast(
-                        "Stop LIVE REC before changing lens"
-                    )
-                }
+                showLiveLensDropdown(
+                    lensButton
+                )
             }
 
         lightButton =
             liveSettingButton(
-                "LIGHT\nOFF",
+                "LIGHT ▾\nOFF",
                 white
             ) {
-                toggleTorch()
+                showLiveLightDropdown(
+                    lightButton
+                )
             }
 
         row2.addView(
@@ -772,10 +748,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         viewModeButton =
             liveSettingButton(
-                "VIEW\nFULL",
+                "VIEW ▾\nFULL",
                 green
             ) {
-                togglePreviewMode()
+                showLiveViewDropdown(
+                    viewModeButton
+                )
             }
 
         settingsButton =
@@ -841,26 +819,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         countdownButton =
             liveSettingButton(
-                "COUNTDOWN\n3 SEC",
+                "COUNTDOWN ▾\n3 SEC",
                 amber
             ) {
-                if (
-                    !liveControlsLocked
-                ) {
-                    countdownEnabled =
-                        !countdownEnabled
-
-                    countdownButton.text =
-                        "COUNTDOWN\n" +
-                            if (countdownEnabled) {
-                                "3 SEC"
-                            } else {
-                                "OFF"
-                            }
-
-                    countdownButton.isSelected =
-                        countdownEnabled
-                }
+                showLiveCountdownDropdown(
+                    countdownButton
+                )
             }.apply {
                 isSelected =
                     true
@@ -876,29 +840,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         styleButton =
             liveSettingButton(
-                "LOWER STYLE\n${lowerThirdStyles[lowerThirdStyleIndex]}",
+                "LOWER STYLE ▾\n${lowerThirdStyles[lowerThirdStyleIndex]}",
                 red
             ) {
-                if (
-                    !liveControlsLocked &&
-                    recording == null
-                ) {
-                    lowerThirdStyleIndex =
-                        (
-                            lowerThirdStyleIndex +
-                                1
-                            ) %
-                            lowerThirdStyles.size
-
-                    styleButton.text =
-                        "LOWER STYLE\n${lowerThirdStyles[lowerThirdStyleIndex]}"
-                } else if (
-                    recording != null
-                ) {
-                    toast(
-                        "Change lower-third style before recording"
-                    )
-                }
+                showLiveStyleDropdown(
+                    styleButton
+                )
             }
 
         liveLockButton =
@@ -1035,7 +982,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
 
         viewModeButton.text =
-            "VIEW\n" +
+            "VIEW ▾\n" +
                 if (halfPreviewMode) {
                     "HALF"
                 } else {
@@ -1721,7 +1668,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            26f * u
+            29f * u
 
         paint.color =
             amber
@@ -1735,7 +1682,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            13f * u
+            14f * u
 
         paint.color =
             if (
@@ -1774,7 +1721,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         canvas.drawLine(
             safeLeft,
             safeTop +
-                (12f * u),
+                (13f * u),
             safeRight,
             safeTop +
                 (12f * u),
@@ -1800,7 +1747,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            11.5f * u
+            12.4f * u
 
         paint.color =
             cyan
@@ -1928,7 +1875,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             white
 
         paint.textSize =
-            18f * u
+            20f * u
 
         drawFitText(
             canvas,
@@ -2050,7 +1997,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 profiles.size
 
         profileButton.text =
-            "PROFILE\n${profiles[profileIndex]}"
+            "PROFILE ▾\n${profiles[profileIndex]}"
 
         liveSubTitle.text =
             "LIVE STUDIO • ${profiles[profileIndex]} • READY"
@@ -2084,7 +2031,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         }
 
         qualityButton.text =
-            "QUALITY\n$qualityLabel"
+            "QUALITY ▾\n$qualityLabel"
 
         bindCamera()
     }
@@ -2904,7 +2851,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 value
 
             textSize =
-                6.9f
+                6.2f
 
             isAllCaps =
                 false
@@ -2914,10 +2861,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
             background =
-                rounded(
-                    0x7A11171A,
+                liveSolidPillBackground(
                     accent,
-                    18
+                    isSelected
                 )
 
             setOnClickListener {
@@ -2933,6 +2879,498 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     action.invoke()
                 }
             }
+        }
+    }
+
+    private fun livePillFillColor(
+        accent: Int,
+        selected: Boolean = false
+    ): Int {
+        val factor =
+            if (selected) {
+                0.72f
+            } else {
+                0.50f
+            }
+
+        return Color.rgb(
+            (
+                Color.red(accent) *
+                    factor
+                ).roundToInt(),
+            (
+                Color.green(accent) *
+                    factor
+                ).roundToInt(),
+            (
+                Color.blue(accent) *
+                    factor
+                ).roundToInt()
+        )
+    }
+
+    private fun liveSolidPillBackground(
+        accent: Int,
+        selected: Boolean = false
+    ): GradientDrawable {
+        return GradientDrawable().apply {
+            shape =
+                GradientDrawable.RECTANGLE
+
+            cornerRadius =
+                dp(20).toFloat()
+
+            setColor(
+                livePillFillColor(
+                    accent,
+                    selected
+                )
+            )
+
+            setStroke(
+                dp(
+                    if (selected) {
+                        2
+                    } else {
+                        1
+                    }
+                ),
+                accent
+            )
+        }
+    }
+
+    private fun liveOptionAccent(
+        index: Int
+    ): Int {
+        val palette =
+            intArrayOf(
+                red,
+                cyan,
+                green,
+                0xFFFF5AA5.toInt(),
+                amber,
+                0xFF8F7CFF.toInt(),
+                0xFF4EA7FF.toInt(),
+                0xFFB7C1C8.toInt()
+            )
+
+        return palette[
+            index %
+                palette.size
+        ]
+    }
+
+    private fun showLivePillDropdown(
+        anchor: View,
+        title: String,
+        options: Array<String>,
+        selectedIndex: Int,
+        onPick: (Int) -> Unit
+    ) {
+        val panel =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(7),
+                    dp(7),
+                    dp(7),
+                    dp(7)
+                )
+
+                background =
+                    GradientDrawable().apply {
+                        shape =
+                            GradientDrawable.RECTANGLE
+
+                        cornerRadius =
+                            dp(18).toFloat()
+
+                        setColor(
+                            0xF20A0E11.toInt()
+                        )
+
+                        setStroke(
+                            dp(1),
+                            0x60FF3B32
+                        )
+                    }
+            }
+
+        panel.addView(
+            label(
+                title,
+                9f,
+                white,
+                true
+            ),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(28)
+            )
+        )
+
+        val popup =
+            PopupWindow(
+                panel,
+                dp(190),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+            ).apply {
+                isOutsideTouchable =
+                    true
+
+                elevation =
+                    dp(8).toFloat()
+
+                setBackgroundDrawable(
+                    ColorDrawable(
+                        Color.TRANSPARENT
+                    )
+                )
+            }
+
+        options.forEachIndexed {
+                index,
+                option ->
+
+            val accent =
+                liveOptionAccent(
+                    index
+                )
+
+            val pill =
+                LiveGlowButton(
+                    this,
+                    accent
+                ).apply {
+                    text =
+                        if (
+                            index ==
+                            selectedIndex
+                        ) {
+                            "✓  $option"
+                        } else {
+                            option
+                        }
+
+                    textSize =
+                        8f
+
+                    isAllCaps =
+                        false
+
+                    setTextColor(
+                        white
+                    )
+
+                    gravity =
+                        Gravity.CENTER
+
+                    background =
+                        liveSolidPillBackground(
+                            accent,
+                            index ==
+                                selectedIndex
+                        )
+
+                    setOnClickListener {
+                        onPick(
+                            index
+                        )
+                        popup.dismiss()
+                    }
+                }
+
+            panel.addView(
+                pill,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(38)
+                ).apply {
+                    topMargin =
+                        dp(4)
+                }
+            )
+        }
+
+        popup.showAsDropDown(
+            anchor,
+            0,
+            dp(4)
+        )
+    }
+
+    private fun showLiveProfileDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Stop LIVE REC before changing profile"
+            )
+            return
+        }
+
+        showLivePillDropdown(
+            anchor,
+            "LIVE PROFILE",
+            profiles,
+            profileIndex
+        ) { picked ->
+            profileIndex =
+                picked
+
+            profileButton.text =
+                "PROFILE ▾\n${profiles[profileIndex]}"
+
+            liveSubTitle.text =
+                "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+        }
+    }
+
+    private fun showLiveQualityDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Stop LIVE REC before changing quality"
+            )
+            return
+        }
+
+        showLivePillDropdown(
+            anchor,
+            "QUALITY",
+            arrayOf(
+                "FHD",
+                "HD"
+            ),
+            if (quality == Quality.FHD) 0 else 1
+        ) { picked ->
+            quality =
+                if (picked == 0) {
+                    Quality.FHD
+                } else {
+                    Quality.HD
+                }
+
+            qualityLabel =
+                if (picked == 0) {
+                    "FHD"
+                } else {
+                    "HD"
+                }
+
+            qualityButton.text =
+                "QUALITY ▾\n$qualityLabel"
+
+            bindCamera()
+        }
+    }
+
+    private fun showLiveAudioDropdown(
+        anchor: View
+    ) {
+        showLivePillDropdown(
+            anchor,
+            "AUDIO",
+            arrayOf(
+                "ON",
+                "OFF"
+            ),
+            if (audioEnabled) 0 else 1
+        ) { picked ->
+            audioEnabled =
+                picked ==
+                    0
+
+            audioButton.text =
+                "AUDIO ▾\n" +
+                    if (audioEnabled) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
+        }
+    }
+
+    private fun showLiveGraphicsDropdown(
+        anchor: View
+    ) {
+        showLivePillDropdown(
+            anchor,
+            "LIVE GRAPHICS",
+            arrayOf(
+                "ON",
+                "OFF"
+            ),
+            if (graphicsEnabled) 0 else 1
+        ) { picked ->
+            graphicsEnabled =
+                picked ==
+                    0
+
+            graphicsButton.text =
+                "GRAPHICS ▾\n" +
+                    if (graphicsEnabled) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
+        }
+    }
+
+    private fun showLiveLensDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Stop LIVE REC before changing lens"
+            )
+            return
+        }
+
+        showLivePillDropdown(
+            anchor,
+            "LENS",
+            arrayOf(
+                "BACK",
+                "FRONT"
+            ),
+            if (useFront) 1 else 0
+        ) { picked ->
+            useFront =
+                picked ==
+                    1
+
+            lensButton.text =
+                "LENS ▾\n" +
+                    if (useFront) {
+                        "FRONT"
+                    } else {
+                        "BACK"
+                    }
+
+            bindCamera()
+        }
+    }
+
+    private fun showLiveLightDropdown(
+        anchor: View
+    ) {
+        val isOn =
+            camera
+                ?.cameraInfo
+                ?.torchState
+                ?.value ==
+                androidx.camera.core.TorchState.ON
+
+        showLivePillDropdown(
+            anchor,
+            "LIGHT",
+            arrayOf(
+                "OFF",
+                "ON"
+            ),
+            if (isOn) 1 else 0
+        ) { picked ->
+            val wantOn =
+                picked ==
+                    1
+
+            camera
+                ?.cameraControl
+                ?.enableTorch(
+                    wantOn
+                )
+
+            lightButton.text =
+                "LIGHT ▾\n" +
+                    if (wantOn) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
+        }
+    }
+
+    private fun showLiveViewDropdown(
+        anchor: View
+    ) {
+        showLivePillDropdown(
+            anchor,
+            "VIEW",
+            arrayOf(
+                "FULL SCREEN",
+                "HALF SCREEN"
+            ),
+            if (halfPreviewMode) 1 else 0
+        ) { picked ->
+            val wantHalf =
+                picked ==
+                    1
+
+            if (
+                wantHalf !=
+                halfPreviewMode
+            ) {
+                togglePreviewMode()
+            }
+        }
+    }
+
+    private fun showLiveCountdownDropdown(
+        anchor: View
+    ) {
+        showLivePillDropdown(
+            anchor,
+            "COUNTDOWN",
+            arrayOf(
+                "3 SEC",
+                "OFF"
+            ),
+            if (countdownEnabled) 0 else 1
+        ) { picked ->
+            countdownEnabled =
+                picked ==
+                    0
+
+            countdownButton.text =
+                "COUNTDOWN ▾\n" +
+                    if (countdownEnabled) {
+                        "3 SEC"
+                    } else {
+                        "OFF"
+                    }
+
+            countdownButton.isSelected =
+                countdownEnabled
+        }
+    }
+
+    private fun showLiveStyleDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Change lower-third style before recording"
+            )
+            return
+        }
+
+        showLivePillDropdown(
+            anchor,
+            "LOWER THIRD STYLE",
+            lowerThirdStyles,
+            lowerThirdStyleIndex
+        ) { picked ->
+            lowerThirdStyleIndex =
+                picked
+
+            styleButton.text =
+                "LOWER STYLE ▾\n${lowerThirdStyles[lowerThirdStyleIndex]}"
         }
     }
 
@@ -3013,7 +3451,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         LinearLayout.LayoutParams {
         return LinearLayout.LayoutParams(
             0,
-            dp(44),
+            dp(40),
             1f
         ).apply {
             marginStart =
@@ -3056,7 +3494,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 strokeWidth = 3f
                 color = accent
                 setShadowLayer(
-                    13f,
+                    6f,
                     0f,
                     0f,
                     accent

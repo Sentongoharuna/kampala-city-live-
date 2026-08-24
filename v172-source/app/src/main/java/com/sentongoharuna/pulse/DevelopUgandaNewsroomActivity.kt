@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "SMART OPERATOR PRO • V189",
+                "PILL DECK PRO • V190",
                 9f,
                 white,
                 true
@@ -216,7 +216,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "SMART OPERATOR PRO",
+                "PILL DECK PRO",
                 "REPORT • LIVE • EDIT • DESK • PUBLISH"
             )
         )
@@ -230,7 +230,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • CLEAN mode • swipe zoom/exposure • double-tap lens • REC HEALTH • SHA-256",
+                "FIELD REPORT • coloured pill controls • dropdown pill choices • larger saved-video telemetry • REC HEALTH",
                 "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -242,7 +242,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • countdown • MARK • lower-thirds • real MIC level • LIVE health",
+                "LIVE STUDIO • coloured broadcast pills • dropdown choices • larger saved-video graphics • MARK + health",
                 "Blinking LIVE • signal lamps • smaller glowing setting buttons • Reporter ID • lower third • safe recorded graphics • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"

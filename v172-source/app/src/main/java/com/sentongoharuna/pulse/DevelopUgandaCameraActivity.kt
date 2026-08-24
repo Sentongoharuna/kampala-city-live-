@@ -40,6 +40,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -670,19 +671,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
 
         sceneButton = deckButton(
-            "SCENE\n${sceneModes[sceneIndex]}",
+            "SCENE ▾\n${sceneModes[sceneIndex]}",
             0xFFFFC21A.toInt()
         )
         lookButton = deckButton(
-            "LOOK\n${lookModes[lookIndex]}",
+            "LOOK ▾\n${lookModes[lookIndex]}",
             0xFF7FE8FF.toInt()
         )
         qualityButton = deckButton(
-            "FORMAT\n${qualityDeckLabel()}",
+            "FORMAT ▾\n${qualityDeckLabel()}",
             0xFFE8F1F2.toInt()
         )
         captureModeButton = deckButton(
-            "CAPTURE\n${captureModes[captureModeIndex]}",
+            "CAPTURE ▾\n${captureModes[captureModeIndex]}",
             0xFF76E39A.toInt()
         )
 
@@ -696,14 +697,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 button,
                 LinearLayout.LayoutParams(
                     0,
-                    dp(44),
+                    dp(40),
                     1f
-                )
+                ).apply {
+                    if (index > 0) {
+                        marginStart =
+                            dp(5)
+                    }
+                }
             )
-            if (index < 3) {
+            if (false) {
                 modeRow.addView(
-                    space(dp(6)),
-                    wrap(6, 1)
+                    space(dp(1)),
+                    wrap(1, 1)
                 )
             }
         }
@@ -733,7 +739,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
 
         viewModeButton = deckButton(
-            "VIEW\nFULL",
+            "VIEW ▾\nFULL",
             0xFF76E39A.toInt()
         )
 
@@ -743,7 +749,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         guidesButton = deckButton(
-            "GUIDES\nON",
+            "GUIDES ▾\nON",
             0xFFFFC21A.toInt()
         )
 
@@ -783,7 +789,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         autoUiButton =
             deckButton(
-                "AUTO UI\nON",
+                "AUTO UI ▾\nON",
                 0xFF76E39A.toInt()
             ).apply {
                 isSelected = true
@@ -791,13 +797,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         lockButton =
             deckButton(
-                "LOCK\nOFF",
+                "LOCK ▾\nOFF",
                 0xFFFFC21A.toInt()
             )
 
         integrityButton =
             deckButton(
-                "VERIFY\nSHA-256",
+                "VERIFY ▾\nSHA-256",
                 0xFF7FE8FF.toInt()
             ).apply {
                 isSelected = true
@@ -811,7 +817,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         cleanModeButton =
             deckButton(
-                "CLEAN\nOFF",
+                "CLEAN ▾\nOFF",
                 0xFF76E39A.toInt()
             )
 
@@ -923,11 +929,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
 
         lensButton = deckButton(
-            "LENS\nBACK",
+            "LENS ▾\nBACK",
             0xFF7FE8FF.toInt()
         )
         torchButton = deckButton(
-            "LIGHT\nOFF",
+            "LIGHT ▾\nOFF",
             0xFFE8F1F2.toInt()
         )
         recordButton = makeRecordButton()
@@ -1326,7 +1332,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             guideParams
 
         viewModeButton.text =
-            "VIEW\n" +
+            "VIEW ▾\n" +
                 if (halfPreviewMode) {
                     "HALF"
                 } else {
@@ -1432,7 +1438,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             }
 
         guidesButton.text =
-            "GUIDES\n" +
+            "GUIDES ▾\n" +
                 if (previewGuidesEnabled) {
                     "ON"
                 } else {
@@ -1461,16 +1467,16 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         sceneExposureTarget = 0
 
         sceneButton.text =
-            "SCENE\n${sceneModes[sceneIndex]}"
+            "SCENE ▾\n${sceneModes[sceneIndex]}"
 
         lookButton.text =
-            "LOOK\n${lookModes[lookIndex]}"
+            "LOOK ▾\n${lookModes[lookIndex]}"
 
         qualityButton.text =
-            "FORMAT\n${qualityDeckLabel()}"
+            "FORMAT ▾\n${qualityDeckLabel()}"
 
         captureModeButton.text =
-            "CAPTURE\n${captureModes[captureModeIndex]}"
+            "CAPTURE ▾\n${captureModes[captureModeIndex]}"
 
         exposureSeek.progress = 6
 
@@ -1603,7 +1609,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             !autoHideOperatorUi
 
         autoUiButton.text =
-            "AUTO UI\n" +
+            "AUTO UI ▾\n" +
                 if (autoHideOperatorUi) {
                     "ON"
                 } else {
@@ -1634,7 +1640,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             !operatorLocked
 
         lockButton.text =
-            "LOCK\n" +
+            "LOCK ▾\n" +
                 if (operatorLocked) {
                     "ON"
                 } else {
@@ -1665,7 +1671,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             !integrityEnabled
 
         integrityButton.text =
-            "VERIFY\n" +
+            "VERIFY ▾\n" +
                 if (integrityEnabled) {
                     "SHA-256"
                 } else {
@@ -2155,7 +2161,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             !cleanModeEnabled
 
         cleanModeButton.text =
-            "CLEAN\n" +
+            "CLEAN ▾\n" +
                 if (cleanModeEnabled) {
                     "ON"
                 } else {
@@ -2721,7 +2727,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val safeTop =
             finalHeight * 0.125f
         val maxWidth =
-            finalWidth * 0.43f
+            finalWidth * 0.47f
 
         var y = safeTop
 
@@ -2770,7 +2776,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            30f * u
+            32f * u
 
         val brand = "develop.uganda"
 
@@ -2794,7 +2800,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 Color.WHITE
             }
         text.textSize =
-            10.8f * u
+            11.5f * u
 
         c.drawText(
             sceneTag(),
@@ -2824,7 +2830,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         // Real live field instruments. These are part of the recorded HUD.
         val instrumentCenterX =
-            finalWidth * 0.69f
+            finalWidth * 0.74f
         val compassCenterY =
             safeTop + (61f * u)
 
@@ -2838,7 +2844,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawAudioMeterInstrument(
             c,
-            finalWidth * 0.625f,
+            finalWidth * 0.675f,
             safeTop + (117f * u),
             finalWidth * 0.13f,
             9f * u,
@@ -2862,7 +2868,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.BOLD
         )
         text.color = Color.WHITE
-        text.textSize = 11.6f * u
+        text.textSize = 12.4f * u
 
         drawFitText(
             c,
@@ -2891,7 +2897,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.textSize = 12.1f * u
+        text.textSize = 13.0f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
@@ -2913,11 +2919,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            9.5f * u
+            10.3f * u
         )
 
         y += 15f * u
-        text.textSize = 10.6f * u
+        text.textSize = 11.4f * u
         drawFitText(
             c,
             "${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
@@ -2933,7 +2939,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            10.9f * u
+            11.7f * u
 
         drawFitText(
             c,
@@ -2952,7 +2958,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.NORMAL
         )
         text.color = Color.WHITE
-        text.textSize = 11.1f * u
+        text.textSize = 12.0f * u
 
         drawFitText(
             c,
@@ -2969,7 +2975,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            10.7f * u
+            11.5f * u
 
         drawFitText(
             c,
@@ -2986,7 +2992,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            10.3f * u
+            11.1f * u
 
         drawFitText(
             c,
@@ -3003,7 +3009,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            10.2f * u
+            11.0f * u
 
         drawFitText(
             c,
@@ -3020,7 +3026,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFDDE8EA.toInt()
         text.textSize =
-            9.9f * u
+            10.7f * u
 
         drawFitText(
             c,
@@ -3054,7 +3060,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFF76E39A.toInt()
         text.textSize =
-            10.1f * u
+            10.9f * u
 
         drawFitText(
             c,
@@ -4688,6 +4694,37 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
     }
 
+    private fun refreshReportPillStates() {
+        val values =
+            listOf(
+                sceneButton to
+                    0xFFFFC21A.toInt(),
+                lookButton to
+                    0xFF7FE8FF.toInt(),
+                qualityButton to
+                    0xFFE8F1F2.toInt(),
+                captureModeButton to
+                    0xFF76E39A.toInt(),
+                viewModeButton to
+                    0xFF76E39A.toInt(),
+                settingsButton to
+                    0xFF7FE8FF.toInt(),
+                guidesButton to
+                    0xFFFFC21A.toInt(),
+                resetButton to
+                    0xFFFF8A84.toInt()
+            )
+
+        values.forEach {
+            pair ->
+            pair.first.background =
+                solidPillBackground(
+                    pair.second,
+                    pair.first.isSelected
+                )
+        }
+    }
+
     private fun refreshHud() {
         timecodeView.text =
             "TC ${tc()}"
@@ -4745,22 +4782,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         if (::sceneButton.isInitialized) {
             sceneButton.text =
-                "SCENE\n${sceneModes[sceneIndex]}"
+                "SCENE ▾\n${sceneModes[sceneIndex]}"
         }
 
         if (::lookButton.isInitialized) {
             lookButton.text =
-                "LOOK\n${lookModes[lookIndex]}"
+                "LOOK ▾\n${lookModes[lookIndex]}"
         }
 
         if (::qualityButton.isInitialized) {
             qualityButton.text =
-                "FORMAT\n${qualityDeckLabel()}"
+                "FORMAT ▾\n${qualityDeckLabel()}"
         }
 
         if (::captureModeButton.isInitialized) {
             captureModeButton.text =
-                "CAPTURE\n${captureModes[captureModeIndex]}"
+                "CAPTURE ▾\n${captureModes[captureModeIndex]}"
         }
 
         if (::identityButton.isInitialized) {
@@ -4786,7 +4823,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         if (::lensButton.isInitialized) {
             lensButton.text =
-                "LENS\n${if (useFront) "FRONT" else "BACK"}"
+                "LENS ▾\n${if (useFront) "FRONT" else "BACK"}"
         }
     }
 
@@ -5420,35 +5457,74 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     v?.performClick()
 
                     when (actionCode) {
-                        ACTION_SCENE -> cycleScene()
-                        ACTION_LOOK -> cycleLook()
-                        ACTION_QUALITY -> cycleQuality()
-                        ACTION_CAPTURE_MODE -> cycleCaptureMode()
+                        ACTION_SCENE ->
+                            showReportSceneDropdown(
+                                v ?: sceneButton
+                            )
+
+                        ACTION_LOOK ->
+                            showReportLookDropdown(
+                                v ?: lookButton
+                            )
+
+                        ACTION_QUALITY ->
+                            showReportQualityDropdown(
+                                v ?: qualityButton
+                            )
+
+                        ACTION_CAPTURE_MODE ->
+                            showReportCaptureDropdown(
+                                v ?: captureModeButton
+                            )
                         ACTION_IDENTITY -> showIdentityDialog()
-                        ACTION_VIEW_MODE -> togglePreviewMode()
-                        ACTION_SETTINGS -> showReportDetailedSettings()
-                        ACTION_GUIDES -> togglePreviewGuides()
-                        ACTION_RESET -> resetReportCameraSettings()
-                        ACTION_AUTO_UI -> toggleReportAutoUi()
-                        ACTION_LOCK -> toggleReportOperatorLock()
-                        ACTION_INTEGRITY -> toggleReportIntegrity()
-                        ACTION_CAPABILITIES -> showCameraCapabilities()
-                        ACTION_CLEAN -> toggleReportCleanMode()
+                        ACTION_VIEW_MODE ->
+                            showReportViewDropdown(
+                                v ?: viewModeButton
+                            )
 
-                        ACTION_LENS -> {
-                            if (recording == null) {
-                                useFront = !useFront
-                                lensButton.text =
-                                    "LENS\n${if (useFront) "FRONT" else "BACK"}"
-                                bindCamera()
-                            } else {
-                                toast(
-                                    "Stop recording before changing lens"
-                                )
-                            }
-                        }
+                        ACTION_SETTINGS ->
+                            showReportDetailedSettings()
 
-                        ACTION_TORCH -> toggleTorch()
+                        ACTION_GUIDES ->
+                            showReportGuidesDropdown(
+                                v ?: guidesButton
+                            )
+
+                        ACTION_RESET ->
+                            resetReportCameraSettings()
+
+                        ACTION_AUTO_UI ->
+                            showReportAutoUiDropdown(
+                                v ?: autoUiButton
+                            )
+
+                        ACTION_LOCK ->
+                            showReportLockDropdown(
+                                v ?: lockButton
+                            )
+
+                        ACTION_INTEGRITY ->
+                            showReportIntegrityDropdown(
+                                v ?: integrityButton
+                            )
+
+                        ACTION_CAPABILITIES ->
+                            showCameraCapabilities()
+
+                        ACTION_CLEAN ->
+                            showReportCleanDropdown(
+                                v ?: cleanModeButton
+                            )
+
+                        ACTION_LENS ->
+                            showReportLensDropdown(
+                                v ?: lensButton
+                            )
+
+                        ACTION_TORCH ->
+                            showReportLightDropdown(
+                                v ?: torchButton
+                            )
                         ACTION_RECORD -> toggleRecording()
                     }
 
@@ -5554,21 +5630,569 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             )
 
             background =
-                GradientDrawable().apply {
-                    shape =
-                        GradientDrawable.RECTANGLE
-                    cornerRadius =
-                        dp(18).toFloat()
+                solidPillBackground(
+                    accentColor,
+                    isSelected
+                )
+        }
+    }
 
-                    setColor(
-                        0x30030A0E
+    private fun pillFillColor(
+        accent: Int,
+        selected: Boolean = false
+    ): Int {
+        val factor =
+            if (selected) {
+                0.68f
+            } else {
+                0.48f
+            }
+
+        return Color.rgb(
+            (
+                Color.red(accent) *
+                    factor
+                ).roundToInt(),
+            (
+                Color.green(accent) *
+                    factor
+                ).roundToInt(),
+            (
+                Color.blue(accent) *
+                    factor
+                ).roundToInt()
+        )
+    }
+
+    private fun solidPillBackground(
+        accent: Int,
+        selected: Boolean = false
+    ): GradientDrawable {
+        return GradientDrawable().apply {
+            shape =
+                GradientDrawable.RECTANGLE
+
+            cornerRadius =
+                dp(20).toFloat()
+
+            setColor(
+                pillFillColor(
+                    accent,
+                    selected
+                )
+            )
+
+            setStroke(
+                dp(
+                    if (selected) {
+                        2
+                    } else {
+                        1
+                    }
+                ),
+                accent
+            )
+        }
+    }
+
+    private fun reportOptionAccent(
+        index: Int
+    ): Int {
+        val colors =
+            intArrayOf(
+                0xFFFFC21A.toInt(), // gold
+                0xFF4EA7FF.toInt(), // blue
+                0xFF62E889.toInt(), // green
+                0xFFFF5AA5.toInt(), // pink
+                0xFF8F7CFF.toInt(), // purple
+                0xFF00C9B7.toInt(), // teal
+                0xFFFF8A3D.toInt(), // orange
+                0xFFB7C1C8.toInt()  // silver
+            )
+
+        return colors[
+            index %
+                colors.size
+        ]
+    }
+
+    private fun showReportPillDropdown(
+        anchor: View,
+        title: String,
+        options: Array<String>,
+        selectedIndex: Int,
+        onPick: (Int) -> Unit
+    ) {
+        val panel =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(7),
+                    dp(7),
+                    dp(7),
+                    dp(7)
+                )
+
+                background =
+                    GradientDrawable().apply {
+                        shape =
+                            GradientDrawable.RECTANGLE
+
+                        cornerRadius =
+                            dp(18).toFloat()
+
+                        setColor(
+                            0xF20A1014.toInt()
+                        )
+
+                        setStroke(
+                            dp(1),
+                            0x507FE8FF
+                        )
+                    }
+            }
+
+        panel.addView(
+            hud(
+                title,
+                7.4f,
+                Color.WHITE,
+                bold = true
+            ),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(27)
+            )
+        )
+
+        val popup =
+            PopupWindow(
+                panel,
+                dp(188),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+            ).apply {
+                isOutsideTouchable =
+                    true
+
+                elevation =
+                    dp(8).toFloat()
+
+                setBackgroundDrawable(
+                    ColorDrawable(
+                        Color.TRANSPARENT
+                    )
+                )
+            }
+
+        options.forEachIndexed {
+                index,
+                option ->
+
+            val accent =
+                reportOptionAccent(
+                    index
+                )
+
+            val pill =
+                GlowSettingButton(
+                    this,
+                    accent
+                ).apply {
+                    text =
+                        if (
+                            index ==
+                            selectedIndex
+                        ) {
+                            "✓  $option"
+                        } else {
+                            option
+                        }
+
+                    textSize =
+                        7.2f
+
+                    isAllCaps =
+                        false
+
+                    setTextColor(
+                        Color.WHITE
                     )
 
-                    setStroke(
-                        dp(1),
-                        accentColor
+                    gravity =
+                        Gravity.CENTER
+
+                    setPadding(
+                        dp(9),
+                        0,
+                        dp(9),
+                        0
                     )
+
+                    background =
+                        solidPillBackground(
+                            accent,
+                            index ==
+                                selectedIndex
+                        )
+
+                    setOnClickListener {
+                        onPick(
+                            index
+                        )
+                        popup.dismiss()
+                    }
                 }
+
+            panel.addView(
+                pill,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(36)
+                ).apply {
+                    topMargin =
+                        dp(4)
+                }
+            )
+        }
+
+        popup.showAsDropDown(
+            anchor,
+            0,
+            dp(4)
+        )
+    }
+
+    private fun showReportSceneDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Stop recording before changing scene"
+            )
+            return
+        }
+
+        showReportPillDropdown(
+            anchor,
+            "SCENE",
+            sceneModes,
+            sceneIndex
+        ) { picked ->
+            sceneIndex =
+                picked
+
+            applyScenePreset()
+            refreshHud()
+        }
+    }
+
+    private fun showReportLookDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "LOOK",
+            lookModes,
+            lookIndex
+        ) { picked ->
+            lookIndex =
+                picked
+            refreshHud()
+        }
+    }
+
+    private fun showReportQualityDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Stop recording before changing format"
+            )
+            return
+        }
+
+        showReportPillDropdown(
+            anchor,
+            "FORMAT",
+            qualityModes,
+            qualityIndex
+        ) { picked ->
+            qualityIndex =
+                picked
+            refreshHud()
+            bindCamera()
+        }
+    }
+
+    private fun showReportCaptureDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Stop recording before changing capture mode"
+            )
+            return
+        }
+
+        showReportPillDropdown(
+            anchor,
+            "CAPTURE",
+            captureModes,
+            captureModeIndex
+        ) { picked ->
+            captureModeIndex =
+                picked
+            refreshHud()
+            bindCamera()
+        }
+    }
+
+    private fun showReportViewDropdown(
+        anchor: View
+    ) {
+        val selected =
+            if (halfPreviewMode) {
+                1
+            } else {
+                0
+            }
+
+        showReportPillDropdown(
+            anchor,
+            "VIEW",
+            arrayOf(
+                "FULL SCREEN",
+                "HALF SCREEN"
+            ),
+            selected
+        ) { picked ->
+            val wantHalf =
+                picked ==
+                    1
+
+            if (
+                wantHalf !=
+                halfPreviewMode
+            ) {
+                togglePreviewMode()
+            }
+        }
+    }
+
+    private fun showReportGuidesDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "GUIDES",
+            arrayOf(
+                "ON",
+                "OFF"
+            ),
+            if (previewGuidesEnabled) 0 else 1
+        ) { picked ->
+            val want =
+                picked ==
+                    0
+
+            if (
+                want !=
+                previewGuidesEnabled
+            ) {
+                togglePreviewGuides()
+            }
+        }
+    }
+
+    private fun showReportAutoUiDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "AUTO UI",
+            arrayOf(
+                "ON",
+                "OFF"
+            ),
+            if (autoHideOperatorUi) 0 else 1
+        ) { picked ->
+            val want =
+                picked ==
+                    0
+
+            if (
+                want !=
+                autoHideOperatorUi
+            ) {
+                toggleReportAutoUi()
+            }
+        }
+    }
+
+    private fun showReportLockDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "OPERATOR LOCK",
+            arrayOf(
+                "OFF",
+                "ON"
+            ),
+            if (operatorLocked) 1 else 0
+        ) { picked ->
+            val want =
+                picked ==
+                    1
+
+            if (
+                want !=
+                operatorLocked
+            ) {
+                toggleReportOperatorLock()
+            }
+        }
+    }
+
+    private fun showReportIntegrityDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Change verification before recording"
+            )
+            return
+        }
+
+        showReportPillDropdown(
+            anchor,
+            "VERIFY",
+            arrayOf(
+                "SHA-256 ON",
+                "OFF"
+            ),
+            if (integrityEnabled) 0 else 1
+        ) { picked ->
+            val want =
+                picked ==
+                    0
+
+            if (
+                want !=
+                integrityEnabled
+            ) {
+                toggleReportIntegrity()
+            }
+        }
+    }
+
+    private fun showReportCleanDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "CLEAN MODE",
+            arrayOf(
+                "OFF",
+                "ON"
+            ),
+            if (cleanModeEnabled) 1 else 0
+        ) { picked ->
+            val want =
+                picked ==
+                    1
+
+            if (
+                want !=
+                cleanModeEnabled
+            ) {
+                toggleReportCleanMode()
+            }
+        }
+    }
+
+    private fun showReportLensDropdown(
+        anchor: View
+    ) {
+        if (recording != null) {
+            toast(
+                "Stop recording before changing lens"
+            )
+            return
+        }
+
+        showReportPillDropdown(
+            anchor,
+            "LENS",
+            arrayOf(
+                "BACK",
+                "FRONT"
+            ),
+            if (useFront) 1 else 0
+        ) { picked ->
+            val wantFront =
+                picked ==
+                    1
+
+            if (
+                wantFront !=
+                useFront
+            ) {
+                useFront =
+                    wantFront
+
+                lensButton.text =
+                    "LENS ▾\n" +
+                        if (useFront) {
+                            "FRONT"
+                        } else {
+                            "BACK"
+                        }
+
+                bindCamera()
+            }
+        }
+    }
+
+    private fun showReportLightDropdown(
+        anchor: View
+    ) {
+        val current =
+            camera
+                ?.cameraInfo
+                ?.torchState
+                ?.value ==
+                TorchState.ON
+
+        showReportPillDropdown(
+            anchor,
+            "LIGHT",
+            arrayOf(
+                "OFF",
+                "ON"
+            ),
+            if (current) 1 else 0
+        ) { picked ->
+            val wantOn =
+                picked ==
+                    1
+
+            camera
+                ?.cameraControl
+                ?.enableTorch(
+                    wantOn
+                )
+
+            torchButton.text =
+                "LIGHT ▾\n" +
+                    if (wantOn) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
         }
     }
 
@@ -5661,7 +6285,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 strokeWidth = 3f
                 color = accent
                 setShadowLayer(
-                    12f,
+                    6f,
                     0f,
                     0f,
                     accent
