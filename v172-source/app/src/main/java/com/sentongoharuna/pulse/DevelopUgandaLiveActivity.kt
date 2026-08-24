@@ -61,6 +61,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var liveBadge: TextView
     private lateinit var liveTitle: TextView
     private lateinit var liveSubTitle: TextView
+    private lateinit var livePreviewMeta: TextView
+    private lateinit var livePreviewTech: TextView
     private lateinit var netLamp: TextView
     private lateinit var gpsLamp: TextView
     private lateinit var micLamp: TextView
@@ -325,6 +327,43 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             liveSubTitle
         )
 
+        livePreviewMeta =
+            label(
+                "$reporterName • STORY $storyId • $headline",
+                9f,
+                white,
+                true
+            ).apply {
+                maxLines = 1
+                isSingleLine = true
+            }
+
+        livePreviewTech =
+            label(
+                "TC 00:00:00 • $qualityLabel • MIC ON",
+                8.5f,
+                cyan,
+                true
+            ).apply {
+                maxLines = 1
+                isSingleLine = true
+
+                setPadding(
+                    0,
+                    dp(2),
+                    0,
+                    dp(3)
+                )
+            }
+
+        topPanel.addView(
+            livePreviewMeta
+        )
+
+        topPanel.addView(
+            livePreviewTech
+        )
+
         val signalRow =
             LinearLayout(this).apply {
                 orientation =
@@ -396,13 +435,29 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             timerView
         )
 
-        root.addView(
-            topPanel,
+        val topPanelParams =
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP
-            )
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity =
+                    Gravity.TOP
+
+                // Screen-only safety inset. Recorded graphics keep their own
+                // output-safe geometry and are not moved by this value.
+                topMargin =
+                    dp(42)
+
+                leftMargin =
+                    dp(8)
+
+                rightMargin =
+                    dp(8)
+            }
+
+        root.addView(
+            topPanel,
+            topPanelParams
         )
 
         val liveDeck =
@@ -805,6 +860,29 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     "FULL"
                 }
 
+        // The top narration is screen UI. Keep it inside the visible camera
+        // area in either mode without changing the saved-video overlay.
+        val top =
+            liveBadge.parent
+                ?.parent as?
+                View
+
+        val topLayout =
+            top?.layoutParams as?
+                FrameLayout.LayoutParams
+
+        if (topLayout != null) {
+            topLayout.topMargin =
+                if (halfPreviewMode) {
+                    dp(32)
+                } else {
+                    dp(42)
+                }
+
+            top.layoutParams =
+                topLayout
+        }
+
         toast(
             if (halfPreviewMode) {
                 "Half-screen LIVE view"
@@ -1142,10 +1220,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         recorder
                     )
 
+                // V187: burn-in graphics target the saved VIDEO only.
+                // Preview narration is native screen UI, so it cannot be
+                // clipped by CameraX preview crop/scale transforms.
                 overlayEffect =
                     OverlayEffect(
-                        CameraEffect.PREVIEW or
-                            CameraEffect.VIDEO_CAPTURE,
+                        CameraEffect.VIDEO_CAPTURE,
                         0,
                         Handler(
                             Looper.getMainLooper()
@@ -2240,6 +2320,28 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private fun updateTimer() {
         timerView.text =
             liveTimecode()
+
+        if (
+            ::livePreviewMeta.isInitialized
+        ) {
+            livePreviewMeta.text =
+                "${profiles[profileIndex]} • REPORTER $reporterName • STORY $storyId • $headline"
+
+            livePreviewTech.text =
+                "TC ${liveTimecode()} • $qualityLabel • ${
+                    if (audioEnabled) {
+                        "MIC ON"
+                    } else {
+                        "MIC OFF"
+                    }
+                } • ${
+                    if (isNetworkConnected()) {
+                        "NET READY"
+                    } else {
+                        "NET OFF"
+                    }
+                }"
+        }
     }
 
     private fun updateBlink() {

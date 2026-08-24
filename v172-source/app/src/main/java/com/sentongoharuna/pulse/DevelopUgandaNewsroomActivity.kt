@@ -85,7 +85,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "MOBILE NEWSROOM • V186",
+                "MOBILE NEWSROOM • V187",
                 9f,
                 white,
                 true
@@ -227,7 +227,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • full edge-to-edge view behind controls • half operator view • green record glow",
+                "FIELD REPORT • safe screen narration • edge-to-edge camera • recorded telemetry kept independent",
                 "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -239,7 +239,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • edge-to-edge camera behind controls • half operator view • red broadcast glow",
+                "LIVE STUDIO • safe screen narration • edge-to-edge camera • separate recorded broadcast graphics",
                 "Blinking LIVE • signal lamps • smaller glowing setting buttons • Reporter ID • lower third • safe recorded graphics • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"

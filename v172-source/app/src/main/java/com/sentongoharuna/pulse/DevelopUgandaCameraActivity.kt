@@ -10,6 +10,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -105,6 +106,21 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
     private lateinit var guidesView: GuidesView
+
+    // V187: dedicated screen-space narration. This is visible to the
+    // operator but is NOT burned into the recording. The recorded overlay
+    // keeps its existing safe geometry independently.
+    private lateinit var previewNarrationPanel: LinearLayout
+    private lateinit var previewBrandView: TextView
+    private lateinit var previewTagView: TextView
+    private lateinit var previewIdentityView: TextView
+    private lateinit var previewClockView: TextView
+    private lateinit var previewModeView: TextView
+    private lateinit var previewPlaceView: TextView
+    private lateinit var previewGpsView: TextView
+    private lateinit var previewNavView: TextView
+    private lateinit var previewSystemView: TextView
+
     private lateinit var brandView: TextView
     private lateinit var statusView: TextView
     private lateinit var timecodeView: TextView
@@ -360,6 +376,169 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+        )
+
+        // V187 PREVIEW HUD:
+        // CameraX output graphics are no longer used for the PREVIEW target.
+        // This panel is drawn in phone-screen coordinates, so develop.uganda
+        // and every narration line remain inside the visible camera screen.
+        previewNarrationPanel =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(12),
+                    dp(7),
+                    dp(12),
+                    dp(7)
+                )
+
+                background =
+                    ColorDrawable(
+                        Color.TRANSPARENT
+                    )
+            }
+
+        val previewBrandRow =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+            }
+
+        previewBrandView =
+            hud(
+                "develop.uganda",
+                13.8f,
+                0xFFFFC21A.toInt(),
+                bold = true
+            )
+
+        previewTagView =
+            hud(
+                "FIELD REPORT",
+                7.1f,
+                Color.WHITE,
+                bold = true
+            ).apply {
+                setPadding(
+                    dp(7),
+                    0,
+                    0,
+                    0
+                )
+            }
+
+        previewBrandRow.addView(
+            previewBrandView
+        )
+
+        previewBrandRow.addView(
+            previewTagView
+        )
+
+        previewNarrationPanel.addView(
+            previewBrandRow
+        )
+
+        previewIdentityView =
+            hud(
+                "",
+                6.1f,
+                Color.WHITE,
+                bold = true
+            )
+
+        previewClockView =
+            hud(
+                "",
+                6.0f,
+                0xFFFF6B63.toInt(),
+                bold = true
+            )
+
+        previewModeView =
+            hud(
+                "",
+                5.8f,
+                0xFFFFC21A.toInt(),
+                bold = true
+            )
+
+        previewPlaceView =
+            hud(
+                "",
+                5.8f,
+                Color.WHITE
+            )
+
+        previewGpsView =
+            hud(
+                "",
+                5.6f,
+                0xFF7FE8FF.toInt()
+            )
+
+        previewNavView =
+            hud(
+                "",
+                5.6f,
+                0xFF7FE8FF.toInt()
+            )
+
+        previewSystemView =
+            hud(
+                "",
+                5.4f,
+                0xFF76E39A.toInt()
+            )
+
+        listOf(
+            previewIdentityView,
+            previewClockView,
+            previewModeView,
+            previewPlaceView,
+            previewGpsView,
+            previewNavView,
+            previewSystemView
+        ).forEach {
+            it.maxLines = 1
+            it.isSingleLine = true
+
+            previewNarrationPanel.addView(
+                it,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(16)
+                )
+            )
+        }
+
+        val previewHudParams =
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity =
+                    Gravity.TOP
+
+                // Keep the operator HUD below Android status icons/time.
+                topMargin =
+                    dp(44)
+
+                leftMargin =
+                    dp(10)
+
+                rightMargin =
+                    dp(10)
+            }
+
+        root.addView(
+            previewNarrationPanel,
+            previewHudParams
         )
 
         guidesView = GuidesView(this)
@@ -818,6 +997,31 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     "FULL"
                 }
 
+        if (
+            ::previewNarrationPanel.isInitialized
+        ) {
+            val hudParams =
+                previewNarrationPanel.layoutParams as
+                    FrameLayout.LayoutParams
+
+            hudParams.topMargin =
+                if (halfPreviewMode) {
+                    dp(34)
+                } else {
+                    dp(44)
+                }
+
+            previewNarrationPanel.layoutParams =
+                hudParams
+
+            previewBrandView.textSize =
+                if (halfPreviewMode) {
+                    11.6f
+                } else {
+                    13.8f
+                }
+        }
+
         if (halfPreviewMode) {
             detailedSettingsVisible =
                 true
@@ -1170,13 +1374,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 )
         }
 
+        // V187: keep CameraX burn-in graphics off the live PreviewView.
+        // The preview has its own screen-space narration panel, while the
+        // IMAGE/VIDEO output keeps the proven recorded overlay geometry.
         val effectTargets =
-            CameraEffect.PREVIEW or
-                if (photoMode) {
-                    CameraEffect.IMAGE_CAPTURE
-                } else {
-                    CameraEffect.VIDEO_CAPTURE
-                }
+            if (photoMode) {
+                CameraEffect.IMAGE_CAPTURE
+            } else {
+                CameraEffect.VIDEO_CAPTURE
+            }
 
         overlayEffect = OverlayEffect(
             effectTargets,
@@ -3353,6 +3559,40 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             weatherOverlay()
         systemView.text =
             systemOverlay()
+
+        if (
+            ::previewNarrationPanel.isInitialized
+        ) {
+            previewTagView.text =
+                sceneTag()
+
+            previewIdentityView.text =
+                "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}"
+
+            previewClockView.text =
+                "${
+                    when {
+                        recording != null -> "● REC"
+                        captureModes[captureModeIndex] == "PHOTO" -> "● PHOTO"
+                        else -> "STBY"
+                    }
+                } • TC ${tc()} • ${clock.format(Date())}"
+
+            previewModeView.text =
+                "SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}"
+
+            previewPlaceView.text =
+                placeName
+
+            previewGpsView.text =
+                "${coordinatePrimaryOverlay()} • ${gnssOverlay()}"
+
+            previewNavView.text =
+                "${navigationOverlay()} • ${orientationOverlay()}"
+
+            previewSystemView.text =
+                "${weatherOverlay()} • ${audioLevelOverlay()} • ${systemOverlay()}"
+        }
 
         if (::sceneButton.isInitialized) {
             sceneButton.text =
