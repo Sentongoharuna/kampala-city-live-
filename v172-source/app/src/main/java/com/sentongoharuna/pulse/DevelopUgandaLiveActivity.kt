@@ -2882,8 +2882,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 if (
                     liveControlsLocked &&
                     this !== liveLockButton &&
-                    this !== markButton &&
-                    this !== recordButton
+                    this !== markButton
                 ) {
                     toast(
                         "LIVE controls locked"
