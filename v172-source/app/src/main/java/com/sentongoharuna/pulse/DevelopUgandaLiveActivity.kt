@@ -136,6 +136,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private var recordStartMs = 0L
     private var liveRecordingName = ""
+    private var liveAudioAmplitude = 0.0
     private var liveBlinkOn = true
 
     private var reporterName = "CITIZEN"
@@ -2442,11 +2443,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     }
 
                     is VideoRecordEvent.Status -> {
-                        if (
-                            audioEnabled &&
+                        liveAudioAmplitude =
                             event.recordingStats
                                 .audioStats
-                                .audioAmplitude >
+                                .audioAmplitude
+                                .coerceIn(
+                                    0.0,
+                                    1.0
+                                )
+
+                        if (
+                            audioEnabled &&
+                            liveAudioAmplitude >
                                 0.0
                         ) {
                             micLamp.setTextColor(
@@ -2472,6 +2480,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                         recordStartMs =
                             0L
+
+                        liveAudioAmplitude =
+                            0.0
 
                         if (
                             event.hasError()
@@ -2787,20 +2798,51 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             livePreviewMeta.text =
                 "${profiles[profileIndex]} • REPORTER $reporterName • STORY $storyId • $headline"
 
-            livePreviewTech.text =
-                "TC ${liveTimecode()} • $qualityLabel • ${
-                    if (audioEnabled) {
-                        "MIC ON"
-                    } else {
-                        "MIC OFF"
-                    }
-                } • ${
-                    if (isNetworkConnected()) {
-                        "NET READY"
-                    } else {
+            val audioPercent =
+                (
+                    liveAudioAmplitude *
+                        100.0
+                    ).roundToInt()
+
+            val battery =
+                (
+                    getSystemService(
+                        Context.BATTERY_SERVICE
+                    ) as BatteryManager
+                    )
+                    .getIntProperty(
+                        BatteryManager.BATTERY_PROPERTY_CAPACITY
+                    )
+
+            val netReady =
+                isNetworkConnected()
+
+            val health =
+                when {
+                    battery in 0..9 ->
+                        "CRITICAL"
+
+                    !netReady ->
                         "NET OFF"
+
+                    audioEnabled &&
+                        recording != null &&
+                        audioPercent <
+                        1 ->
+                        "CHECK MIC"
+
+                    else ->
+                        "GOOD"
+                }
+
+            livePreviewTech.text =
+                "TC ${liveTimecode()} • $qualityLabel • MIC ${audioPercent}% • NET ${
+                    if (netReady) {
+                        "READY"
+                    } else {
+                        "OFF"
                     }
-                }"
+                } • HEALTH $health"
         }
     }
 

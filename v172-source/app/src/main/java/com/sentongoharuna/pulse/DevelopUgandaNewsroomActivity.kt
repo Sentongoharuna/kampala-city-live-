@@ -1,11 +1,14 @@
 package com.sentongoharuna.pulse
 
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -85,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "CONTROL ROOM PRO • V188",
+                "SMART OPERATOR PRO • V189",
                 9f,
                 white,
                 true
@@ -213,7 +216,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "CONTROL ROOM PRO",
+                "SMART OPERATOR PRO",
                 "REPORT • LIVE • EDIT • DESK • PUBLISH"
             )
         )
@@ -227,7 +230,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • safe preview • AUTO UI • control lock • camera capabilities • SHA-256 integrity record",
+                "FIELD REPORT • CLEAN mode • swipe zoom/exposure • double-tap lens • REC HEALTH • SHA-256",
                 "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -239,7 +242,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • 3-2-1 countdown • MARK timestamps • lower-third styles • live control lock",
+                "LIVE STUDIO • countdown • MARK • lower-thirds • real MIC level • LIVE health",
                 "Blinking LIVE • signal lamps • smaller glowing setting buttons • Reporter ID • lower third • safe recorded graphics • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"
@@ -258,7 +261,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             launchCard(
                 "EDIT DESK",
                 "Fast social cut",
-                "Open clip • preview • trim • save • share",
+                "Open clip • preview • trim • mute export • save • share",
                 cyan,
                 "OPEN EDIT DESK"
             ) {
@@ -276,6 +279,16 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             ) {
                 showNewsroom()
             }
+        )
+
+        page.addView(
+            sectionTitle(
+                "RECENT CLIPS"
+            )
+        )
+
+        addRecentClips(
+            page
         )
 
         page.addView(
@@ -312,6 +325,357 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         setPage(
             scroll
+        )
+    }
+
+    private fun addRecentClips(
+        page: LinearLayout
+    ) {
+        val projection =
+            arrayOf(
+                MediaStore.Video.Media._ID,
+                MediaStore.Video.Media.DISPLAY_NAME,
+                MediaStore.Video.Media.DURATION,
+                MediaStore.Video.Media.DATE_ADDED
+            )
+
+        val uri =
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+
+        var shown =
+            0
+
+        try {
+            contentResolver.query(
+                uri,
+                projection,
+                null,
+                null,
+                "${MediaStore.Video.Media.DATE_ADDED} DESC"
+            )?.use { cursor ->
+                val idCol =
+                    cursor.getColumnIndexOrThrow(
+                        MediaStore.Video.Media._ID
+                    )
+
+                val nameCol =
+                    cursor.getColumnIndexOrThrow(
+                        MediaStore.Video.Media.DISPLAY_NAME
+                    )
+
+                val durationCol =
+                    cursor.getColumnIndexOrThrow(
+                        MediaStore.Video.Media.DURATION
+                    )
+
+                while (
+                    cursor.moveToNext() &&
+                    shown <
+                    4
+                ) {
+                    val name =
+                        cursor.getString(
+                            nameCol
+                        ) ?: continue
+
+                    if (
+                        !name.startsWith(
+                            "DEVELOP_UGANDA_",
+                            ignoreCase = true
+                        )
+                    ) {
+                        continue
+                    }
+
+                    val id =
+                        cursor.getLong(
+                            idCol
+                        )
+
+                    val duration =
+                        cursor.getLong(
+                            durationCol
+                        )
+
+                    val clipUri =
+                        ContentUris.withAppendedId(
+                            uri,
+                            id
+                        )
+
+                    page.addView(
+                        recentClipCard(
+                            name,
+                            duration,
+                            clipUri
+                        )
+                    )
+
+                    shown +=
+                        1
+                }
+            }
+        } catch (
+            _: Exception
+        ) {
+        }
+
+        if (
+            shown ==
+            0
+        ) {
+            page.addView(
+                infoCard(
+                    "NO RECENT CLIPS",
+                    "Record with REPORT or LIVE, then return here. Clips created by develop.uganda will appear here when Android MediaStore permits access."
+                )
+            )
+        }
+    }
+
+    private fun recentClipCard(
+        name: String,
+        durationMs: Long,
+        uri: Uri
+    ): View {
+        val cardView =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(12),
+                    dp(10),
+                    dp(12),
+                    dp(10)
+                )
+
+                background =
+                    rounded(
+                        card,
+                        0xFF2A3940.toInt(),
+                        15
+                    )
+            }
+
+        val badge =
+            when {
+                name.contains(
+                    "_LIVE_",
+                    ignoreCase = true
+                ) ->
+                    "LIVE"
+
+                else ->
+                    "REPORT"
+            }
+
+        cardView.addView(
+            label(
+                "$badge • ${formatDuration(durationMs)}",
+                10f,
+                if (
+                    badge ==
+                    "LIVE"
+                ) {
+                    red
+                } else {
+                    gold
+                },
+                true
+            )
+        )
+
+        cardView.addView(
+            label(
+                name.removeSuffix(
+                    ".mp4"
+                ),
+                11f,
+                white,
+                true
+            ).apply {
+                maxLines =
+                    1
+            }
+        )
+
+        val actions =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(7),
+                    0,
+                    0
+                )
+            }
+
+        actions.addView(
+            smallClipButton(
+                "PLAY",
+                cyan
+            ) {
+                try {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW
+                        ).apply {
+                            setDataAndType(
+                                uri,
+                                "video/mp4"
+                            )
+
+                            addFlags(
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        }
+                    )
+                } catch (
+                    _: Exception
+                ) {
+                    toast(
+                        "No video player available"
+                    )
+                }
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(40),
+                1f
+            )
+        )
+
+        actions.addView(
+            smallClipButton(
+                "EDIT",
+                green
+            ) {
+                startActivity(
+                    Intent(
+                        this,
+                        DevelopUgandaEditorActivity::class.java
+                    ).apply {
+                        putExtra(
+                            "develop_uganda_edit_uri",
+                            uri.toString()
+                        )
+                    }
+                )
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(40),
+                1f
+            ).apply {
+                marginStart =
+                    dp(7)
+            }
+        )
+
+        actions.addView(
+            smallClipButton(
+                "SHARE",
+                gold
+            ) {
+                startActivity(
+                    Intent.createChooser(
+                        Intent(
+                            Intent.ACTION_SEND
+                        ).apply {
+                            type =
+                                "video/mp4"
+
+                            putExtra(
+                                Intent.EXTRA_STREAM,
+                                uri
+                            )
+
+                            addFlags(
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        },
+                        "Share develop.uganda clip"
+                    )
+                )
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(40),
+                1f
+            ).apply {
+                marginStart =
+                    dp(7)
+            }
+        )
+
+        cardView.addView(
+            actions
+        )
+
+        cardView.layoutParams =
+            full(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                0,
+                7
+            )
+
+        return cardView
+    }
+
+    private fun smallClipButton(
+        value: String,
+        accent: Int,
+        action: () -> Unit
+    ): Button {
+        return Button(this).apply {
+            text =
+                value
+
+            textSize =
+                8f
+
+            isAllCaps =
+                false
+
+            setTextColor(
+                white
+            )
+
+            background =
+                rounded(
+                    0xFF0D1418.toInt(),
+                    accent,
+                    13
+                )
+
+            setOnClickListener {
+                action.invoke()
+            }
+        }
+    }
+
+    private fun formatDuration(
+        durationMs: Long
+    ): String {
+        val seconds =
+            (
+                durationMs /
+                    1000L
+                )
+                .coerceAtLeast(
+                    0L
+                )
+
+        return String.format(
+            java.util.Locale.US,
+            "%02d:%02d",
+            seconds /
+                60L,
+            seconds %
+                60L
         )
     }
 

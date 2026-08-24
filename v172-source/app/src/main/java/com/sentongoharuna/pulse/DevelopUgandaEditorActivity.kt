@@ -64,6 +64,20 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildUi()
+
+        intent.getStringExtra(
+            "develop_uganda_edit_uri"
+        )
+            ?.takeIf {
+                it.isNotBlank()
+            }
+            ?.let {
+                loadVideo(
+                    Uri.parse(
+                        it
+                    )
+                )
+            }
     }
 
     private fun buildUi() {
@@ -212,13 +226,37 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
             )
         )
 
-        root.addView(
+        val editTools =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER
+            }
+
+        editTools.addView(
             action(
-                "PUBLISH / SHARE LAST EXPORT",
+                "MUTE + SAVE",
+                0xFFFFC21A.toInt()
+            ) {
+                exportMutedTrim()
+            },
+            weight()
+        )
+
+        editTools.addView(
+            action(
+                "PUBLISH / SHARE",
                 0xFFFF5A52.toInt()
             ) {
                 shareExport()
             },
+            weight()
+        )
+
+        root.addView(
+            editTools,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(52)
@@ -340,7 +378,8 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                     input,
                     output,
                     startUs,
-                    endUs
+                    endUs,
+                    includeAudio = true
                 )
 
                 exportedUri = output
@@ -355,6 +394,89 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                     statusView.text =
                         "Trim failed: ${e.message ?: "unknown error"}"
                     toast("Trim failed")
+                }
+            }
+        }.start()
+    }
+
+    private fun exportMutedTrim() {
+        val input =
+            sourceUri ?: run {
+                toast(
+                    "Choose a video first"
+                )
+                return
+            }
+
+        if (
+            durationMs <=
+            0L
+        ) {
+            toast(
+                "Video duration is unavailable"
+            )
+            return
+        }
+
+        val startUs =
+            durationMs *
+                startSeek.progress *
+                1000L /
+                1000L
+
+        val endUs =
+            durationMs *
+                endSeek.progress *
+                1000L /
+                1000L
+
+        if (
+            endUs <=
+            startUs
+        ) {
+            toast(
+                "Choose a longer trim range"
+            )
+            return
+        }
+
+        statusView.text =
+            "Saving muted social cut…"
+
+        Thread {
+            try {
+                val output =
+                    createOutputVideo()
+
+                trimMp4(
+                    input,
+                    output,
+                    startUs,
+                    endUs,
+                    includeAudio = false
+                )
+
+                exportedUri =
+                    output
+
+                runOnUiThread {
+                    statusView.text =
+                        "Muted cut saved • ${formatTime((endUs - startUs) / 1000L)}"
+
+                    toast(
+                        "Muted video saved"
+                    )
+                }
+            } catch (
+                e: Exception
+            ) {
+                runOnUiThread {
+                    statusView.text =
+                        "Mute export failed: ${e.message ?: "unknown error"}"
+
+                    toast(
+                        "Mute export failed"
+                    )
                 }
             }
         }.start()
@@ -399,7 +521,8 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
         input: Uri,
         output: Uri,
         startUs: Long,
-        endUs: Long
+        endUs: Long,
+        includeAudio: Boolean
     ) {
         val extractor =
             MediaExtractor()
@@ -441,8 +564,15 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                 ) ?: ""
 
             if (
-                mime.startsWith("video/") ||
-                mime.startsWith("audio/")
+                mime.startsWith(
+                    "video/"
+                ) ||
+                (
+                    includeAudio &&
+                    mime.startsWith(
+                        "audio/"
+                    )
+                    )
             ) {
                 extractor.selectTrack(i)
                 trackMap[i] =

@@ -85,6 +85,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import org.json.JSONObject
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.log10
 import kotlin.math.roundToInt
@@ -109,6 +110,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         const val ACTION_LOCK = 14
         const val ACTION_INTEGRITY = 15
         const val ACTION_CAPABILITIES = 16
+        const val ACTION_CLEAN = 17
     }
 
 
@@ -129,6 +131,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var previewGpsView: TextView
     private lateinit var previewNavView: TextView
     private lateinit var previewSystemView: TextView
+    private lateinit var previewHealthView: TextView
 
     private lateinit var brandView: TextView
     private lateinit var statusView: TextView
@@ -167,6 +170,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var lockButton: Button
     private lateinit var integrityButton: Button
     private lateinit var capabilitiesButton: Button
+    private lateinit var cleanModeButton: Button
 
     private var halfPreviewMode = false
     private var detailedSettingsVisible = false
@@ -175,6 +179,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private var operatorLocked = false
     private var integrityEnabled = true
     private var operatorControlsHidden = false
+    private var cleanModeEnabled = false
+
+    private var gestureDownX = 0f
+    private var gestureDownY = 0f
+    private var gestureStartZoom = 1f
+    private var gestureStartExposure = 0
+    private var gestureMoved = false
+    private var lastPreviewTapMs = 0L
 
     private val autoHideRunnable =
         Runnable {
@@ -535,6 +547,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 0xFF76E39A.toInt()
             )
 
+        previewHealthView =
+            hud(
+                "",
+                5.7f,
+                0xFF76E39A.toInt(),
+                bold = true
+            )
+
         listOf(
             previewIdentityView,
             previewClockView,
@@ -542,7 +562,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             previewPlaceView,
             previewGpsView,
             previewNavView,
-            previewSystemView
+            previewSystemView,
+            previewHealthView
         ).forEach {
             it.maxLines = 1
             it.isSingleLine = true
@@ -579,6 +600,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             previewNarrationPanel,
             previewHudParams
         )
+
+        applyAdaptiveReportPreviewTypography()
 
         guidesView = GuidesView(this)
 
@@ -786,11 +809,18 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 0xFFE8F1F2.toInt()
             )
 
+        cleanModeButton =
+            deckButton(
+                "CLEAN\nOFF",
+                0xFF76E39A.toInt()
+            )
+
         listOf(
             autoUiButton,
             lockButton,
             integrityButton,
-            capabilitiesButton
+            capabilitiesButton,
+            cleanModeButton
         ).forEachIndexed { index, button ->
             reportAdvancedRow.addView(
                 button,
@@ -1017,6 +1047,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             DeckTouchListener(ACTION_CAPABILITIES)
         )
 
+        cleanModeButton.setOnTouchListener(
+            DeckTouchListener(ACTION_CLEAN)
+        )
+
         lensButton.setOnTouchListener(
             DeckTouchListener(ACTION_LENS)
         )
@@ -1043,24 +1077,204 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         previewView.setOnTouchListener { _, event ->
-            if (
-                event.action ==
-                MotionEvent.ACTION_DOWN
-            ) {
-                showReportOperatorControlsTemporarily()
-            }
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    showReportOperatorControlsTemporarily()
 
-            if (
-                event.action ==
-                MotionEvent.ACTION_UP
-            ) {
-                tapToFocus(
-                    event.x,
-                    event.y
-                )
-                true
-            } else {
-                true
+                    gestureDownX =
+                        event.x
+
+                    gestureDownY =
+                        event.y
+
+                    gestureStartZoom =
+                        camera
+                            ?.cameraInfo
+                            ?.zoomState
+                            ?.value
+                            ?.zoomRatio
+                            ?: 1f
+
+                    gestureStartExposure =
+                        camera
+                            ?.cameraInfo
+                            ?.exposureState
+                            ?.exposureCompensationIndex
+                            ?: 0
+
+                    gestureMoved =
+                        false
+
+                    true
+                }
+
+                MotionEvent.ACTION_MOVE -> {
+                    if (
+                        !operatorLocked
+                    ) {
+                        val dx =
+                            event.x -
+                                gestureDownX
+
+                        val dy =
+                            event.y -
+                                gestureDownY
+
+                        if (
+                            maxOf(
+                                abs(dx),
+                                abs(dy)
+                            ) >
+                            dp(18)
+                        ) {
+                            gestureMoved =
+                                true
+                        }
+
+                        val cam =
+                            camera
+
+                        if (
+                            cam != null &&
+                            gestureMoved
+                        ) {
+                            if (
+                                abs(dy) >
+                                abs(dx)
+                            ) {
+                                val zoomState =
+                                    cam.cameraInfo
+                                        .zoomState
+                                        .value
+
+                                if (
+                                    zoomState != null
+                                ) {
+                                    val span =
+                                        (
+                                            zoomState.maxZoomRatio -
+                                                zoomState.minZoomRatio
+                                            )
+                                            .coerceAtLeast(
+                                                0.1f
+                                            )
+
+                                    val ratio =
+                                        (
+                                            gestureStartZoom -
+                                                (
+                                                    dy /
+                                                        previewView.height
+                                                    ) *
+                                                    span
+                                            )
+                                            .coerceIn(
+                                                zoomState.minZoomRatio,
+                                                zoomState.maxZoomRatio
+                                            )
+
+                                    cam.cameraControl
+                                        .setZoomRatio(
+                                            ratio
+                                        )
+                                }
+                            } else {
+                                val state =
+                                    cam.cameraInfo
+                                        .exposureState
+
+                                val range =
+                                    state.exposureCompensationRange
+
+                                val total =
+                                    (
+                                        range.upper -
+                                            range.lower
+                                        )
+                                        .coerceAtLeast(
+                                            1
+                                        )
+
+                                val delta =
+                                    (
+                                        dx /
+                                            previewView.width *
+                                            total
+                                        )
+                                        .roundToInt()
+
+                                val target =
+                                    (
+                                        gestureStartExposure +
+                                            delta
+                                        )
+                                        .coerceIn(
+                                            range.lower,
+                                            range.upper
+                                        )
+
+                                cam.cameraControl
+                                    .setExposureCompensationIndex(
+                                        target
+                                    )
+                            }
+                        }
+                    }
+
+                    true
+                }
+
+                MotionEvent.ACTION_UP -> {
+                    if (
+                        !gestureMoved
+                    ) {
+                        val now =
+                            SystemClock.elapsedRealtime()
+
+                        if (
+                            now -
+                                lastPreviewTapMs <
+                            340L &&
+                            !operatorLocked
+                        ) {
+                            if (
+                                recording ==
+                                null
+                            ) {
+                                useFront =
+                                    !useFront
+
+                                lensButton.text =
+                                    if (useFront) {
+                                        "LENS\nFRONT"
+                                    } else {
+                                        "LENS\nBACK"
+                                    }
+
+                                bindCamera()
+                                toast(
+                                    "Lens switched"
+                                )
+                            }
+                        } else {
+                            tapToFocus(
+                                event.x,
+                                event.y
+                            )
+                        }
+
+                        lastPreviewTapMs =
+                            now
+                    }
+
+                    true
+                }
+
+                MotionEvent.ACTION_CANCEL ->
+                    true
+
+                else ->
+                    true
             }
         }
     }
@@ -1357,6 +1571,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     "OFF"
                 }
             )
+            append(" • CLEAN ")
+            append(
+                if (cleanModeEnabled) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+            )
+            append(" • SWIPE ZOOM/EXP • DOUBLE TAP LENS")
             append(" • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
             append("\n")
 
@@ -1873,6 +2096,260 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     )
                 )
             }
+        }
+    }
+
+    private fun applyAdaptiveReportPreviewTypography() {
+        val widthDp =
+            resources.configuration
+                .screenWidthDp
+
+        val brandSize =
+            when {
+                widthDp <= 360 ->
+                    11.5f
+
+                widthDp <= 420 ->
+                    12.8f
+
+                else ->
+                    13.8f
+            }
+
+        val rowSize =
+            when {
+                widthDp <= 360 ->
+                    5.2f
+
+                widthDp <= 420 ->
+                    5.7f
+
+                else ->
+                    6.1f
+            }
+
+        previewBrandView.textSize =
+            brandSize
+
+        previewTagView.textSize =
+            rowSize +
+                0.8f
+
+        listOf(
+            previewIdentityView,
+            previewClockView,
+            previewModeView,
+            previewPlaceView,
+            previewGpsView,
+            previewNavView,
+            previewSystemView,
+            previewHealthView
+        ).forEach {
+            it.textSize =
+                rowSize
+        }
+    }
+
+    private fun toggleReportCleanMode() {
+        cleanModeEnabled =
+            !cleanModeEnabled
+
+        cleanModeButton.text =
+            "CLEAN\n" +
+                if (cleanModeEnabled) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+
+        cleanModeButton.isSelected =
+            cleanModeEnabled
+
+        if (
+            cleanModeEnabled
+        ) {
+            listOf(
+                modeRow,
+                identityRow,
+                reportToolsRow,
+                reportAdvancedRow,
+                zoomRow,
+                exposureRow
+            ).forEach {
+                it.visibility =
+                    View.INVISIBLE
+            }
+
+            settingsSummaryView.visibility =
+                View.GONE
+
+            previewIdentityView.visibility =
+                View.GONE
+
+            previewModeView.visibility =
+                View.GONE
+
+            previewPlaceView.visibility =
+                View.GONE
+
+            previewGpsView.visibility =
+                View.GONE
+
+            previewNavView.visibility =
+                View.GONE
+
+            previewSystemView.visibility =
+                View.GONE
+
+            previewClockView.visibility =
+                View.VISIBLE
+
+            previewHealthView.visibility =
+                View.VISIBLE
+
+            actionRow.visibility =
+                View.VISIBLE
+        } else {
+            setReportOperatorControlsHidden(
+                false
+            )
+
+            listOf(
+                previewIdentityView,
+                previewClockView,
+                previewModeView,
+                previewPlaceView,
+                previewGpsView,
+                previewNavView,
+                previewSystemView,
+                previewHealthView
+            ).forEach {
+                it.visibility =
+                    View.VISIBLE
+            }
+        }
+
+        toast(
+            if (cleanModeEnabled) {
+                "Clean operator mode"
+            } else {
+                "Full report controls"
+            }
+        )
+    }
+
+    private fun recordingHealthText(): String {
+        val battery =
+            batteryPct()
+                ?: -1
+
+        val storage =
+            freeStorageGb()
+                ?: -1L
+
+        val gps =
+            accuracy
+
+        val micReady =
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) ==
+                PackageManager.PERMISSION_GRANTED
+
+        val state =
+            when {
+                battery in 0..9 ->
+                    "CRITICAL"
+
+                storage in 0..1L ->
+                    "CRITICAL"
+
+                !micReady ->
+                    "CHECK MIC"
+
+                gps != null &&
+                    gps >
+                    50f ->
+                    "GPS WEAK"
+
+                battery in 10..19 ->
+                    "BAT LOW"
+
+                storage in 2..4L ->
+                    "SPACE LOW"
+
+                else ->
+                    "GOOD"
+            }
+
+        return buildString {
+            append("REC HEALTH ")
+            append(state)
+
+            append(" • BAT ")
+            append(
+                if (battery >= 0) {
+                    "$battery%"
+                } else {
+                    "--"
+                }
+            )
+
+            append(" • FREE ")
+            append(
+                if (storage >= 0L) {
+                    "${storage}GB"
+                } else {
+                    "--"
+                }
+            )
+
+            append(" • GPS ")
+            append(
+                gps?.let {
+                    String.format(
+                        Locale.US,
+                        "±%.0fm",
+                        it
+                    )
+                } ?: "--"
+            )
+
+            append(" • MIC ")
+            append(
+                if (micReady) {
+                    "READY"
+                } else {
+                    "OFF"
+                }
+            )
+        }
+    }
+
+    private fun recordingHealthColor(): Int {
+        val text =
+            recordingHealthText()
+
+        return when {
+            text.contains(
+                "CRITICAL"
+            ) ->
+                0xFFFF4D42.toInt()
+
+            text.contains(
+                "LOW"
+            ) ||
+                text.contains(
+                    "WEAK"
+                ) ||
+                text.contains(
+                    "CHECK"
+                ) ->
+                0xFFFFC21A.toInt()
+
+            else ->
+                0xFF76E39A.toInt()
         }
     }
 
@@ -4257,6 +4734,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
             previewSystemView.text =
                 "${weatherOverlay()} • ${audioLevelOverlay()} • ${systemOverlay()}"
+
+            previewHealthView.text =
+                recordingHealthText()
+
+            previewHealthView.setTextColor(
+                recordingHealthColor()
+            )
         }
 
         if (::sceneButton.isInitialized) {
@@ -4949,6 +5433,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         ACTION_LOCK -> toggleReportOperatorLock()
                         ACTION_INTEGRITY -> toggleReportIntegrity()
                         ACTION_CAPABILITIES -> showCameraCapabilities()
+                        ACTION_CLEAN -> toggleReportCleanMode()
 
                         ACTION_LENS -> {
                             if (recording == null) {
