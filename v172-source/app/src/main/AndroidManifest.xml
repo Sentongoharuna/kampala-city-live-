@@ -17,7 +17,17 @@
         android:supportsRtl="true">
 
         <activity
+            android:name=".DevelopUgandaEditorActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".DevelopUgandaCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaNewsroomActivity"
             android:screenOrientation="portrait"
             android:exported="true">
 

@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 18100
-        versionName = "181.0-wysiwyg-preview"
+        versionCode = 18200
+        versionName = "182.0-mobile-newsroom"
     }
 
     buildTypes {
@@ -35,6 +35,7 @@ dependencies {
     val camerax = "1.6.1"
     implementation("androidx.appcompat:appcompat:1.8.0")
     implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.activity:activity-ktx:1.11.0")
     implementation("androidx.camera:camera-core:$camerax")
     implementation("androidx.camera:camera-camera2:$camerax")
     implementation("androidx.camera:camera-lifecycle:$camerax")

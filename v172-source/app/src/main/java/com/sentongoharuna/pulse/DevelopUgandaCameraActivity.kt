@@ -193,6 +193,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private var reporterName = "CITIZEN"
     private var storyId = ""
     private var reportId = ""
+    private var reportDisplayMode = "FIELD REPORT"
     private var clipSequence = 0
     private var recordStartUtc = "--"
 
@@ -306,6 +307,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         loadReporterIdentity()
         reportId = newReportId()
+
+        reportDisplayMode =
+            intent.getStringExtra("develop_uganda_mode")
+                ?.trim()
+                ?.uppercase(Locale.US)
+                ?.takeIf { it.isNotBlank() }
+                ?: "FIELD REPORT"
 
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -1037,16 +1045,27 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             text
         )
 
-        // V180: FIELD REPORT sits under the brand instead of extending to
-        // the right edge. This keeps the full identity visible on every crop.
-        text.color = Color.WHITE
+        // V182: keep develop.uganda and the report type on one broadcast line.
+        // The WYSIWYG preview now shows the complete 9:16 frame, so both labels
+        // can stay together without being cropped.
+        val brandWidth =
+            text.measureText(brand)
+
+        text.color =
+            if (reportDisplayMode == "LIVE EFFECT") {
+                0xFFFF5A52.toInt()
+            } else {
+                Color.WHITE
+            }
         text.textSize =
-            11.6f * u
+            10.8f * u
 
         c.drawText(
             sceneTag(),
-            safeLeft,
-            y + (17f * u),
+            safeLeft +
+                brandWidth +
+                (14f * u),
+            y,
             text
         )
 
@@ -1061,9 +1080,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         c.drawLine(
             safeLeft,
-            y + (25f * u),
+            y + (10f * u),
             safeLeft + maxWidth,
-            y + (25f * u),
+            y + (10f * u),
             accent
         )
 
@@ -1101,7 +1120,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         // 2. Stable report identity rows. Shorter rows keep the full
         // develop.uganda identity readable instead of shrinking off-screen.
-        y += 43f * u
+        y += 28f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
@@ -3038,6 +3057,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun sceneTag(): String {
+        if (reportDisplayMode == "LIVE EFFECT") {
+            return "LIVE EFFECT"
+        }
+
         return when (
             sceneModes[
                 sceneIndex
