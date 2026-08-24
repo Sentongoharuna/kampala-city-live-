@@ -203,9 +203,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
     private val reportHudScales =
         floatArrayOf(
-            0.94f,
-            1.00f,
-            1.06f
+            1.04f,
+            1.16f,
+            1.28f
         )
 
     private var reportHudSizeIndex = 1
@@ -512,7 +512,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "develop.uganda",
                 13.8f,
-                0xFFC7A64A.toInt(),
+                0xFFD8B85B.toInt(),
                 bold = true
             )
 
@@ -563,7 +563,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.8f,
-                0xFFC7A64A.toInt(),
+                0xFFD8B85B.toInt(),
                 bold = true
             )
 
@@ -580,7 +580,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.6f,
-                0xFF6EA9B5.toInt()
+                0xFF83C7D4.toInt()
            ,
                 bold = true
             )
@@ -589,7 +589,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.6f,
-                0xFF6EA9B5.toInt()
+                0xFF83C7D4.toInt()
            ,
                 bold = true
             )
@@ -598,7 +598,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.4f,
-                0xFF6F9C7C.toInt()
+                0xFF83B995.toInt()
            ,
                 bold = true
             )
@@ -607,7 +607,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.7f,
-                0xFF6F9C7C.toInt(),
+                0xFF83B995.toInt(),
                 bold = true
             )
 
@@ -674,7 +674,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         brandView = hud(
             "develop.uganda",
             10f,
-            0xFFC7A64A.toInt(),
+            0xFFD8B85B.toInt(),
             bold = true
         )
         statusView = hud(
@@ -691,22 +691,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         formatView = hud(
             "SOCIAL FHD • DEVICE FPS",
             7f,
-            0xFFC7A64A.toInt()
+            0xFFD8B85B.toInt()
         )
         locationView = hud(
             "GPS acquiring…",
             6f,
-            0xFF6EA9B5.toInt()
+            0xFF83C7D4.toInt()
         )
         weatherView = hud(
             "WX --",
             6f,
-            0xFF8FDBFF.toInt()
+            0xFF9FD9FF.toInt()
         )
         systemView = hud(
             "MIC READY • NET -- • BAT -- • FREE --",
             6f,
-            0xFF6F9C7C.toInt()
+            0xFF83B995.toInt()
         )
 
         // ORBIT DECK: a custom floating control system. No large black panel.
@@ -727,11 +727,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         sceneButton = deckButton(
             "SCENE ▾\n${sceneModes[sceneIndex]}",
-            0xFFC7A64A.toInt()
+            0xFFD8B85B.toInt()
         )
         lookButton = deckButton(
             "LOOK ▾\n${lookModes[lookIndex]}",
-            0xFF6EA9B5.toInt()
+            0xFF83C7D4.toInt()
         )
         qualityButton = deckButton(
             "FORMAT ▾\n${qualityDeckLabel()}",
@@ -739,7 +739,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
         captureModeButton = deckButton(
             "CAPTURE ▾\n${captureModes[captureModeIndex]}",
-            0xFF6F9C7C.toInt()
+            0xFF83B995.toInt()
         )
 
         listOf(
@@ -775,7 +775,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
         identityButton = deckButton(
             identityButtonText(),
-            0xFFC7A64A.toInt()
+            0xFFD8B85B.toInt()
         )
         identityRow.addView(
             identityButton,
@@ -795,17 +795,17 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         viewModeButton = deckButton(
             "VIEW ▾\nFULL",
-            0xFF6F9C7C.toInt()
+            0xFF83B995.toInt()
         )
 
         settingsButton = deckButton(
             "SETTINGS\nREPORT",
-            0xFF6EA9B5.toInt()
+            0xFF83C7D4.toInt()
         )
 
         guidesButton = deckButton(
             "GUIDES ▾\nON",
-            0xFFC7A64A.toInt()
+            0xFFD8B85B.toInt()
         )
 
         resetButton = deckButton(
@@ -845,7 +845,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         autoUiButton =
             deckButton(
                 "AUTO UI ▾\nON",
-                0xFF6F9C7C.toInt()
+                0xFF83B995.toInt()
             ).apply {
                 isSelected = true
             }
@@ -853,13 +853,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         lockButton =
             deckButton(
                 "LOCK ▾\nOFF",
-                0xFFC7A64A.toInt()
+                0xFFD8B85B.toInt()
             )
 
         integrityButton =
             deckButton(
                 "VERIFY ▾\nSHA-256",
-                0xFF6EA9B5.toInt()
+                0xFF83C7D4.toInt()
             ).apply {
                 isSelected = true
             }
@@ -873,7 +873,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         cleanModeButton =
             deckButton(
                 "CLEAN ▾\nOFF",
-                0xFF6F9C7C.toInt()
+                0xFF83B995.toInt()
             )
 
         listOf(
@@ -1086,7 +1086,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         lensButton = deckButton(
             "LENS ▾\nBACK",
-            0xFF6EA9B5.toInt()
+            0xFF83C7D4.toInt()
         )
         torchButton = deckButton(
             "LIGHT ▾\nOFF",
@@ -2554,10 +2554,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 text.contains(
                     "CHECK"
                 ) ->
-                0xFFC7A64A.toInt()
+                0xFFD8B85B.toInt()
 
             else ->
-                0xFF6F9C7C.toInt()
+                0xFF83B995.toInt()
         }
     }
 
@@ -2711,13 +2711,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             reportHudContrastIndex
         ) {
             0 ->
-                0.045f
+                0.014f
 
             2 ->
-                0.080f
+                0.032f
 
             else ->
-                0.060f
+                0.022f
         }
     }
 
@@ -2726,13 +2726,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             reportHudContrastIndex
         ) {
             0 ->
-                0x50000000
+                0x26000000
 
             2 ->
-                0x90000000.toInt()
+                0x52000000
 
             else ->
-                0x70000000
+                0x38000000
         }
     }
 
@@ -2743,13 +2743,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             reportHudContrastIndex
         ) {
             0 ->
-                1.2f * u
+                0.39f * u
 
             2 ->
-                2.8f * u
+                1.0f * u
 
             else ->
-                2.0f * u
+                0.65f * u
         }
     }
 
@@ -3121,12 +3121,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // V180: deliberately deeper safe margins for both the CameraX
         // preview crop and the exported 9:16 video. This prevents the brand,
         // telemetry and instruments from being clipped at the phone edges.
+        // V198: wider protected narration lane. It still stays well
+        // inside the 9:16 frame, but long telemetry lines no longer need
+        // to collapse into tiny lettering.
         val safeLeft =
-            finalWidth * 0.19f
+            finalWidth * 0.16f
         val safeTop =
-            finalHeight * 0.125f
+            finalHeight * 0.105f
         val maxWidth =
-            finalWidth * 0.49f
+            finalWidth * 0.62f
 
         var y = safeTop
 
@@ -3156,7 +3159,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 if (recording != null) {
                     0xFFFF4138.toInt()
                 } else {
-                    0xFFC7A64A.toInt()
+                    0xFFD8B85B.toInt()
                 }
             strokeWidth = 3.2f * u
         }
@@ -3175,7 +3178,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.BOLD
         )
         text.color =
-            0xFFC7A64A.toInt()
+            0xFFD8B85B.toInt()
         text.textSize =
             35f * u
 
@@ -3202,7 +3205,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 Color.WHITE
             }
         text.textSize =
-            12.0f * u
+            14.0f * u
 
         drawStrongRecordedText(
             c,
@@ -3280,7 +3283,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.BOLD
         )
         text.color = Color.WHITE
-        text.textSize = 13.2f * u
+        text.textSize = 15.0f * u
 
         drawFitText(
             c,
@@ -3289,7 +3292,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            9.3f * u
+            11.2f * u
         )
 
         y += 15f * u
@@ -3300,7 +3303,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            9.2f * u
+            11.0f * u
         )
 
         // 3. REC / timecode / date and local clock.
@@ -3309,7 +3312,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.textSize = 13.8f * u
+        text.textSize = 15.8f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
@@ -3331,11 +3334,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            10.3f * u
+            11.8f * u
         )
 
         y += 15f * u
-        text.textSize = 11.9f * u
+        text.textSize = 13.2f * u
         drawFitText(
             c,
             "LOCAL ${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
@@ -3343,34 +3346,45 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            8.3f * u
+            10.0f * u
         )
 
         // 4. Editorial / camera identity.
         y += 16f * u
         text.color =
-            0xFFC7A64A.toInt()
+            0xFFD8B85B.toInt()
         text.textSize =
-            12.2f * u
+            14.0f * u
 
         drawFitText(
             c,
-            "MODE • ${sceneModes[sceneIndex]}   |   LOOK • ${lookModes[lookIndex]}   |   FORMAT • ${qualityModes[qualityIndex]}",
+            "MODE • ${sceneModes[sceneIndex]}   |   LOOK • ${lookModes[lookIndex]}",
             safeLeft,
             y,
             maxWidth,
             text,
-            8.3f * u
+            10.0f * u
+        )
+
+        y += 16f * u
+        drawFitText(
+            c,
+            "FORMAT • ${qualityModes[qualityIndex]}   |   CAPTURE • ${captureModes[captureModeIndex]}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            10.0f * u
         )
 
         // 5. Place.
-        y += 16f * u
+        y += 17f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
         text.color = Color.WHITE
-        text.textSize = 12.8f * u
+        text.textSize = 14.6f * u
 
         drawFitText(
             c,
@@ -3379,15 +3393,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            8.6f * u
+            10.4f * u
         )
 
         // 6. Live changing coordinates.
         y += 16f * u
         text.color =
-            0xFF6EA9B5.toInt()
+            0xFF83C7D4.toInt()
         text.textSize =
-            11.5f * u
+            13.0f * u
 
         drawFitText(
             c,
@@ -3396,15 +3410,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            8.2f * u
+            9.9f * u
         )
 
         // 7. GPS altitude / accuracy / satellites / fix age.
         y += 15f * u
         text.color =
-            0xFF6EA9B5.toInt()
+            0xFF83C7D4.toInt()
         text.textSize =
-            11.6f * u
+            13.0f * u
 
         drawFitText(
             c,
@@ -3413,15 +3427,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            7.9f * u
+            9.7f * u
         )
 
         // 8. Compass / GPS bearing / speed / motion / distance.
         y += 15f * u
         text.color =
-            0xFF6EA9B5.toInt()
+            0xFF83C7D4.toInt()
         text.textSize =
-            11.5f * u
+            13.0f * u
 
         drawFitText(
             c,
@@ -3430,7 +3444,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            7.8f * u
+            9.6f * u
         )
 
         // 9. Real phone orientation / horizon angle.
@@ -3438,7 +3452,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFFFFFFF.toInt()
         text.textSize =
-            11.2f * u
+            12.8f * u
 
         drawFitText(
             c,
@@ -3447,15 +3461,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            7.6f * u
+            9.4f * u
         )
 
         // 10. Weather.
         y += 15f * u
         text.color =
-            0xFF8FDBFF.toInt()
+            0xFF9FD9FF.toInt()
         text.textSize =
-            10.8f * u
+            12.5f * u
 
         drawFitText(
             c,
@@ -3464,57 +3478,68 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            7.8f * u
+            9.6f * u
         )
 
         // 11. Real recording audio amplitude + network / battery / storage.
         y += 15f * u
         text.color =
-            0xFF6F9C7C.toInt()
+            0xFF83B995.toInt()
         text.textSize =
-            11.5f * u
+            13.0f * u
 
         drawFitText(
             c,
-            "AUDIO / SYSTEM • ${audioLevelOverlay()} • ${systemOverlay()}",
+            "AUDIO • ${audioLevelOverlay()}",
             safeLeft,
             y,
             maxWidth,
             text,
-            7.7f * u
+            9.5f * u
+        )
+
+        y += 15f * u
+        drawFitText(
+            c,
+            "SYSTEM • ${systemOverlay()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            9.5f * u
         )
 
         // 12. Active camera state.
+        y += 17f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.color =
+            0xFFD8B85B.toInt()
+        text.textSize =
+            12.0f * u
+
+        drawFitText(
+            c,
+            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • AF TAP",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            9.5f * u
+        )
+
+        // 13. Keep all automatic/manual-capability information.
         y += 16f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
         text.color =
-            0xFFC7A64A.toInt()
-        text.textSize =
-            10.2f * u
-
-        drawFitText(
-            c,
-            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • AF TAP • HIGH BITRATE",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            7.7f * u
-        )
-
-        // 13. Keep all automatic/manual-capability information.
-        y += 15f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.NORMAL
-        )
-        text.color =
             0xFFFFFFFF.toInt()
         text.textSize =
-            9.5f * u
+            11.4f * u
 
         drawFitText(
             c,
@@ -3523,7 +3548,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             y,
             maxWidth,
             text,
-            7.3f * u
+            9.2f * u
         )
 
         c.restore()
@@ -3590,10 +3615,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 0xFFFF5A52.toInt()
 
             acc <= 8f ->
-                0xFF6F9C7C.toInt()
+                0xFF83B995.toInt()
 
             acc <= 25f ->
-                0xFFC7A64A.toInt()
+                0xFFD8B85B.toInt()
 
             else ->
                 0xFFFF6B57.toInt()
@@ -3653,7 +3678,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 textAlign =
                     Paint.Align.CENTER
                 textSize =
-                    9.2f * u
+                    11.0f * u
                 setShadowLayer(
                     2.0f * u,
                     0.5f * u,
@@ -3665,7 +3690,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val valuePaint =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFF6EA9B5.toInt()
+                    0xFF83C7D4.toInt()
                 typeface = Typeface.create(
                     Typeface.MONOSPACE,
                     Typeface.BOLD
@@ -3792,7 +3817,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val pointer =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFFC7A64A.toInt()
+                    0xFFD8B85B.toInt()
                 style =
                     Paint.Style.FILL
             }
@@ -3840,7 +3865,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         valuePaint.textSize =
-            7.6f * u
+            9.4f * u
         valuePaint.color =
             stateColor
 
@@ -3915,10 +3940,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     0xFFFF4138.toInt()
 
                 level >= 0.72f ->
-                    0xFFC7A64A.toInt()
+                    0xFFD8B85B.toInt()
 
                 else ->
-                    0xFF6F9C7C.toInt()
+                    0xFF83B995.toInt()
             }
 
         val fill =
@@ -3993,10 +4018,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     0xFFFF5A52.toInt()
 
                 kotlin.math.abs(roll) <= 1f ->
-                    0xFF6F9C7C.toInt()
+                    0xFF83B995.toInt()
 
                 kotlin.math.abs(roll) <= 3f ->
-                    0xFFC7A64A.toInt()
+                    0xFFD8B85B.toInt()
 
                 else ->
                     0xFFFF6B57.toInt()
@@ -5068,7 +5093,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     } else {
                         statusView.text = "SAVED"
                         statusView.setTextColor(
-                            0xFF6F9C7C.toInt()
+                            0xFF83B995.toInt()
                         )
                         telemetryRecorder.exportSidecar(
                             baseName
@@ -5169,7 +5194,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 ) {
                     statusView.text = "PHOTO SAVED"
                     statusView.setTextColor(
-                        0xFF6F9C7C.toInt()
+                        0xFF83B995.toInt()
                     )
                     toast(
                         "Photo saved • develop.uganda"
@@ -5204,19 +5229,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val values =
             listOf(
                 sceneButton to
-                    0xFFC7A64A.toInt(),
+                    0xFFD8B85B.toInt(),
                 lookButton to
-                    0xFF6EA9B5.toInt(),
+                    0xFF83C7D4.toInt(),
                 qualityButton to
                     0xFFE8F1F2.toInt(),
                 captureModeButton to
-                    0xFF6F9C7C.toInt(),
+                    0xFF83B995.toInt(),
                 viewModeButton to
-                    0xFF6F9C7C.toInt(),
+                    0xFF83B995.toInt(),
                 settingsButton to
-                    0xFF6EA9B5.toInt(),
+                    0xFF83C7D4.toInt(),
                 guidesButton to
-                    0xFFC7A64A.toInt(),
+                    0xFFD8B85B.toInt(),
                 resetButton to
                     0xFFB66B67.toInt()
             )
@@ -6231,9 +6256,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // softened so the camera deck does not look neon.
         val colors =
             intArrayOf(
-                0xFFC7A64A.toInt(), // muted gold
+                0xFFD8B85B.toInt(), // muted gold
                 0xFF6D88A4.toInt(), // slate blue
-                0xFF6F9C7C.toInt(), // muted green
+                0xFF83B995.toInt(), // muted green
                 0xFFA77B92.toInt(), // muted pink
                 0xFF83799A.toInt(), // muted violet
                 0xFF6EA9A4.toInt(), // muted teal

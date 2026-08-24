@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "PRESET RECALL PRO • V196",
+                "CLEAR BURN-IN PRO • V198",
                 9f,
                 white,
                 true
@@ -245,6 +245,14 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             )
         )
 
+        page.addView(
+            compactStatus(
+                "SAVED VIDEO VISIBILITY",
+                "LARGER TEXT • WIDER SAFE AREA • LIGHTER SHADOW • FULL-OPACITY COLOURS",
+                green
+            )
+        )
+
         val quickLaunch =
             LinearLayout(this).apply {
                 orientation =
@@ -336,7 +344,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • one-tap FIELD / OUTDOOR / NIGHT / INTERVIEW / CINEMA presets • HUD memory",
+                "FIELD REPORT • larger saved-video lettering • lighter shadow • wider telemetry lane • presets + HUD memory",
                 "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -348,7 +356,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • BREAKING / INTERVIEW / EVENT / COMMUNITY presets • ON AIR graphics • MARK",
+                "LIVE STUDIO • larger ON AIR graphics • lighter text shade • clearer lower-third • presets + MARK",
                 "Signals • reporter identity • output setup • broadcast profiles • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"

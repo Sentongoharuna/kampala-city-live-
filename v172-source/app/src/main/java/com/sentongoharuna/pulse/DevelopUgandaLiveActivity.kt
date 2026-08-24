@@ -106,9 +106,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private val liveHudScales =
         floatArrayOf(
-            0.94f,
-            1.00f,
-            1.06f
+            1.04f,
+            1.16f,
+            1.28f
         )
 
     private var liveHudSizeIndex = 1
@@ -1753,15 +1753,15 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         // the CameraX crop could place the left side outside the saved MP4.
         val safeLeft =
             finalWidth *
-                0.19f
+                0.16f
 
         val safeTop =
             finalHeight *
-                0.09f
+                0.075f
 
         val safeRight =
             finalWidth *
-                0.81f
+                0.84f
 
         val paint =
             Paint(
@@ -1825,7 +1825,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            32f * u
+            38f * u
 
         paint.color =
             amber
@@ -1840,7 +1840,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            15.2f * u
+            17.5f * u
 
         paint.color =
             if (
@@ -1882,7 +1882,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 (13f * u),
             safeRight,
             safeTop +
-                (12f * u),
+                (14.0f * u),
             rule
         )
 
@@ -1894,32 +1894,50 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "LIVE PROFILE • ${profiles[profileIndex]}   |   REPORTER • $reporterName   |   STORY • $storyId",
+            "LIVE PROFILE • ${profiles[profileIndex]}   |   REPORTER • $reporterName",
             safeLeft,
             safeTop +
-                (36f * u),
+                (38f * u),
             safeRight -
                 safeLeft,
             paint,
-            8.5f * u
+            10.4f * u
         )
 
         paint.textSize =
-            13.4f * u
+            13.5f * u
+
+        paint.color =
+            white
+
+        drawFitText(
+            canvas,
+            "STORY • $storyId   |   ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
+            safeLeft,
+            safeTop +
+                (57f * u),
+            safeRight -
+                safeLeft,
+            paint,
+            10.2f * u
+        )
+
+        paint.textSize =
+            15.4f * u
 
         paint.color =
             cyan
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   $qualityLabel   |   ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   FORMAT • $qualityLabel",
             safeLeft,
             safeTop +
-                (56f * u),
+                (77f * u),
             safeRight -
                 safeLeft,
             paint,
-            8.2f * u
+            10.1f * u
         )
 
         val lowerY =
@@ -1971,7 +1989,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
 
         val lowerH =
-            88f * u
+            102f * u
 
         canvas.drawRoundRect(
             safeLeft,
@@ -2004,7 +2022,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 (8f * u),
             lowerY +
                 lowerH -
-                (10f * u),
+                (12.0f * u),
             redRail
         )
 
@@ -2033,7 +2051,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             white
 
         paint.textSize =
-            21.5f * u
+            25.0f * u
 
         drawFitText(
             canvas,
@@ -2041,12 +2059,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             safeLeft +
                 (22f * u),
             lowerY +
-                (51f * u),
+                (60f * u),
             safeRight -
                 safeLeft -
                 (40f * u),
             paint,
-            11f * u
+            13f * u
         )
 
         paint.color =
@@ -2061,12 +2079,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             safeLeft +
                 (22f * u),
             lowerY +
-                (72f * u),
+                (84f * u),
             safeRight -
                 safeLeft -
                 (40f * u),
             paint,
-            7.8f * u
+            9.8f * u
         )
 
         canvas.restore()
@@ -3775,13 +3793,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             liveHudContrastIndex
         ) {
             0 ->
-                0.045f
+                0.014f
 
             2 ->
-                0.080f
+                0.032f
 
             else ->
-                0.060f
+                0.022f
         }
     }
 
@@ -3790,13 +3808,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             liveHudContrastIndex
         ) {
             0 ->
-                0x50000000
+                0x26000000
 
             2 ->
-                0x90000000.toInt()
+                0x52000000
 
             else ->
-                0x70000000
+                0x38000000
         }
     }
 
@@ -3807,13 +3825,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             liveHudContrastIndex
         ) {
             0 ->
-                1.2f * u
+                0.35f * u
 
             2 ->
-                2.8f * u
+                1.0f * u
 
             else ->
-                2.0f * u
+                0.65f * u
         }
     }
 
