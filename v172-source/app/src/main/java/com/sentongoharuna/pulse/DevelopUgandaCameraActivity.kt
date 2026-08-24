@@ -526,6 +526,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 "",
                 5.8f,
                 Color.WHITE
+           ,
+                bold = true
             )
 
         previewGpsView =
@@ -533,6 +535,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 "",
                 5.6f,
                 0xFF7FE8FF.toInt()
+           ,
+                bold = true
             )
 
         previewNavView =
@@ -540,6 +544,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 "",
                 5.6f,
                 0xFF7FE8FF.toInt()
+           ,
+                bold = true
             )
 
         previewSystemView =
@@ -547,6 +553,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 "",
                 5.4f,
                 0xFF76E39A.toInt()
+           ,
+                bold = true
             )
 
         previewHealthView =
@@ -647,7 +655,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         weatherView = hud(
             "WX --",
             6f,
-            0xFF8ECFFF.toInt()
+            0xFF8FDBFF.toInt()
         )
         systemView = hud(
             "MIC READY • NET -- • BAT -- • FREE --",
@@ -2741,10 +2749,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             )
 
             setShadowLayer(
-                2.8f * u,
-                0.8f * u,
-                0.8f * u,
-                0xED000000.toInt()
+                4.8f * u,
+                1.0f * u,
+                1.0f * u,
+                0xFF000000.toInt()
             )
         }
 
@@ -2777,11 +2785,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            33f * u
+            35f * u
 
         val brand = "develop.uganda"
 
-        c.drawText(
+        drawStrongRecordedText(
+            c,
             brand,
             safeLeft,
             y,
@@ -2801,9 +2810,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 Color.WHITE
             }
         text.textSize =
-            11.5f * u
+            12.0f * u
 
-        c.drawText(
+        drawStrongRecordedText(
+            c,
             sceneTag(),
             safeLeft +
                 brandWidth +
@@ -2830,34 +2840,43 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         // Real live field instruments. These are part of the recorded HUD.
+        // V192: navigation instruments live at the extreme lower-right of
+        // the recorded feed, leaving the upper narration clean and spacious.
         val instrumentCenterX =
-            finalWidth * 0.74f
+            finalWidth *
+                0.79f
+
         val compassCenterY =
-            safeTop + (61f * u)
+            finalHeight *
+                0.875f
 
         drawCompassInstrument(
             c,
             instrumentCenterX,
             compassCenterY,
-            39f * u,
+            43f * u,
             u
         )
 
         drawAudioMeterInstrument(
             c,
-            finalWidth * 0.675f,
-            safeTop + (117f * u),
-            finalWidth * 0.13f,
-            9f * u,
+            finalWidth *
+                0.705f,
+            finalHeight *
+                0.815f,
+            finalWidth *
+                0.15f,
+            10f * u,
             u
         )
 
         drawLevelInstrument(
             c,
             instrumentCenterX,
-            safeTop + (149f * u),
-            78f * u,
-            26f * u,
+            finalHeight *
+                0.935f,
+            92f * u,
+            28f * u,
             u
         )
 
@@ -2869,11 +2888,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.BOLD
         )
         text.color = Color.WHITE
-        text.textSize = 12.8f * u
+        text.textSize = 13.2f * u
 
         drawFitText(
             c,
-            "REPORT $reportId • CLIP ${clipSequenceText()}",
+            "REPORT ID • $reportId   |   CLIP • ${clipSequenceText()}",
             safeLeft,
             y,
             maxWidth,
@@ -2884,7 +2903,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         y += 15f * u
         drawFitText(
             c,
-            "REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}",
+            "REPORTER • ${reporterDisplayName()}   |   STORY • ${storyDisplayId()}",
             safeLeft,
             y,
             maxWidth,
@@ -2898,12 +2917,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.textSize = 13.3f * u
+        text.textSize = 13.8f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
             } else {
-                0xFFE6EEF0.toInt()
+                0xFFFFFFFF.toInt()
             }
 
         val recState =
@@ -2915,7 +2934,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "$recState • TIMECODE ${tc()} • ${clock.format(Date())}",
+            "$recState   |   TIMECODE • ${tc()}   |   ${clock.format(Date())}",
             safeLeft,
             y,
             maxWidth,
@@ -2924,7 +2943,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         y += 15f * u
-        text.textSize = 11.4f * u
+        text.textSize = 11.9f * u
         drawFitText(
             c,
             "LOCAL ${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
@@ -2940,11 +2959,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            11.7f * u
+            12.2f * u
 
         drawFitText(
             c,
-            "MODE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • FORMAT ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}",
+            "MODE • ${sceneModes[sceneIndex]}   |   LOOK • ${lookModes[lookIndex]}   |   FORMAT • ${qualityModes[qualityIndex]}",
             safeLeft,
             y,
             maxWidth,
@@ -2956,10 +2975,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         y += 16f * u
         text.typeface = Typeface.create(
             Typeface.MONOSPACE,
-            Typeface.NORMAL
+            Typeface.BOLD
         )
         text.color = Color.WHITE
-        text.textSize = 12.3f * u
+        text.textSize = 12.8f * u
 
         drawFitText(
             c,
@@ -2993,7 +3012,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            11.1f * u
+            11.6f * u
 
         drawFitText(
             c,
@@ -3010,7 +3029,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFF7FE8FF.toInt()
         text.textSize =
-            11.0f * u
+            11.5f * u
 
         drawFitText(
             c,
@@ -3025,9 +3044,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // 9. Real phone orientation / horizon angle.
         y += 15f * u
         text.color =
-            0xFFDDE8EA.toInt()
+            0xFFFFFFFF.toInt()
         text.textSize =
-            10.7f * u
+            11.2f * u
 
         drawFitText(
             c,
@@ -3042,9 +3061,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // 10. Weather.
         y += 15f * u
         text.color =
-            0xFF8ECFFF.toInt()
+            0xFF8FDBFF.toInt()
         text.textSize =
-            10.2f * u
+            10.8f * u
 
         drawFitText(
             c,
@@ -3061,11 +3080,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFF76E39A.toInt()
         text.textSize =
-            10.9f * u
+            11.5f * u
 
         drawFitText(
             c,
-            "${audioLevelOverlay()} • ${systemOverlay()}",
+            "AUDIO / SYSTEM • ${audioLevelOverlay()} • ${systemOverlay()}",
             safeLeft,
             y,
             maxWidth,
@@ -3086,7 +3105,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • TAP AF • HIGH BITRATE",
+            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • AF TAP • HIGH BITRATE",
             safeLeft,
             y,
             maxWidth,
@@ -3101,7 +3120,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.NORMAL
         )
         text.color =
-            0xFFDDE8EA.toInt()
+            0xFFFFFFFF.toInt()
         text.textSize =
             9.5f * u
 
@@ -3116,6 +3135,59 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         c.restore()
+    }
+
+    private fun drawStrongRecordedText(
+        canvas: Canvas,
+        value: String,
+        x: Float,
+        y: Float,
+        paint: Paint
+    ) {
+        val savedStyle =
+            paint.style
+
+        val savedColor =
+            paint.color
+
+        val savedStroke =
+            paint.strokeWidth
+
+        paint.style =
+            Paint.Style.STROKE
+
+        paint.strokeWidth =
+            paint.textSize *
+                0.15f
+
+        paint.color =
+            0xFA000000.toInt()
+
+        canvas.drawText(
+            value,
+            x,
+            y,
+            paint
+        )
+
+        paint.style =
+            Paint.Style.FILL
+
+        paint.strokeWidth =
+            savedStroke
+
+        paint.color =
+            savedColor
+
+        canvas.drawText(
+            value,
+            x,
+            y,
+            paint
+        )
+
+        paint.style =
+            savedStyle
     }
 
     private fun instrumentStateColor(): Int {
@@ -3149,11 +3221,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val ring =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xCCFFFFFF.toInt()
+                    0xFFFFFFFF.toInt()
                 style =
                     Paint.Style.STROKE
                 strokeWidth =
-                    1.2f * u
+                    2.0f * u
                 setShadowLayer(
                     2.0f * u,
                     0.6f * u,
@@ -3174,9 +3246,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val tickPaint =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xBFFFFFFF.toInt()
+                    0xFFFFFFFF.toInt()
                 strokeWidth =
-                    1.0f * u
+                    1.4f * u
             }
 
         val labelPaint =
@@ -4400,12 +4472,53 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             value.substring(0, end) + ellipsis
         }
 
+        val savedStyle =
+            paint.style
+
+        val savedColor =
+            paint.color
+
+        val savedStroke =
+            paint.strokeWidth
+
+        // V192: high-contrast recorded text. A solid black outline sits
+        // behind the chosen text colour so the burn-in stays readable on
+        // white walls, sky, sunlight and other bright video backgrounds.
+        paint.style =
+            Paint.Style.STROKE
+
+        paint.strokeWidth =
+            paint.textSize *
+                0.16f
+
+        paint.color =
+            0xFA000000.toInt()
+
         canvas.drawText(
             textToDraw,
             x,
             y,
             paint
         )
+
+        paint.style =
+            Paint.Style.FILL
+
+        paint.strokeWidth =
+            savedStroke
+
+        paint.color =
+            savedColor
+
+        canvas.drawText(
+            textToDraw,
+            x,
+            y,
+            paint
+        )
+
+        paint.style =
+            savedStyle
     }
 
     private fun toggleRecording() {
@@ -5596,10 +5709,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             )
 
             setShadowLayer(
-                2f,
-                0.7f,
-                0.7f,
-                0xCC000000.toInt()
+                4f,
+                1f,
+                1f,
+                0xFF000000.toInt()
             )
 
             setPadding(
@@ -6317,11 +6430,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    4.2f *
+                    6.2f *
                         density
 
                 color =
                     accent
+
+                setShadowLayer(
+                    5.5f *
+                        density,
+                    0f,
+                    0f,
+                    accent
+                )
             }
 
         private val idleFillPaint =
@@ -6332,7 +6453,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.FILL
 
                 color =
-                    0x26000000
+                    0x72000000
             }
 
         private val pressedFillPaint =
@@ -6344,7 +6465,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 color =
                     Color.argb(
-                        78,
+                        125,
                         Color.red(
                             accent
                         ),
@@ -6365,7 +6486,26 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.FILL
 
                 color =
-                    accent
+                    Color.rgb(
+                        (
+                            Color.red(
+                                accent
+                            ) *
+                                0.92f
+                            ).roundToInt(),
+                        (
+                            Color.green(
+                                accent
+                            ) *
+                                0.92f
+                            ).roundToInt(),
+                        (
+                            Color.blue(
+                                accent
+                            ) *
+                                0.92f
+                            ).roundToInt()
+                    )
             }
 
         private val glowPaint =
@@ -6376,7 +6516,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    5.5f *
+                    7.0f *
                         density
 
                 color =

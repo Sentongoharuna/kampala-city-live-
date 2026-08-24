@@ -1619,10 +1619,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     )
 
                 setShadowLayer(
-                    3.0f * u,
-                    0.8f * u,
-                    0.8f * u,
-                    0xE0000000.toInt()
+                    5.0f * u,
+                    1.0f * u,
+                    1.0f * u,
+                    0xFF000000.toInt()
                 )
             }
 
@@ -1668,12 +1668,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            30f * u
+            32f * u
 
         paint.color =
             amber
 
-        canvas.drawText(
+        drawStrongLiveText(
+            canvas,
             "develop.uganda",
             safeLeft +
                 (23f * u),
@@ -1682,7 +1683,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            14.5f * u
+            15.2f * u
 
         paint.color =
             if (
@@ -1736,7 +1737,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${profiles[profileIndex]} • REPORTER $reporterName • STORY $storyId",
+            "LIVE PROFILE • ${profiles[profileIndex]}   |   REPORTER • $reporterName   |   STORY • $storyId",
             safeLeft,
             safeTop +
                 (36f * u),
@@ -1747,14 +1748,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            12.8f * u
+            13.4f * u
 
         paint.color =
             cyan
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"} ${liveTimecode()} • ${ZoneId.systemDefault().id} • $qualityLabel • ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   $qualityLabel   |   ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
             safeLeft,
             safeTop +
                 (56f * u),
@@ -1799,10 +1800,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         lowerStyle
                     ) {
                         "MINIMAL" ->
-                            0x6605080A
+                            0x8205080A.toInt()
 
                         "CLEAN" ->
-                            0x8805080A.toInt()
+                            0xA505080A.toInt()
 
                         else ->
                             0x9A05080A.toInt()
@@ -1875,7 +1876,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             white
 
         paint.textSize =
-            20f * u
+            21.5f * u
 
         drawFitText(
             canvas,
@@ -1899,7 +1900,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "REPORTER $reporterName • STORY $storyId • develop.uganda",
+            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -1912,6 +1913,59 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         canvas.restore()
+    }
+
+    private fun drawStrongLiveText(
+        canvas: Canvas,
+        value: String,
+        x: Float,
+        y: Float,
+        paint: Paint
+    ) {
+        val savedStyle =
+            paint.style
+
+        val savedColor =
+            paint.color
+
+        val savedStroke =
+            paint.strokeWidth
+
+        paint.style =
+            Paint.Style.STROKE
+
+        paint.strokeWidth =
+            paint.textSize *
+                0.15f
+
+        paint.color =
+            0xFA000000.toInt()
+
+        canvas.drawText(
+            value,
+            x,
+            y,
+            paint
+        )
+
+        paint.style =
+            Paint.Style.FILL
+
+        paint.strokeWidth =
+            savedStroke
+
+        paint.color =
+            savedColor
+
+        canvas.drawText(
+            value,
+            x,
+            y,
+            paint
+        )
+
+        paint.style =
+            savedStyle
     }
 
     private fun drawFitText(
@@ -1944,12 +1998,50 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 size
         }
 
+        val savedStyle =
+            paint.style
+
+        val savedColor =
+            paint.color
+
+        val savedStroke =
+            paint.strokeWidth
+
+        paint.style =
+            Paint.Style.STROKE
+
+        paint.strokeWidth =
+            paint.textSize *
+                0.16f
+
+        paint.color =
+            0xFA000000.toInt()
+
         canvas.drawText(
             value,
             x,
             y,
             paint
         )
+
+        paint.style =
+            Paint.Style.FILL
+
+        paint.strokeWidth =
+            savedStroke
+
+        paint.color =
+            savedColor
+
+        canvas.drawText(
+            value,
+            x,
+            y,
+            paint
+        )
+
+        paint.style =
+            savedStyle
 
         paint.textSize =
             original
@@ -3509,11 +3601,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    4.2f *
+                    6.2f *
                         density
 
                 color =
                     accent
+
+                setShadowLayer(
+                    5.5f *
+                        density,
+                    0f,
+                    0f,
+                    accent
+                )
             }
 
         private val idleFill =
@@ -3524,7 +3624,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.FILL
 
                 color =
-                    0x24000000
+                    0x72000000
             }
 
         private val pressedFill =
@@ -3536,7 +3636,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 color =
                     Color.argb(
-                        82,
+                        130,
                         Color.red(
                             accent
                         ),
@@ -3568,7 +3668,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    5.5f *
+                    7.0f *
                         density
 
                 color =

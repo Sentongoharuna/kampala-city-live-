@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "BRIGHT RING DECK • V191",
+                "HIGH VISIBILITY BROADCAST • V192",
                 9f,
                 white,
                 true
@@ -216,9 +216,99 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "BRIGHT RING DECK",
-                "REPORT • LIVE • EDIT • DESK • PUBLISH"
+                "develop.uganda CONTROL ROOM",
+                "CAPTURE • VERIFY • EDIT • BROADCAST • PUBLISH"
             )
+        )
+
+        page.addView(
+            compactStatus(
+                "SYSTEM READY",
+                "REPORT • LIVE • EDIT • NEWSROOM",
+                green
+            )
+        )
+
+        val quickLaunch =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(4),
+                    0,
+                    dp(8)
+                )
+            }
+
+        quickLaunch.addView(
+            smallClipButton(
+                "REPORT",
+                gold
+            ) {
+                openReportCamera()
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(48),
+                1f
+            )
+        )
+
+        quickLaunch.addView(
+            smallClipButton(
+                "LIVE",
+                red
+            ) {
+                openLiveCamera()
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(48),
+                1f
+            ).apply {
+                marginStart =
+                    dp(6)
+            }
+        )
+
+        quickLaunch.addView(
+            smallClipButton(
+                "EDIT",
+                cyan
+            ) {
+                openEditor()
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(48),
+                1f
+            ).apply {
+                marginStart =
+                    dp(6)
+            }
+        )
+
+        quickLaunch.addView(
+            smallClipButton(
+                "DESK",
+                green
+            ) {
+                showNewsroom()
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(48),
+                1f
+            ).apply {
+                marginStart =
+                    dp(6)
+            }
+        )
+
+        page.addView(
+            quickLaunch
         )
 
         page.addView(
@@ -230,8 +320,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • thick bright ring controls • selected pills fill completely • clearer saved-video narration",
-                "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
+                "FIELD REPORT • high-contrast telemetry • bright ring deck • verification • navigation instruments at lower feed",
+                "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
                 gold,
                 "OPEN REPORT CAMERA"
             ) {
@@ -242,8 +332,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • bright broadcast rings • full-colour selected pills • cleaner ON AIR/lower-third wording",
-                "Blinking LIVE • signal lamps • smaller glowing setting buttons • Reporter ID • lower third • safe recorded graphics • pulsing red record ring",
+                "LIVE STUDIO • stronger ON AIR graphics • bright control rings • countdown • MARK • lower thirds",
+                "Signals • reporter identity • output setup • broadcast profiles • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"
             ) {

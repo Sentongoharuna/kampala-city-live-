@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 19100
-        versionName = "191.0-bright-ring-deck"
+        versionCode = 19200
+        versionName = "192.0-high-visibility-broadcast"
     }
 
     buildTypes {
