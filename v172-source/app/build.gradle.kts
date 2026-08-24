@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 19000
-        versionName = "190.0-pill-deck-pro"
+        versionCode = 19001
+        versionName = "190.1-pill-deck-pro-fix1"
     }
 
     buildTypes {

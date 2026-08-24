@@ -54,6 +54,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.SessionConfig
+import androidx.camera.core.TorchState
 import androidx.camera.core.ZoomState
 import androidx.camera.effects.Frame
 import androidx.camera.effects.OverlayEffect
@@ -5714,6 +5715,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             index %
                 colors.size
         ]
+    }
+
+    private fun showReportPillDropdown(
+        anchor: View,
+        title: String,
+        options: List<String>,
+        selectedIndex: Int,
+        onPick: (Int) -> Unit
+    ) {
+        showReportPillDropdown(
+            anchor,
+            title,
+            options.toTypedArray(),
+            selectedIndex,
+            onPick
+        )
     }
 
     private fun showReportPillDropdown(
