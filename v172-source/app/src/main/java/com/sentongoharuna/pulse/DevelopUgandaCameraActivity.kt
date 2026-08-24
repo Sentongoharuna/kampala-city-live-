@@ -113,6 +113,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         const val ACTION_INTEGRITY = 15
         const val ACTION_CAPABILITIES = 16
         const val ACTION_CLEAN = 17
+        const val ACTION_HUD_SIZE = 18
+        const val ACTION_HUD_CONTRAST = 19
+        const val ACTION_REPORT_PRESET = 20
     }
 
 
@@ -173,6 +176,48 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var integrityButton: Button
     private lateinit var capabilitiesButton: Button
     private lateinit var cleanModeButton: Button
+    private lateinit var hudSizeButton: Button
+    private lateinit var hudContrastButton: Button
+    private lateinit var reportPresetButton: Button
+    private lateinit var reportDisplayRow: LinearLayout
+    private lateinit var reportOutputRow: LinearLayout
+
+    private val reportPresetLabels =
+        arrayOf(
+            "CUSTOM",
+            "FIELD",
+            "OUTDOOR",
+            "NIGHT",
+            "INTERVIEW",
+            "CINEMA"
+        )
+
+    private var reportPresetIndex = 0
+
+    private val reportHudLabels =
+        arrayOf(
+            "COMPACT",
+            "STANDARD",
+            "LARGE"
+        )
+
+    private val reportHudScales =
+        floatArrayOf(
+            0.94f,
+            1.00f,
+            1.06f
+        )
+
+    private var reportHudSizeIndex = 1
+
+    private val reportHudContrastLabels =
+        arrayOf(
+            "SOFT",
+            "BALANCED",
+            "STRONG"
+        )
+
+    private var reportHudContrastIndex = 1
 
     private var halfPreviewMode = false
     private var detailedSettingsVisible = false
@@ -391,6 +436,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         loadReporterIdentity()
+        loadReportCameraPreferences()
         reportId = newReportId()
 
         reportDisplayMode =
@@ -466,7 +512,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "develop.uganda",
                 13.8f,
-                0xFFFFC21A.toInt(),
+                0xFFC7A64A.toInt(),
                 bold = true
             )
 
@@ -517,7 +563,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.8f,
-                0xFFFFC21A.toInt(),
+                0xFFC7A64A.toInt(),
                 bold = true
             )
 
@@ -534,7 +580,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.6f,
-                0xFF7FE8FF.toInt()
+                0xFF6EA9B5.toInt()
            ,
                 bold = true
             )
@@ -543,7 +589,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.6f,
-                0xFF7FE8FF.toInt()
+                0xFF6EA9B5.toInt()
            ,
                 bold = true
             )
@@ -552,7 +598,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.4f,
-                0xFF76E39A.toInt()
+                0xFF6F9C7C.toInt()
            ,
                 bold = true
             )
@@ -561,7 +607,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             hud(
                 "",
                 5.7f,
-                0xFF76E39A.toInt(),
+                0xFF6F9C7C.toInt(),
                 bold = true
             )
 
@@ -628,7 +674,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         brandView = hud(
             "develop.uganda",
             10f,
-            0xFFFFC21A.toInt(),
+            0xFFC7A64A.toInt(),
             bold = true
         )
         statusView = hud(
@@ -645,12 +691,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         formatView = hud(
             "SOCIAL FHD • DEVICE FPS",
             7f,
-            0xFFFFC21A.toInt()
+            0xFFC7A64A.toInt()
         )
         locationView = hud(
             "GPS acquiring…",
             6f,
-            0xFF7FE8FF.toInt()
+            0xFF6EA9B5.toInt()
         )
         weatherView = hud(
             "WX --",
@@ -660,7 +706,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         systemView = hud(
             "MIC READY • NET -- • BAT -- • FREE --",
             6f,
-            0xFF76E39A.toInt()
+            0xFF6F9C7C.toInt()
         )
 
         // ORBIT DECK: a custom floating control system. No large black panel.
@@ -681,11 +727,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         sceneButton = deckButton(
             "SCENE ▾\n${sceneModes[sceneIndex]}",
-            0xFFFFC21A.toInt()
+            0xFFC7A64A.toInt()
         )
         lookButton = deckButton(
             "LOOK ▾\n${lookModes[lookIndex]}",
-            0xFF7FE8FF.toInt()
+            0xFF6EA9B5.toInt()
         )
         qualityButton = deckButton(
             "FORMAT ▾\n${qualityDeckLabel()}",
@@ -693,7 +739,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
         captureModeButton = deckButton(
             "CAPTURE ▾\n${captureModes[captureModeIndex]}",
-            0xFF76E39A.toInt()
+            0xFF6F9C7C.toInt()
         )
 
         listOf(
@@ -729,7 +775,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
         identityButton = deckButton(
             identityButtonText(),
-            0xFFFFC21A.toInt()
+            0xFFC7A64A.toInt()
         )
         identityRow.addView(
             identityButton,
@@ -749,22 +795,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         viewModeButton = deckButton(
             "VIEW ▾\nFULL",
-            0xFF76E39A.toInt()
+            0xFF6F9C7C.toInt()
         )
 
         settingsButton = deckButton(
             "SETTINGS\nREPORT",
-            0xFF7FE8FF.toInt()
+            0xFF6EA9B5.toInt()
         )
 
         guidesButton = deckButton(
             "GUIDES ▾\nON",
-            0xFFFFC21A.toInt()
+            0xFFC7A64A.toInt()
         )
 
         resetButton = deckButton(
             "RESET\nCAM",
-            0xFFFF8A84.toInt()
+            0xFFB66B67.toInt()
         )
 
         listOf(
@@ -799,7 +845,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         autoUiButton =
             deckButton(
                 "AUTO UI ▾\nON",
-                0xFF76E39A.toInt()
+                0xFF6F9C7C.toInt()
             ).apply {
                 isSelected = true
             }
@@ -807,13 +853,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         lockButton =
             deckButton(
                 "LOCK ▾\nOFF",
-                0xFFFFC21A.toInt()
+                0xFFC7A64A.toInt()
             )
 
         integrityButton =
             deckButton(
                 "VERIFY ▾\nSHA-256",
-                0xFF7FE8FF.toInt()
+                0xFF6EA9B5.toInt()
             ).apply {
                 isSelected = true
             }
@@ -827,26 +873,24 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         cleanModeButton =
             deckButton(
                 "CLEAN ▾\nOFF",
-                0xFF76E39A.toInt()
+                0xFF6F9C7C.toInt()
             )
 
         listOf(
             autoUiButton,
             lockButton,
-            integrityButton,
-            capabilitiesButton,
             cleanModeButton
         ).forEachIndexed { index, button ->
             reportAdvancedRow.addView(
                 button,
                 LinearLayout.LayoutParams(
                     0,
-                    dp(31),
+                    dp(34),
                     1f
                 ).apply {
                     if (index > 0) {
                         marginStart =
-                            dp(4)
+                            dp(7)
                     }
                 }
             )
@@ -854,6 +898,109 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         bottomDeck.addView(
             reportAdvancedRow
+        )
+
+        reportDisplayRow =
+            row().apply {
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    0,
+                    dp(4),
+                    0,
+                    0
+                )
+            }
+
+        hudSizeButton =
+            deckButton(
+                "HUD SIZE ▾\n${reportHudLabels[reportHudSizeIndex]}",
+                0xFF6D88A4.toInt()
+            ).apply {
+                isSelected =
+                    true
+            }
+
+        listOf(
+            integrityButton,
+            capabilitiesButton,
+            hudSizeButton
+        ).forEachIndexed { index, button ->
+            reportDisplayRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(34),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart =
+                            dp(7)
+                    }
+                }
+            )
+        }
+
+        bottomDeck.addView(
+            reportDisplayRow
+        )
+
+        reportOutputRow =
+            row().apply {
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    0,
+                    dp(4),
+                    0,
+                    0
+                )
+            }
+
+        hudContrastButton =
+            deckButton(
+                "HUD CONTRAST ▾\n${reportHudContrastLabels[reportHudContrastIndex]}",
+                0xFF83799A.toInt()
+            ).apply {
+                isSelected =
+                    true
+            }
+
+        reportPresetButton =
+            deckButton(
+                "PRESET ▾\n${reportPresetLabels[reportPresetIndex]}",
+                0xFF8B9499.toInt()
+            ).apply {
+                isSelected =
+                    reportPresetIndex !=
+                        0
+            }
+
+        reportOutputRow.addView(
+            hudContrastButton,
+            LinearLayout.LayoutParams(
+                0,
+                dp(34),
+                1f
+            )
+        )
+
+        reportOutputRow.addView(
+            reportPresetButton,
+            LinearLayout.LayoutParams(
+                0,
+                dp(34),
+                1f
+            ).apply {
+                marginStart =
+                    dp(7)
+            }
+        )
+
+        bottomDeck.addView(
+            reportOutputRow
         )
 
         settingsSummaryView = hud(
@@ -939,7 +1086,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         lensButton = deckButton(
             "LENS ▾\nBACK",
-            0xFF7FE8FF.toInt()
+            0xFF6EA9B5.toInt()
         )
         torchButton = deckButton(
             "LIGHT ▾\nOFF",
@@ -1064,6 +1211,18 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         cleanModeButton.setOnTouchListener(
             DeckTouchListener(ACTION_CLEAN)
+        )
+
+        hudSizeButton.setOnTouchListener(
+            DeckTouchListener(ACTION_HUD_SIZE)
+        )
+
+        hudContrastButton.setOnTouchListener(
+            DeckTouchListener(ACTION_HUD_CONTRAST)
+        )
+
+        reportPresetButton.setOnTouchListener(
+            DeckTouchListener(ACTION_REPORT_PRESET)
         )
 
         lensButton.setOnTouchListener(
@@ -1454,6 +1613,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     "OFF"
                 }
 
+        saveReportCameraPreferences()
+
         toast(
             if (previewGuidesEnabled) {
                 "Preview guides on"
@@ -1594,6 +1755,25 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     "OFF"
                 }
             )
+            append(" • HUD ")
+            append(
+                reportHudLabels[
+                    reportHudSizeIndex
+                ]
+            )
+            append(" / ")
+            append(
+                reportHudContrastLabels[
+                    reportHudContrastIndex
+                ]
+            )
+            append(" • PRESET ")
+            append(
+                reportPresetLabels[
+                    reportPresetIndex
+                ]
+            )
+            append(" • SETTINGS MEMORY ON")
             append(" • SWIPE ZOOM/EXP • DOUBLE TAP LENS")
             append(" • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
             append("\n")
@@ -1641,6 +1821,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             showReportOperatorControlsTemporarily()
         }
 
+        saveReportCameraPreferences()
         refreshReportSettingsSummary()
     }
 
@@ -1690,6 +1871,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         integrityButton.isSelected =
             integrityEnabled
 
+        saveReportCameraPreferences()
         refreshReportSettingsSummary()
     }
 
@@ -1711,6 +1893,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             identityRow,
             reportToolsRow,
             reportAdvancedRow,
+            reportDisplayRow,
+            reportOutputRow,
             zoomRow,
             exposureRow
         ).forEach {
@@ -2119,6 +2303,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             resources.configuration
                 .screenWidthDp
 
+        val scale =
+            reportHudScales[
+                reportHudSizeIndex
+            ]
+
         val brandSize =
             when {
                 widthDp <= 360 ->
@@ -2129,7 +2318,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 else ->
                     13.8f
-            }
+            } *
+                scale
 
         val rowSize =
             when {
@@ -2141,7 +2331,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 else ->
                     6.1f
-            }
+            } *
+                scale
 
         previewBrandView.textSize =
             brandSize
@@ -2188,6 +2379,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 identityRow,
                 reportToolsRow,
                 reportAdvancedRow,
+                reportDisplayRow,
+                reportOutputRow,
                 zoomRow,
                 exposureRow
             ).forEach {
@@ -2361,10 +2554,202 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 text.contains(
                     "CHECK"
                 ) ->
-                0xFFFFC21A.toInt()
+                0xFFC7A64A.toInt()
 
             else ->
-                0xFF76E39A.toInt()
+                0xFF6F9C7C.toInt()
+        }
+    }
+
+    private fun loadReportCameraPreferences() {
+        val prefs =
+            getSharedPreferences(
+                "develop_uganda_report_camera",
+                Context.MODE_PRIVATE
+            )
+
+        sceneIndex =
+            prefs.getInt(
+                "scene_index",
+                sceneIndex
+            )
+                .coerceIn(
+                    0,
+                    sceneModes.lastIndex
+                )
+
+        lookIndex =
+            prefs.getInt(
+                "look_index",
+                lookIndex
+            )
+                .coerceIn(
+                    0,
+                    lookModes.lastIndex
+                )
+
+        qualityIndex =
+            prefs.getInt(
+                "quality_index",
+                qualityIndex
+            )
+                .coerceIn(
+                    0,
+                    qualityModes.lastIndex
+                )
+
+        captureModeIndex =
+            prefs.getInt(
+                "capture_index",
+                captureModeIndex
+            )
+                .coerceIn(
+                    0,
+                    captureModes.lastIndex
+                )
+
+        reportHudSizeIndex =
+            prefs.getInt(
+                "hud_size",
+                reportHudSizeIndex
+            )
+                .coerceIn(
+                    0,
+                    reportHudLabels.lastIndex
+                )
+
+        reportHudContrastIndex =
+            prefs.getInt(
+                "hud_contrast",
+                reportHudContrastIndex
+            )
+                .coerceIn(
+                    0,
+                    reportHudContrastLabels.lastIndex
+                )
+
+        reportPresetIndex =
+            prefs.getInt(
+                "preset_index",
+                reportPresetIndex
+            )
+                .coerceIn(
+                    0,
+                    reportPresetLabels.lastIndex
+                )
+
+        previewGuidesEnabled =
+            prefs.getBoolean(
+                "guides",
+                previewGuidesEnabled
+            )
+
+        autoHideOperatorUi =
+            prefs.getBoolean(
+                "auto_ui",
+                autoHideOperatorUi
+            )
+
+        integrityEnabled =
+            prefs.getBoolean(
+                "integrity",
+                integrityEnabled
+            )
+    }
+
+    private fun saveReportCameraPreferences() {
+        getSharedPreferences(
+            "develop_uganda_report_camera",
+            Context.MODE_PRIVATE
+        )
+            .edit()
+            .putInt(
+                "scene_index",
+                sceneIndex
+            )
+            .putInt(
+                "look_index",
+                lookIndex
+            )
+            .putInt(
+                "quality_index",
+                qualityIndex
+            )
+            .putInt(
+                "capture_index",
+                captureModeIndex
+            )
+            .putInt(
+                "hud_size",
+                reportHudSizeIndex
+            )
+            .putInt(
+                "hud_contrast",
+                reportHudContrastIndex
+            )
+            .putInt(
+                "preset_index",
+                reportPresetIndex
+            )
+            .putBoolean(
+                "guides",
+                previewGuidesEnabled
+            )
+            .putBoolean(
+                "auto_ui",
+                autoHideOperatorUi
+            )
+            .putBoolean(
+                "integrity",
+                integrityEnabled
+            )
+            .apply()
+    }
+
+    private fun reportHudOutlineScale(): Float {
+        return when (
+            reportHudContrastIndex
+        ) {
+            0 ->
+                0.045f
+
+            2 ->
+                0.080f
+
+            else ->
+                0.060f
+        }
+    }
+
+    private fun reportHudOutlineColor(): Int {
+        return when (
+            reportHudContrastIndex
+        ) {
+            0 ->
+                0x50000000
+
+            2 ->
+                0x90000000.toInt()
+
+            else ->
+                0x70000000
+        }
+    }
+
+    private fun reportHudShadowRadius(
+        u: Float
+    ): Float {
+        return when (
+            reportHudContrastIndex
+        ) {
+            0 ->
+                1.2f * u
+
+            2 ->
+                2.8f * u
+
+            else ->
+                2.0f * u
         }
     }
 
@@ -2715,10 +3100,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             finalHeight
         )
 
-        val u = minOf(
-            finalWidth,
-            finalHeight
-        ) / 1000f
+        val u =
+            minOf(
+                finalWidth,
+                finalHeight
+            ) /
+                1000f *
+                reportHudScales[
+                    reportHudSizeIndex
+                ]
 
         // V177 social-safe broadcast HUD:
         // all telemetry is retained, but reorganized into deliberate rows.
@@ -2749,10 +3139,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             )
 
             setShadowLayer(
-                4.8f * u,
-                1.0f * u,
-                1.0f * u,
-                0xFF000000.toInt()
+                reportHudShadowRadius(
+                    u
+                ),
+                0.6f * u,
+                0.6f * u,
+                reportHudOutlineColor()
             )
         }
 
@@ -2764,7 +3156,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 if (recording != null) {
                     0xFFFF4138.toInt()
                 } else {
-                    0xFFFFC21A.toInt()
+                    0xFFC7A64A.toInt()
                 }
             strokeWidth = 3.2f * u
         }
@@ -2783,7 +3175,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.BOLD
         )
         text.color =
-            0xFFFFC21A.toInt()
+            0xFFC7A64A.toInt()
         text.textSize =
             35f * u
 
@@ -2957,7 +3349,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // 4. Editorial / camera identity.
         y += 16f * u
         text.color =
-            0xFFFFC21A.toInt()
+            0xFFC7A64A.toInt()
         text.textSize =
             12.2f * u
 
@@ -2993,7 +3385,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // 6. Live changing coordinates.
         y += 16f * u
         text.color =
-            0xFF7FE8FF.toInt()
+            0xFF6EA9B5.toInt()
         text.textSize =
             11.5f * u
 
@@ -3010,7 +3402,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // 7. GPS altitude / accuracy / satellites / fix age.
         y += 15f * u
         text.color =
-            0xFF7FE8FF.toInt()
+            0xFF6EA9B5.toInt()
         text.textSize =
             11.6f * u
 
@@ -3027,7 +3419,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // 8. Compass / GPS bearing / speed / motion / distance.
         y += 15f * u
         text.color =
-            0xFF7FE8FF.toInt()
+            0xFF6EA9B5.toInt()
         text.textSize =
             11.5f * u
 
@@ -3078,7 +3470,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // 11. Real recording audio amplitude + network / battery / storage.
         y += 15f * u
         text.color =
-            0xFF76E39A.toInt()
+            0xFF6F9C7C.toInt()
         text.textSize =
             11.5f * u
 
@@ -3099,7 +3491,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.BOLD
         )
         text.color =
-            0xFFFFC21A.toInt()
+            0xFFC7A64A.toInt()
         text.textSize =
             10.2f * u
 
@@ -3158,10 +3550,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         paint.strokeWidth =
             paint.textSize *
-                0.15f
+                reportHudOutlineScale()
 
         paint.color =
-            0xFA000000.toInt()
+            reportHudOutlineColor()
 
         canvas.drawText(
             value,
@@ -3198,10 +3590,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 0xFFFF5A52.toInt()
 
             acc <= 8f ->
-                0xFF76E39A.toInt()
+                0xFF6F9C7C.toInt()
 
             acc <= 25f ->
-                0xFFFFC21A.toInt()
+                0xFFC7A64A.toInt()
 
             else ->
                 0xFFFF6B57.toInt()
@@ -3227,10 +3619,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 strokeWidth =
                     2.0f * u
                 setShadowLayer(
-                    2.0f * u,
-                    0.6f * u,
-                    0.6f * u,
-                    0xCC000000.toInt()
+                    1.3f * u,
+                    0.4f * u,
+                    0.4f * u,
+                    0x88000000.toInt()
                 )
             }
 
@@ -3273,7 +3665,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val valuePaint =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFF7FE8FF.toInt()
+                    0xFF6EA9B5.toInt()
                 typeface = Typeface.create(
                     Typeface.MONOSPACE,
                     Typeface.BOLD
@@ -3400,7 +3792,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val pointer =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFFFFC21A.toInt()
+                    0xFFC7A64A.toInt()
                 style =
                     Paint.Style.FILL
             }
@@ -3523,10 +3915,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     0xFFFF4138.toInt()
 
                 level >= 0.72f ->
-                    0xFFFFC21A.toInt()
+                    0xFFC7A64A.toInt()
 
                 else ->
-                    0xFF76E39A.toInt()
+                    0xFF6F9C7C.toInt()
             }
 
         val fill =
@@ -3601,10 +3993,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     0xFFFF5A52.toInt()
 
                 kotlin.math.abs(roll) <= 1f ->
-                    0xFF76E39A.toInt()
+                    0xFF6F9C7C.toInt()
 
                 kotlin.math.abs(roll) <= 3f ->
-                    0xFFFFC21A.toInt()
+                    0xFFC7A64A.toInt()
 
                 else ->
                     0xFFFF6B57.toInt()
@@ -4489,10 +4881,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         paint.strokeWidth =
             paint.textSize *
-                0.16f
+                reportHudOutlineScale()
 
         paint.color =
-            0xFA000000.toInt()
+            reportHudOutlineColor()
 
         canvas.drawText(
             textToDraw,
@@ -4676,7 +5068,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     } else {
                         statusView.text = "SAVED"
                         statusView.setTextColor(
-                            0xFF76E39A.toInt()
+                            0xFF6F9C7C.toInt()
                         )
                         telemetryRecorder.exportSidecar(
                             baseName
@@ -4777,7 +5169,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 ) {
                     statusView.text = "PHOTO SAVED"
                     statusView.setTextColor(
-                        0xFF76E39A.toInt()
+                        0xFF6F9C7C.toInt()
                     )
                     toast(
                         "Photo saved • develop.uganda"
@@ -4812,21 +5204,21 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val values =
             listOf(
                 sceneButton to
-                    0xFFFFC21A.toInt(),
+                    0xFFC7A64A.toInt(),
                 lookButton to
-                    0xFF7FE8FF.toInt(),
+                    0xFF6EA9B5.toInt(),
                 qualityButton to
                     0xFFE8F1F2.toInt(),
                 captureModeButton to
-                    0xFF76E39A.toInt(),
+                    0xFF6F9C7C.toInt(),
                 viewModeButton to
-                    0xFF76E39A.toInt(),
+                    0xFF6F9C7C.toInt(),
                 settingsButton to
-                    0xFF7FE8FF.toInt(),
+                    0xFF6EA9B5.toInt(),
                 guidesButton to
-                    0xFFFFC21A.toInt(),
+                    0xFFC7A64A.toInt(),
                 resetButton to
-                    0xFFFF8A84.toInt()
+                    0xFFB66B67.toInt()
             )
 
         values.forEach {
@@ -5631,6 +6023,21 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                                 v ?: cleanModeButton
                             )
 
+                        ACTION_HUD_SIZE ->
+                            showReportHudSizeDropdown(
+                                v ?: hudSizeButton
+                            )
+
+                        ACTION_HUD_CONTRAST ->
+                            showReportHudContrastDropdown(
+                                v ?: hudContrastButton
+                            )
+
+                        ACTION_REPORT_PRESET ->
+                            showReportPresetDropdown(
+                                v ?: reportPresetButton
+                            )
+
                         ACTION_LENS ->
                             showReportLensDropdown(
                                 v ?: lensButton
@@ -5709,10 +6116,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             )
 
             setShadowLayer(
-                4f,
-                1f,
-                1f,
-                0xFF000000.toInt()
+                2.0f,
+                0.7f,
+                0.7f,
+                0xA6000000.toInt()
             )
 
             setPadding(
@@ -5820,16 +6227,18 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private fun reportOptionAccent(
         index: Int
     ): Int {
+        // V193: same family as the Home/Control Room, but deliberately
+        // softened so the camera deck does not look neon.
         val colors =
             intArrayOf(
-                0xFFFFC21A.toInt(), // gold
-                0xFF4EA7FF.toInt(), // blue
-                0xFF62E889.toInt(), // green
-                0xFFFF5AA5.toInt(), // pink
-                0xFF8F7CFF.toInt(), // purple
-                0xFF00C9B7.toInt(), // teal
-                0xFFFF8A3D.toInt(), // orange
-                0xFFB7C1C8.toInt()  // silver
+                0xFFC7A64A.toInt(), // muted gold
+                0xFF6D88A4.toInt(), // slate blue
+                0xFF6F9C7C.toInt(), // muted green
+                0xFFA77B92.toInt(), // muted pink
+                0xFF83799A.toInt(), // muted violet
+                0xFF6EA9A4.toInt(), // muted teal
+                0xFFB17E58.toInt(), // muted amber
+                0xFF8B9499.toInt()  // soft silver
             )
 
         return colors[
@@ -6024,7 +6433,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             sceneIndex =
                 picked
 
+            markReportPresetCustom()
             applyScenePreset()
+            saveReportCameraPreferences()
             refreshHud()
         }
     }
@@ -6040,6 +6451,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         ) { picked ->
             lookIndex =
                 picked
+            markReportPresetCustom()
+            saveReportCameraPreferences()
             refreshHud()
         }
     }
@@ -6062,6 +6475,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         ) { picked ->
             qualityIndex =
                 picked
+            markReportPresetCustom()
+            saveReportCameraPreferences()
             refreshHud()
             bindCamera()
         }
@@ -6085,6 +6500,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         ) { picked ->
             captureModeIndex =
                 picked
+            markReportPresetCustom()
+            saveReportCameraPreferences()
             refreshHud()
             bindCamera()
         }
@@ -6254,6 +6671,404 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun showReportHudSizeDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "RECORDED HUD SIZE",
+            reportHudLabels,
+            reportHudSizeIndex
+        ) { picked ->
+            reportHudSizeIndex =
+                picked
+
+            markReportPresetCustom()
+
+            hudSizeButton.text =
+                "HUD SIZE ▾\n${reportHudLabels[reportHudSizeIndex]}"
+
+            hudSizeButton.isSelected =
+                true
+
+            applyAdaptiveReportPreviewTypography()
+            saveReportCameraPreferences()
+            refreshHud()
+
+            toast(
+                "HUD ${reportHudLabels[reportHudSizeIndex]}"
+            )
+        }
+    }
+
+    private fun markReportPresetCustom() {
+        if (
+            reportPresetIndex !=
+            0
+        ) {
+            reportPresetIndex =
+                0
+
+            if (
+                ::reportPresetButton.isInitialized
+            ) {
+                reportPresetButton.text =
+                    "PRESET ▾\nCUSTOM"
+
+                reportPresetButton.isSelected =
+                    false
+            }
+        }
+    }
+
+    private fun reportIndexOf(
+        values: List<String>,
+        wanted: String,
+        fallback: Int = 0
+    ): Int {
+        val index =
+            values.indexOf(
+                wanted
+            )
+
+        return if (
+            index >=
+            0
+        ) {
+            index
+        } else {
+            fallback.coerceIn(
+                0,
+                values.lastIndex
+            )
+        }
+    }
+
+    private fun applyReportPreset(
+        picked: Int
+    ) {
+        reportPresetIndex =
+            picked.coerceIn(
+                0,
+                reportPresetLabels.lastIndex
+            )
+
+        when (
+            reportPresetLabels[
+                reportPresetIndex
+            ]
+        ) {
+            "FIELD" -> {
+                sceneIndex =
+                    reportIndexOf(
+                        sceneModes,
+                        "REPORTER"
+                    )
+
+                lookIndex =
+                    reportIndexOf(
+                        lookModes,
+                        "CLEAN"
+                    )
+
+                qualityIndex =
+                    reportIndexOf(
+                        qualityModes,
+                        "SOCIAL FHD"
+                    )
+
+                captureModeIndex =
+                    reportIndexOf(
+                        captureModes,
+                        "VIDEO"
+                    )
+
+                reportHudSizeIndex =
+                    1
+
+                reportHudContrastIndex =
+                    1
+
+                previewGuidesEnabled =
+                    true
+
+                integrityEnabled =
+                    true
+            }
+
+            "OUTDOOR" -> {
+                sceneIndex =
+                    reportIndexOf(
+                        sceneModes,
+                        "OUTDOOR"
+                    )
+
+                lookIndex =
+                    reportIndexOf(
+                        lookModes,
+                        "NATURAL"
+                    )
+
+                qualityIndex =
+                    reportIndexOf(
+                        qualityModes,
+                        "SOCIAL FHD"
+                    )
+
+                captureModeIndex =
+                    reportIndexOf(
+                        captureModes,
+                        "VIDEO"
+                    )
+
+                reportHudSizeIndex =
+                    1
+
+                reportHudContrastIndex =
+                    2
+
+                previewGuidesEnabled =
+                    true
+
+                integrityEnabled =
+                    true
+            }
+
+            "NIGHT" -> {
+                sceneIndex =
+                    reportIndexOf(
+                        sceneModes,
+                        "NIGHT"
+                    )
+
+                lookIndex =
+                    reportIndexOf(
+                        lookModes,
+                        "NIGHT"
+                    )
+
+                qualityIndex =
+                    reportIndexOf(
+                        qualityModes,
+                        "SOCIAL FHD"
+                    )
+
+                captureModeIndex =
+                    reportIndexOf(
+                        captureModes,
+                        "VIDEO"
+                    )
+
+                reportHudSizeIndex =
+                    1
+
+                reportHudContrastIndex =
+                    2
+
+                previewGuidesEnabled =
+                    true
+
+                integrityEnabled =
+                    true
+            }
+
+            "INTERVIEW" -> {
+                sceneIndex =
+                    reportIndexOf(
+                        sceneModes,
+                        "INTERVIEW"
+                    )
+
+                lookIndex =
+                    reportIndexOf(
+                        lookModes,
+                        "NATURAL"
+                    )
+
+                qualityIndex =
+                    reportIndexOf(
+                        qualityModes,
+                        "SOCIAL FHD"
+                    )
+
+                captureModeIndex =
+                    reportIndexOf(
+                        captureModes,
+                        "VIDEO"
+                    )
+
+                reportHudSizeIndex =
+                    0
+
+                reportHudContrastIndex =
+                    1
+
+                previewGuidesEnabled =
+                    true
+
+                integrityEnabled =
+                    true
+            }
+
+            "CINEMA" -> {
+                sceneIndex =
+                    reportIndexOf(
+                        sceneModes,
+                        "CINEMA"
+                    )
+
+                lookIndex =
+                    reportIndexOf(
+                        lookModes,
+                        "TEAL"
+                    )
+
+                qualityIndex =
+                    reportIndexOf(
+                        qualityModes,
+                        "MASTER UHD"
+                    )
+
+                captureModeIndex =
+                    reportIndexOf(
+                        captureModes,
+                        "VIDEO"
+                    )
+
+                reportHudSizeIndex =
+                    0
+
+                reportHudContrastIndex =
+                    0
+
+                previewGuidesEnabled =
+                    true
+
+                integrityEnabled =
+                    false
+            }
+
+            else -> {
+                // CUSTOM keeps the current manual values.
+            }
+        }
+
+        reportPresetButton.text =
+            "PRESET ▾\n${reportPresetLabels[reportPresetIndex]}"
+
+        reportPresetButton.isSelected =
+            reportPresetIndex !=
+                0
+
+        hudSizeButton.text =
+            "HUD SIZE ▾\n${reportHudLabels[reportHudSizeIndex]}"
+
+        hudContrastButton.text =
+            "HUD CONTRAST ▾\n${reportHudContrastLabels[reportHudContrastIndex]}"
+
+        guidesButton.text =
+            "GUIDES ▾\n" +
+                if (
+                    previewGuidesEnabled
+                ) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+
+        integrityButton.text =
+            "VERIFY ▾\n" +
+                if (
+                    integrityEnabled
+                ) {
+                    "SHA-256"
+                } else {
+                    "OFF"
+                }
+
+        sceneButton.text =
+            "SCENE ▾\n${sceneModes[sceneIndex]}"
+
+        lookButton.text =
+            "LOOK ▾\n${lookModes[lookIndex]}"
+
+        qualityButton.text =
+            "FORMAT ▾\n${qualityDeckLabel()}"
+
+        captureModeButton.text =
+            "CAPTURE ▾\n${captureModes[captureModeIndex]}"
+
+        applyScenePreset()
+        applyAdaptiveReportPreviewTypography()
+        saveReportCameraPreferences()
+        refreshHud()
+
+        if (
+            recording ==
+            null
+        ) {
+            bindCamera()
+        }
+
+        toast(
+            "Preset ${reportPresetLabels[reportPresetIndex]}"
+        )
+    }
+
+    private fun showReportPresetDropdown(
+        anchor: View
+    ) {
+        if (
+            recording !=
+            null
+        ) {
+            toast(
+                "Stop recording before changing preset"
+            )
+            return
+        }
+
+        showReportPillDropdown(
+            anchor,
+            "REPORT PRESET",
+            reportPresetLabels,
+            reportPresetIndex
+        ) { picked ->
+            applyReportPreset(
+                picked
+            )
+        }
+    }
+
+    private fun showReportHudContrastDropdown(
+        anchor: View
+    ) {
+        showReportPillDropdown(
+            anchor,
+            "RECORDED HUD CONTRAST",
+            reportHudContrastLabels,
+            reportHudContrastIndex
+        ) { picked ->
+            reportHudContrastIndex =
+                picked
+
+            markReportPresetCustom()
+
+            hudContrastButton.text =
+                "HUD CONTRAST ▾\n${reportHudContrastLabels[reportHudContrastIndex]}"
+
+            hudContrastButton.isSelected =
+                true
+
+            saveReportCameraPreferences()
+            refreshHud()
+
+            toast(
+                "HUD contrast ${reportHudContrastLabels[reportHudContrastIndex]}"
+            )
+        }
+    }
+
     private fun showReportLensDropdown(
         anchor: View
     ) {
@@ -6366,7 +7181,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                     setStroke(
                         dp(1),
-                        0xFFFF8A84.toInt()
+                        0xFFB66B67.toInt()
                     )
                 }
         }
@@ -6430,19 +7245,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    6.2f *
+                    3.8f *
                         density
 
                 color =
                     accent
-
-                setShadowLayer(
-                    5.5f *
-                        density,
-                    0f,
-                    0f,
-                    accent
-                )
             }
 
         private val idleFillPaint =
@@ -6453,7 +7260,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.FILL
 
                 color =
-                    0x72000000
+                    0x52000000
             }
 
         private val pressedFillPaint =
@@ -6465,7 +7272,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
                 color =
                     Color.argb(
-                        125,
+                        88,
                         Color.red(
                             accent
                         ),
@@ -6491,19 +7298,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                             Color.red(
                                 accent
                             ) *
-                                0.92f
+                                0.78f
                             ).roundToInt(),
                         (
                             Color.green(
                                 accent
                             ) *
-                                0.92f
+                                0.78f
                             ).roundToInt(),
                         (
                             Color.blue(
                                 accent
                             ) *
-                                0.92f
+                                0.78f
                             ).roundToInt()
                     )
             }
@@ -6516,18 +7323,23 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    7.0f *
+                    4.8f *
                         density
 
                 color =
                     accent
 
                 setShadowLayer(
-                    7f *
+                    3.0f *
                         density,
                     0f,
                     0f,
-                    accent
+                    Color.argb(
+                        120,
+                        Color.red(accent),
+                        Color.green(accent),
+                        Color.blue(accent)
+                    )
                 )
             }
 

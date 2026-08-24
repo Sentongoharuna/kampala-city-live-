@@ -26,14 +26,14 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
     private lateinit var contentHost: FrameLayout
 
-    private val gold = 0xFFFFC21A.toInt()
-    private val cyan = 0xFF77E9FF.toInt()
-    private val green = 0xFF62E889.toInt()
-    private val red = 0xFFFF3B32.toInt()
+    private val gold = 0xFFC7A64A.toInt()
+    private val cyan = 0xFF6EA9B5.toInt()
+    private val green = 0xFF6F9C7C.toInt()
+    private val red = 0xFFB85F59.toInt()
     private val white = Color.WHITE
     private val ink = 0xFF05090C.toInt()
-    private val card = 0xFF10171C.toInt()
-    private val muted = 0xFF9BABAF.toInt()
+    private val card = 0xFF11191E.toInt()
+    private val muted = 0xFFA7B2B6.toInt()
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "HIGH VISIBILITY BROADCAST • V192",
+                "PRESET RECALL PRO • V196",
                 9f,
                 white,
                 true
@@ -156,7 +156,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "REPORT",
+                "REPORT\nFIELD",
                 gold
             ) {
                 openReportCamera()
@@ -166,7 +166,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "LIVE",
+                "LIVE\nSTUDIO",
                 red
             ) {
                 showLivePage()
@@ -176,7 +176,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "EDIT",
+                "EDIT\nVIDEO",
                 cyan
             ) {
                 openEditor()
@@ -186,7 +186,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "DESK",
+                "DESK\nSTORY",
                 green
             ) {
                 showNewsroom()
@@ -216,16 +216,32 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "develop.uganda CONTROL ROOM",
-                "CAPTURE • VERIFY • EDIT • BROADCAST • PUBLISH"
+                "develop.uganda NEWSROOM PRO",
+                "REPORT • LIVE • EDIT • NEWSROOM"
             )
         )
 
         page.addView(
             compactStatus(
-                "SYSTEM READY",
-                "REPORT • LIVE • EDIT • NEWSROOM",
+                "READY TO REPORT",
+                "FIELD • LIVE • EDIT • STORY DESK",
                 green
+            )
+        )
+
+        page.addView(
+            compactStatus(
+                "CAMERA MEMORY",
+                "REPORT + LIVE remember your last HUD and key operating settings",
+                gold
+            )
+        )
+
+        page.addView(
+            compactStatus(
+                "QUICK PRESETS",
+                "REPORT: FIELD / OUTDOOR / NIGHT / INTERVIEW / CINEMA   •   LIVE: BREAKING / INTERVIEW / EVENT / COMMUNITY",
+                cyan
             )
         )
 
@@ -320,7 +336,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • high-contrast telemetry • bright ring deck • verification • navigation instruments at lower feed",
+                "FIELD REPORT • one-tap FIELD / OUTDOOR / NIGHT / INTERVIEW / CINEMA presets • HUD memory",
                 "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -332,7 +348,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • stronger ON AIR graphics • bright control rings • countdown • MARK • lower thirds",
+                "LIVE STUDIO • BREAKING / INTERVIEW / EVENT / COMMUNITY presets • ON AIR graphics • MARK",
                 "Signals • reporter identity • output setup • broadcast profiles • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"
@@ -369,6 +385,14 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             ) {
                 showNewsroom()
             }
+        )
+
+        page.addView(
+            compactStatus(
+                "REPORTING WORKFLOW",
+                "ASSIGN → CAPTURE → VERIFY → EDIT → SHARE",
+                cyan
+            )
         )
 
         page.addView(

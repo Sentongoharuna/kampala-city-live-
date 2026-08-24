@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 19200
-        versionName = "192.0-high-visibility-broadcast"
+        versionCode = 19600
+        versionName = "196.0-preset-recall-pro"
     }
 
     buildTypes {

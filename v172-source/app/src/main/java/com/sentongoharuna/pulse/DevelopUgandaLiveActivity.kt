@@ -91,7 +91,47 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var markButton: Button
     private lateinit var styleButton: Button
     private lateinit var liveLockButton: Button
+    private lateinit var liveHudSizeButton: Button
+    private lateinit var liveHudContrastButton: Button
+    private lateinit var livePresetButton: Button
+    private lateinit var liveSafeInfoButton: Button
     private lateinit var countdownView: TextView
+
+    private val liveHudLabels =
+        arrayOf(
+            "COMPACT",
+            "STANDARD",
+            "LARGE"
+        )
+
+    private val liveHudScales =
+        floatArrayOf(
+            0.94f,
+            1.00f,
+            1.06f
+        )
+
+    private var liveHudSizeIndex = 1
+
+    private val liveHudContrastLabels =
+        arrayOf(
+            "SOFT",
+            "BALANCED",
+            "STRONG"
+        )
+
+    private var liveHudContrastIndex = 1
+
+    private val livePresetLabels =
+        arrayOf(
+            "CUSTOM",
+            "BREAKING",
+            "INTERVIEW",
+            "EVENT",
+            "COMMUNITY"
+        )
+
+    private var livePresetIndex = 0
     private lateinit var recordButton: LiveRecordButtonView
 
     private lateinit var timerView: TextView
@@ -162,10 +202,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
         }
 
-    private val red = 0xFFFF3B32.toInt()
-    private val green = 0xFF62E889.toInt()
-    private val amber = 0xFFFFC21A.toInt()
-    private val cyan = 0xFF77E9FF.toInt()
+    private val red = 0xFFB85F59.toInt()
+    private val green = 0xFF6F9C7C.toInt()
+    private val amber = 0xFFC7A64A.toInt()
+    private val cyan = 0xFF6EA9B5.toInt()
     private val white = Color.WHITE
     private val panel = 0x280A0E11.toInt()
 
@@ -181,6 +221,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         loadLiveIdentity()
+        loadLiveCameraPreferences()
         buildLiveUi()
         requestNeededPermissions()
 
@@ -893,6 +934,91 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             row5
         )
 
+        val displayRow =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(5),
+                    0,
+                    0
+                )
+            }
+
+        liveHudSizeButton =
+            liveSettingButton(
+                "HUD SIZE ▾\n${liveHudLabels[liveHudSizeIndex]}",
+                0xFF6D88A4.toInt()
+            ) {
+                showLiveHudSizeDropdown(
+                    liveHudSizeButton
+                )
+            }.apply {
+                isSelected =
+                    true
+            }
+
+        liveSafeInfoButton =
+            liveSettingButton(
+                "OUTPUT\nSAFE",
+                0xFF8B9499.toInt()
+            ) {
+                showLiveSafeAreaInfo()
+            }
+
+        liveHudContrastButton =
+            liveSettingButton(
+                "HUD CONTRAST ▾\n${liveHudContrastLabels[liveHudContrastIndex]}",
+                0xFF83799A.toInt()
+            ) {
+                showLiveHudContrastDropdown(
+                    liveHudContrastButton
+                )
+            }.apply {
+                isSelected =
+                    true
+            }
+
+        livePresetButton =
+            liveSettingButton(
+                "PRESET ▾\n${livePresetLabels[livePresetIndex]}",
+                0xFF8B9499.toInt()
+            ) {
+                showLivePresetDropdown(
+                    livePresetButton
+                )
+            }.apply {
+                isSelected =
+                    livePresetIndex !=
+                        0
+            }
+
+        listOf(
+            liveHudSizeButton,
+            liveHudContrastButton,
+            livePresetButton
+        ).forEachIndexed { index, button ->
+            displayRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(40),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart =
+                            dp(6)
+                    }
+                }
+            )
+        }
+
+        liveDeck.addView(
+            displayRow
+        )
+
         val recordArea =
             FrameLayout(this).apply {
                 setPadding(
@@ -1215,6 +1341,32 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     }
                 )
                 append("\n")
+
+                append("HUD SIZE: ")
+                append(
+                    liveHudLabels[
+                        liveHudSizeIndex
+                    ]
+                )
+                append("\n")
+
+                append("HUD CONTRAST: ")
+                append(
+                    liveHudContrastLabels[
+                        liveHudContrastIndex
+                    ]
+                )
+                append("\n")
+
+                append("PRESET: ")
+                append(
+                    livePresetLabels[
+                        livePresetIndex
+                    ]
+                )
+                append("\n")
+
+                append("SETTINGS MEMORY: ON\n")
 
                 append("LOWER STYLE: ")
                 append(
@@ -1592,7 +1744,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 finalWidth,
                 finalHeight
             ) /
-                1000f
+                1000f *
+                liveHudScales[
+                    liveHudSizeIndex
+                ]
 
         // V186: conservative social-safe margins. V184/V185 used 8% and
         // the CameraX crop could place the left side outside the saved MP4.
@@ -1619,10 +1774,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     )
 
                 setShadowLayer(
-                    5.0f * u,
-                    1.0f * u,
-                    1.0f * u,
-                    0xFF000000.toInt()
+                    liveHudShadowRadius(
+                        u
+                    ),
+                    0.6f * u,
+                    0.6f * u,
+                    liveHudOutlineColor()
                 )
             }
 
@@ -1803,10 +1960,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             0x8205080A.toInt()
 
                         "CLEAN" ->
-                            0xA505080A.toInt()
+                            0x8F05080A.toInt()
 
                         else ->
-                            0x9A05080A.toInt()
+                            0x8405080A.toInt()
                     }
 
                 style =
@@ -1936,10 +2093,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         paint.strokeWidth =
             paint.textSize *
-                0.15f
+                liveHudOutlineScale()
 
         paint.color =
-            0xFA000000.toInt()
+            liveHudOutlineColor()
 
         canvas.drawText(
             value,
@@ -2012,10 +2169,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         paint.strokeWidth =
             paint.textSize *
-                0.16f
+                liveHudOutlineScale()
 
         paint.color =
-            0xFA000000.toInt()
+            liveHudOutlineColor()
 
         canvas.drawText(
             value,
@@ -3048,11 +3205,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 red,
                 cyan,
                 green,
-                0xFFFF5AA5.toInt(),
+                0xFFA77B92.toInt(),
                 amber,
-                0xFF8F7CFF.toInt(),
-                0xFF4EA7FF.toInt(),
-                0xFFB7C1C8.toInt()
+                0xFF83799A.toInt(),
+                0xFF6D88A4.toInt(),
+                0xFF8B9499.toInt()
             )
 
         return palette[
@@ -3224,11 +3381,15 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             profileIndex =
                 picked
 
+            markLivePresetCustom()
+
             profileButton.text =
                 "PROFILE ▾\n${profiles[profileIndex]}"
 
             liveSubTitle.text =
                 "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+
+            saveLiveCameraPreferences()
         }
     }
 
@@ -3288,6 +3449,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked ==
                     0
 
+            markLivePresetCustom()
+
             audioButton.text =
                 "AUDIO ▾\n" +
                     if (audioEnabled) {
@@ -3295,6 +3458,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     } else {
                         "OFF"
                     }
+
+            saveLiveCameraPreferences()
         }
     }
 
@@ -3314,6 +3479,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked ==
                     0
 
+            markLivePresetCustom()
+
             graphicsButton.text =
                 "GRAPHICS ▾\n" +
                     if (graphicsEnabled) {
@@ -3321,6 +3488,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     } else {
                         "OFF"
                     }
+
+            saveLiveCameraPreferences()
         }
     }
 
@@ -3439,6 +3608,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked ==
                     0
 
+            markLivePresetCustom()
+
             countdownButton.text =
                 "COUNTDOWN ▾\n" +
                     if (countdownEnabled) {
@@ -3449,6 +3620,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
             countdownButton.isSelected =
                 countdownEnabled
+
+            saveLiveCameraPreferences()
         }
     }
 
@@ -3471,9 +3644,513 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             lowerThirdStyleIndex =
                 picked
 
+            markLivePresetCustom()
+
             styleButton.text =
                 "LOWER STYLE ▾\n${lowerThirdStyles[lowerThirdStyleIndex]}"
+
+            saveLiveCameraPreferences()
         }
+    }
+
+    private fun loadLiveCameraPreferences() {
+        val prefs =
+            getSharedPreferences(
+                "develop_uganda_live_camera",
+                Context.MODE_PRIVATE
+            )
+
+        profileIndex =
+            prefs.getInt(
+                "profile_index",
+                profileIndex
+            )
+                .coerceIn(
+                    0,
+                    profiles.lastIndex
+                )
+
+        lowerThirdStyleIndex =
+            prefs.getInt(
+                "lower_style",
+                lowerThirdStyleIndex
+            )
+                .coerceIn(
+                    0,
+                    lowerThirdStyles.lastIndex
+                )
+
+        liveHudSizeIndex =
+            prefs.getInt(
+                "hud_size",
+                liveHudSizeIndex
+            )
+                .coerceIn(
+                    0,
+                    liveHudLabels.lastIndex
+                )
+
+        liveHudContrastIndex =
+            prefs.getInt(
+                "hud_contrast",
+                liveHudContrastIndex
+            )
+                .coerceIn(
+                    0,
+                    liveHudContrastLabels.lastIndex
+                )
+
+        livePresetIndex =
+            prefs.getInt(
+                "preset_index",
+                livePresetIndex
+            )
+                .coerceIn(
+                    0,
+                    livePresetLabels.lastIndex
+                )
+
+        audioEnabled =
+            prefs.getBoolean(
+                "audio",
+                audioEnabled
+            )
+
+        graphicsEnabled =
+            prefs.getBoolean(
+                "graphics",
+                graphicsEnabled
+            )
+
+        countdownEnabled =
+            prefs.getBoolean(
+                "countdown",
+                countdownEnabled
+            )
+    }
+
+    private fun saveLiveCameraPreferences() {
+        getSharedPreferences(
+            "develop_uganda_live_camera",
+            Context.MODE_PRIVATE
+        )
+            .edit()
+            .putInt(
+                "profile_index",
+                profileIndex
+            )
+            .putInt(
+                "lower_style",
+                lowerThirdStyleIndex
+            )
+            .putInt(
+                "hud_size",
+                liveHudSizeIndex
+            )
+            .putInt(
+                "hud_contrast",
+                liveHudContrastIndex
+            )
+            .putInt(
+                "preset_index",
+                livePresetIndex
+            )
+            .putBoolean(
+                "audio",
+                audioEnabled
+            )
+            .putBoolean(
+                "graphics",
+                graphicsEnabled
+            )
+            .putBoolean(
+                "countdown",
+                countdownEnabled
+            )
+            .apply()
+    }
+
+    private fun liveHudOutlineScale(): Float {
+        return when (
+            liveHudContrastIndex
+        ) {
+            0 ->
+                0.045f
+
+            2 ->
+                0.080f
+
+            else ->
+                0.060f
+        }
+    }
+
+    private fun liveHudOutlineColor(): Int {
+        return when (
+            liveHudContrastIndex
+        ) {
+            0 ->
+                0x50000000
+
+            2 ->
+                0x90000000.toInt()
+
+            else ->
+                0x70000000
+        }
+    }
+
+    private fun liveHudShadowRadius(
+        u: Float
+    ): Float {
+        return when (
+            liveHudContrastIndex
+        ) {
+            0 ->
+                1.2f * u
+
+            2 ->
+                2.8f * u
+
+            else ->
+                2.0f * u
+        }
+    }
+
+    private fun markLivePresetCustom() {
+        if (
+            livePresetIndex !=
+            0
+        ) {
+            livePresetIndex =
+                0
+
+            if (
+                ::livePresetButton.isInitialized
+            ) {
+                livePresetButton.text =
+                    "PRESET ▾\nCUSTOM"
+
+                livePresetButton.isSelected =
+                    false
+            }
+        }
+    }
+
+    private fun liveArrayIndex(
+        values: Array<String>,
+        wanted: String,
+        fallback: Int = 0
+    ): Int {
+        val index =
+            values.indexOf(
+                wanted
+            )
+
+        return if (
+            index >=
+            0
+        ) {
+            index
+        } else {
+            fallback.coerceIn(
+                0,
+                values.lastIndex
+            )
+        }
+    }
+
+    private fun applyLivePreset(
+        picked: Int
+    ) {
+        livePresetIndex =
+            picked.coerceIn(
+                0,
+                livePresetLabels.lastIndex
+            )
+
+        when (
+            livePresetLabels[
+                livePresetIndex
+            ]
+        ) {
+            "BREAKING" -> {
+                profileIndex =
+                    liveArrayIndex(
+                        profiles,
+                        "BREAKING"
+                    )
+
+                lowerThirdStyleIndex =
+                    liveArrayIndex(
+                        lowerThirdStyles,
+                        "BREAKING"
+                    )
+
+                liveHudSizeIndex =
+                    1
+
+                liveHudContrastIndex =
+                    2
+
+                audioEnabled =
+                    true
+
+                graphicsEnabled =
+                    true
+
+                countdownEnabled =
+                    true
+            }
+
+            "INTERVIEW" -> {
+                profileIndex =
+                    liveArrayIndex(
+                        profiles,
+                        "INTERVIEW"
+                    )
+
+                lowerThirdStyleIndex =
+                    liveArrayIndex(
+                        lowerThirdStyles,
+                        "CLEAN"
+                    )
+
+                liveHudSizeIndex =
+                    0
+
+                liveHudContrastIndex =
+                    1
+
+                audioEnabled =
+                    true
+
+                graphicsEnabled =
+                    true
+
+                countdownEnabled =
+                    false
+            }
+
+            "EVENT" -> {
+                profileIndex =
+                    liveArrayIndex(
+                        profiles,
+                        "EVENT"
+                    )
+
+                lowerThirdStyleIndex =
+                    liveArrayIndex(
+                        lowerThirdStyles,
+                        "CLEAN"
+                    )
+
+                liveHudSizeIndex =
+                    1
+
+                liveHudContrastIndex =
+                    1
+
+                audioEnabled =
+                    true
+
+                graphicsEnabled =
+                    true
+
+                countdownEnabled =
+                    true
+            }
+
+            "COMMUNITY" -> {
+                profileIndex =
+                    liveArrayIndex(
+                        profiles,
+                        "COMMUNITY"
+                    )
+
+                lowerThirdStyleIndex =
+                    liveArrayIndex(
+                        lowerThirdStyles,
+                        "MINIMAL"
+                    )
+
+                liveHudSizeIndex =
+                    1
+
+                liveHudContrastIndex =
+                    1
+
+                audioEnabled =
+                    true
+
+                graphicsEnabled =
+                    true
+
+                countdownEnabled =
+                    true
+            }
+
+            else -> {
+                // CUSTOM leaves current values untouched.
+            }
+        }
+
+        livePresetButton.text =
+            "PRESET ▾\n${livePresetLabels[livePresetIndex]}"
+
+        livePresetButton.isSelected =
+            livePresetIndex !=
+                0
+
+        profileButton.text =
+            "PROFILE ▾\n${profiles[profileIndex]}"
+
+        styleButton.text =
+            "LOWER STYLE ▾\n${lowerThirdStyles[lowerThirdStyleIndex]}"
+
+        liveHudSizeButton.text =
+            "HUD SIZE ▾\n${liveHudLabels[liveHudSizeIndex]}"
+
+        liveHudContrastButton.text =
+            "HUD CONTRAST ▾\n${liveHudContrastLabels[liveHudContrastIndex]}"
+
+        audioButton.text =
+            "AUDIO ▾\n" +
+                if (
+                    audioEnabled
+                ) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+
+        graphicsButton.text =
+            "GRAPHICS ▾\n" +
+                if (
+                    graphicsEnabled
+                ) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+
+        countdownButton.text =
+            "COUNTDOWN ▾\n" +
+                if (
+                    countdownEnabled
+                ) {
+                    "3 SEC"
+                } else {
+                    "OFF"
+                }
+
+        countdownButton.isSelected =
+            countdownEnabled
+
+        liveSubTitle.text =
+            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+
+        saveLiveCameraPreferences()
+
+        toast(
+            "LIVE preset ${livePresetLabels[livePresetIndex]}"
+        )
+    }
+
+    private fun showLivePresetDropdown(
+        anchor: View
+    ) {
+        if (
+            recording !=
+            null
+        ) {
+            toast(
+                "Stop LIVE REC before changing preset"
+            )
+            return
+        }
+
+        showLivePillDropdown(
+            anchor,
+            "LIVE PRESET",
+            livePresetLabels,
+            livePresetIndex
+        ) { picked ->
+            applyLivePreset(
+                picked
+            )
+        }
+    }
+
+    private fun showLiveHudContrastDropdown(
+        anchor: View
+    ) {
+        showLivePillDropdown(
+            anchor,
+            "RECORDED HUD CONTRAST",
+            liveHudContrastLabels,
+            liveHudContrastIndex
+        ) { picked ->
+            liveHudContrastIndex =
+                picked
+
+            markLivePresetCustom()
+
+            liveHudContrastButton.text =
+                "HUD CONTRAST ▾\n${liveHudContrastLabels[liveHudContrastIndex]}"
+
+            liveHudContrastButton.isSelected =
+                true
+
+            saveLiveCameraPreferences()
+
+            toast(
+                "LIVE contrast ${liveHudContrastLabels[liveHudContrastIndex]}"
+            )
+        }
+    }
+
+    private fun showLiveHudSizeDropdown(
+        anchor: View
+    ) {
+        showLivePillDropdown(
+            anchor,
+            "RECORDED HUD SIZE",
+            liveHudLabels,
+            liveHudSizeIndex
+        ) { picked ->
+            liveHudSizeIndex =
+                picked
+
+            markLivePresetCustom()
+
+            liveHudSizeButton.text =
+                "HUD SIZE ▾\n${liveHudLabels[liveHudSizeIndex]}"
+
+            liveHudSizeButton.isSelected =
+                true
+
+            saveLiveCameraPreferences()
+
+            toast(
+                "LIVE HUD ${liveHudLabels[liveHudSizeIndex]}"
+            )
+        }
+    }
+
+    private fun showLiveSafeAreaInfo() {
+        AlertDialog.Builder(this)
+            .setTitle(
+                "LIVE OUTPUT SAFE AREA"
+            )
+            .setMessage(
+                "The operator controls stay screen-only. Saved-video branding, ON AIR status and lower-third graphics remain inside the protected 9:16 output area."
+            )
+            .setPositiveButton(
+                "OK",
+                null
+            )
+            .show()
     }
 
     private fun signal(
@@ -3601,19 +4278,30 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    6.2f *
+                    3.8f *
                         density
 
                 color =
-                    accent
-
-                setShadowLayer(
-                    5.5f *
-                        density,
-                    0f,
-                    0f,
-                    accent
-                )
+                    Color.rgb(
+                        (
+                            Color.red(
+                                accent
+                            ) *
+                                0.78f
+                            ).roundToInt(),
+                        (
+                            Color.green(
+                                accent
+                            ) *
+                                0.78f
+                            ).roundToInt(),
+                        (
+                            Color.blue(
+                                accent
+                            ) *
+                                0.78f
+                            ).roundToInt()
+                    )
             }
 
         private val idleFill =
@@ -3624,7 +4312,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.FILL
 
                 color =
-                    0x72000000
+                    0x52000000
             }
 
         private val pressedFill =
@@ -3636,7 +4324,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 color =
                     Color.argb(
-                        130,
+                        90,
                         Color.red(
                             accent
                         ),
@@ -3668,18 +4356,23 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    7.0f *
+                    4.8f *
                         density
 
                 color =
                     accent
 
                 setShadowLayer(
-                    7f *
+                    3.0f *
                         density,
                     0f,
                     0f,
-                    accent
+                    Color.argb(
+                        120,
+                        Color.red(accent),
+                        Color.green(accent),
+                        Color.blue(accent)
+                    )
                 )
             }
 
