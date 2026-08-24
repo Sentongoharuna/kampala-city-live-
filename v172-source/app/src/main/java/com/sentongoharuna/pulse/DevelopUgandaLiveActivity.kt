@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -21,6 +22,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -28,9 +30,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
+import androidx.camera.core.CameraEffect
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
-import androidx.camera.core.TorchState
+import androidx.camera.core.SessionConfig
+import androidx.camera.effects.Frame
+import androidx.camera.effects.OverlayEffect
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.MediaStoreOutputOptions
 import androidx.camera.video.Quality
@@ -42,6 +47,7 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -51,6 +57,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
+
     private lateinit var liveBadge: TextView
     private lateinit var liveTitle: TextView
     private lateinit var liveSubTitle: TextView
@@ -60,31 +67,54 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var camLamp: TextView
     private lateinit var recLamp: TextView
     private lateinit var batteryLamp: TextView
+
+    private lateinit var profileButton: Button
     private lateinit var qualityButton: Button
     private lateinit var audioButton: Button
     private lateinit var graphicsButton: Button
     private lateinit var lensButton: Button
     private lateinit var lightButton: Button
     private lateinit var outputButton: Button
+    private lateinit var viewModeButton: Button
+    private lateinit var settingsButton: Button
     private lateinit var recordButton: LiveRecordButtonView
+
     private lateinit var timerView: TextView
     private lateinit var outputStatus: TextView
 
     private var camera: Camera? = null
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
+    private var overlayEffect: OverlayEffect? = null
 
     private var useFront = false
     private var audioEnabled = true
     private var graphicsEnabled = true
+
     private var quality = Quality.FHD
     private var qualityLabel = "FHD"
+
+    private val profiles =
+        arrayOf(
+            "BREAKING",
+            "INTERVIEW",
+            "EVENT",
+            "TRAFFIC",
+            "COMMUNITY"
+        )
+
+    private var profileIndex = 0
+    private var halfPreviewMode = false
+
     private var recordStartMs = 0L
+    private var liveBlinkOn = true
+
+    private var reporterName = "CITIZEN"
+    private var storyId = "--"
+    private var headline = "LIVE REPORT"
 
     private val uiHandler =
         Handler(Looper.getMainLooper())
-
-    private var liveBlinkOn = true
 
     private val uiTicker =
         object : Runnable {
@@ -92,6 +122,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 updateSignals()
                 updateTimer()
                 updateBlink()
+
                 uiHandler.postDelayed(
                     this,
                     500L
@@ -117,29 +148,86 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
 
+        loadLiveIdentity()
         buildLiveUi()
         requestNeededPermissions()
-        uiHandler.post(uiTicker)
+
+        uiHandler.post(
+            uiTicker
+        )
     }
 
     override fun onDestroy() {
         uiHandler.removeCallbacksAndMessages(
             null
         )
+
         recording?.stop()
         recording = null
+
         super.onDestroy()
     }
 
+    private fun loadLiveIdentity() {
+        val reporterPrefs =
+            getSharedPreferences(
+                "develop_uganda_reporter",
+                Context.MODE_PRIVATE
+            )
+
+        reporterName =
+            reporterPrefs.getString(
+                "reporter_name",
+                "CITIZEN"
+            )
+                ?.trim()
+                ?.ifBlank {
+                    "CITIZEN"
+                }
+                ?: "CITIZEN"
+
+        storyId =
+            reporterPrefs.getString(
+                "story_id",
+                "--"
+            )
+                ?.trim()
+                ?.ifBlank {
+                    "--"
+                }
+                ?: "--"
+
+        val newsroomPrefs =
+            getSharedPreferences(
+                "develop_uganda_newsroom",
+                Context.MODE_PRIVATE
+            )
+
+        headline =
+            newsroomPrefs.getString(
+                "headline",
+                "LIVE REPORT"
+            )
+                ?.trim()
+                ?.ifBlank {
+                    "LIVE REPORT"
+                }
+                ?: "LIVE REPORT"
+    }
+
     private fun buildLiveUi() {
-        root = FrameLayout(this).apply {
-            setBackgroundColor(Color.BLACK)
-        }
+        root =
+            FrameLayout(this).apply {
+                setBackgroundColor(
+                    Color.BLACK
+                )
+            }
 
         previewView =
             PreviewView(this).apply {
                 implementationMode =
                     PreviewView.ImplementationMode.COMPATIBLE
+
                 scaleType =
                     PreviewView.ScaleType.FIT_START
             }
@@ -152,30 +240,21 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         )
 
-        val graphics =
-            LiveGraphicsView(this)
-
-        root.addView(
-            graphics,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-
         val topPanel =
             LinearLayout(this).apply {
                 orientation =
                     LinearLayout.VERTICAL
+
                 setPadding(
-                    dp(16),
-                    dp(12),
-                    dp(16),
-                    dp(12)
+                    dp(14),
+                    dp(10),
+                    dp(14),
+                    dp(10)
                 )
+
                 background =
                     rounded(
-                        0x71000000,
+                        0x6E000000,
                         Color.TRANSPARENT,
                         0
                     )
@@ -185,13 +264,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             LinearLayout(this).apply {
                 orientation =
                     LinearLayout.HORIZONTAL
+
                 gravity =
                     Gravity.CENTER_VERTICAL
             }
 
         liveBadge =
             label(
-                "● LIVE REC",
+                "● LIVE",
                 18f,
                 red,
                 true
@@ -215,15 +295,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         header.addView(
             liveBadge
         )
+
         header.addView(
             liveTitle
         )
 
-        topPanel.addView(header)
+        topPanel.addView(
+            header
+        )
 
         liveSubTitle =
             label(
-                "LIVE STUDIO • LOCAL CAPTURE",
+                "LIVE STUDIO • ${profiles[profileIndex]} • READY",
                 10f,
                 white,
                 true
@@ -244,20 +327,26 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             LinearLayout(this).apply {
                 orientation =
                     LinearLayout.HORIZONTAL
+
                 gravity =
                     Gravity.CENTER_VERTICAL
             }
 
         netLamp =
             signal("● NET")
+
         gpsLamp =
             signal("● GPS")
+
         micLamp =
             signal("● MIC")
+
         camLamp =
             signal("● CAM")
+
         recLamp =
             signal("● REC")
+
         batteryLamp =
             signal("● BAT")
 
@@ -292,6 +381,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ).apply {
                 typeface =
                     Typeface.MONOSPACE
+
                 setPadding(
                     0,
                     dp(5),
@@ -317,12 +407,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             LinearLayout(this).apply {
                 orientation =
                     LinearLayout.VERTICAL
+
                 setPadding(
-                    dp(12),
                     dp(10),
-                    dp(12),
-                    dp(12)
+                    dp(9),
+                    dp(10),
+                    dp(10)
                 )
+
                 background =
                     rounded(
                         panel,
@@ -333,13 +425,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         outputStatus =
             label(
-                "OUTPUT • LOCAL GALLERY • INTERNET STREAM NOT CONNECTED",
+                "OUTPUT • LOCAL LIVE CAPTURE • STREAM DESTINATION NOT CONNECTED",
                 9f,
                 0xFFB7C4CA.toInt(),
                 true
             ).apply {
                 gravity =
                     Gravity.CENTER
+
                 setPadding(
                     0,
                     0,
@@ -352,10 +445,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             outputStatus
         )
 
-        val settingsRow1 =
+        val row1 =
             LinearLayout(this).apply {
                 orientation =
                     LinearLayout.HORIZONTAL
+            }
+
+        profileButton =
+            liveSettingButton(
+                "PROFILE\n${profiles[profileIndex]}",
+                red
+            ) {
+                cycleProfile()
             }
 
         qualityButton =
@@ -373,6 +474,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ) {
                 audioEnabled =
                     !audioEnabled
+
                 audioButton.text =
                     "AUDIO\n" +
                         if (audioEnabled) {
@@ -382,6 +484,38 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         }
             }
 
+        row1.addView(
+            profileButton,
+            weight()
+        )
+
+        row1.addView(
+            qualityButton,
+            weight()
+        )
+
+        row1.addView(
+            audioButton,
+            weight()
+        )
+
+        liveDeck.addView(
+            row1
+        )
+
+        val row2 =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(6),
+                    0,
+                    0
+                )
+            }
+
         graphicsButton =
             liveSettingButton(
                 "GRAPHICS\nON",
@@ -389,12 +523,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ) {
                 graphicsEnabled =
                     !graphicsEnabled
-                graphics.visibility =
-                    if (graphicsEnabled) {
-                        View.VISIBLE
-                    } else {
-                        View.INVISIBLE
-                    }
 
                 graphicsButton.text =
                     "GRAPHICS\n" +
@@ -405,45 +533,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         }
             }
 
-        settingsRow1.addView(
-            qualityButton,
-            weight()
-        )
-        settingsRow1.addView(
-            audioButton,
-            weight()
-        )
-        settingsRow1.addView(
-            graphicsButton,
-            weight()
-        )
-
-        liveDeck.addView(
-            settingsRow1
-        )
-
-        val settingsRow2 =
-            LinearLayout(this).apply {
-                orientation =
-                    LinearLayout.HORIZONTAL
-                setPadding(
-                    0,
-                    dp(7),
-                    0,
-                    0
-                )
-            }
-
         lensButton =
             liveSettingButton(
                 "LENS\nBACK",
                 cyan
             ) {
                 if (
-                    recording == null
+                    recording ==
+                    null
                 ) {
                     useFront =
                         !useFront
+
                     lensButton.text =
                         "LENS\n" +
                             if (useFront) {
@@ -451,6 +552,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             } else {
                                 "BACK"
                             }
+
                     bindCamera()
                 } else {
                     toast(
@@ -464,62 +566,132 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 "LIGHT\nOFF",
                 white
             ) {
-                val current =
-                    camera
-                        ?.cameraInfo
-                        ?.torchState
-                        ?.value
-                        ?: TorchState.OFF
-
-                camera
-                    ?.cameraControl
-                    ?.enableTorch(
-                        current !=
-                            TorchState.ON
-                    )
-
-                lightButton.text =
-                    "LIGHT\n" +
-                        if (
-                            current ==
-                            TorchState.ON
-                        ) {
-                            "OFF"
-                        } else {
-                            "ON"
-                        }
+                toggleTorch()
             }
 
-        outputButton =
-            liveSettingButton(
-                "OUTPUT\nLOCAL",
-                red
-            ) {
-                showOutputInfo()
-            }
+        row2.addView(
+            graphicsButton,
+            weight()
+        )
 
-        settingsRow2.addView(
+        row2.addView(
             lensButton,
             weight()
         )
-        settingsRow2.addView(
+
+        row2.addView(
             lightButton,
-            weight()
-        )
-        settingsRow2.addView(
-            outputButton,
             weight()
         )
 
         liveDeck.addView(
-            settingsRow2
+            row2
+        )
+
+        val row3 =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(6),
+                    0,
+                    0
+                )
+            }
+
+        outputButton =
+            liveSettingButton(
+                "OUTPUT\nSETUP",
+                red
+            ) {
+                showOutputSetup()
+            }
+
+        val headlineButton =
+            liveSettingButton(
+                "LOWER THIRD\nEDIT",
+                amber
+            ) {
+                showLowerThirdEditor()
+            }
+
+        val infoButton =
+            liveSettingButton(
+                "SIGNALS\nINFO",
+                green
+            ) {
+                showSignalInfo()
+            }
+
+        row3.addView(
+            outputButton,
+            weight()
+        )
+
+        row3.addView(
+            headlineButton,
+            weight()
+        )
+
+        row3.addView(
+            infoButton,
+            weight()
+        )
+
+        liveDeck.addView(
+            row3
+        )
+
+        val row4 =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(6),
+                    0,
+                    0
+                )
+            }
+
+        viewModeButton =
+            liveSettingButton(
+                "VIEW\nFULL",
+                green
+            ) {
+                togglePreviewMode()
+            }
+
+        settingsButton =
+            liveSettingButton(
+                "SETTINGS\nLIVE",
+                cyan
+            ) {
+                showLiveDetailedSettings()
+            }
+
+        row4.addView(
+            viewModeButton,
+            weight()
+        )
+
+        row4.addView(
+            settingsButton,
+            weight()
+        )
+
+        liveDeck.addView(
+            row4
         )
 
         val recordArea =
             FrameLayout(this).apply {
                 setPadding(
                     0,
-                    dp(10),
+                    dp(8),
                     0,
                     0
                 )
@@ -547,7 +719,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             recordArea,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(120)
+                dp(118)
             )
         )
 
@@ -560,7 +732,162 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         )
 
-        setContentView(root)
+        setContentView(
+            root
+        )
+    }
+
+    private fun togglePreviewMode() {
+        halfPreviewMode =
+            !halfPreviewMode
+
+        val height =
+            if (halfPreviewMode) {
+                (
+                    resources.displayMetrics.heightPixels *
+                        0.50f
+                    ).roundToInt()
+            } else {
+                ViewGroup.LayoutParams.MATCH_PARENT
+            }
+
+        val params =
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                height
+            )
+
+        params.gravity =
+            Gravity.TOP
+
+        previewView.layoutParams =
+            params
+
+        viewModeButton.text =
+            "VIEW\n" +
+                if (halfPreviewMode) {
+                    "HALF"
+                } else {
+                    "FULL"
+                }
+
+        toast(
+            if (halfPreviewMode) {
+                "Half-screen LIVE preview"
+            } else {
+                "Full-screen LIVE preview"
+            }
+        )
+    }
+
+    private fun showLiveDetailedSettings() {
+        val streamPrefs =
+            getSharedPreferences(
+                "develop_uganda_stream",
+                Context.MODE_PRIVATE
+            )
+
+        val destination =
+            streamPrefs.getString(
+                "url",
+                ""
+            )
+                ?.trim()
+                .orEmpty()
+
+        val summary =
+            buildString {
+                append("LIVE-ONLY SETTINGS\n\n")
+
+                append("PROFILE: ")
+                append(
+                    profiles[
+                        profileIndex
+                    ]
+                )
+                append("\n")
+
+                append("QUALITY: ")
+                append(
+                    qualityLabel
+                )
+                append("\n")
+
+                append("AUDIO: ")
+                append(
+                    if (audioEnabled) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
+                )
+                append("\n")
+
+                append("GRAPHICS: ")
+                append(
+                    if (graphicsEnabled) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
+                )
+                append("\n")
+
+                append("LENS: ")
+                append(
+                    if (useFront) {
+                        "FRONT"
+                    } else {
+                        "BACK"
+                    }
+                )
+                append("\n")
+
+                append("PREVIEW: ")
+                append(
+                    if (halfPreviewMode) {
+                        "HALF SCREEN"
+                    } else {
+                        "FULL SCREEN"
+                    }
+                )
+                append("\n")
+
+                append("LOWER THIRD: ")
+                append(
+                    headline.ifBlank {
+                        "LIVE REPORT"
+                    }
+                )
+                append("\n")
+
+                append("OUTPUT: ")
+                append(
+                    if (destination.isBlank()) {
+                        "LOCAL GALLERY"
+                    } else {
+                        "DESTINATION SAVED"
+                    }
+                )
+                append("\n\n")
+
+                append("SIGNALS: NET • GPS • MIC • CAM • REC • BAT\n")
+                append("RECORD GRAPHICS: develop.uganda LIVE + profile + reporter + story + lower third\n")
+                append("STREAMING: destination may be stored, but internet streaming remains inactive until an RTMP/SRT/WebRTC engine is connected.")
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "LIVE STUDIO SETTINGS"
+            )
+            .setMessage(
+                summary
+            )
+            .setPositiveButton(
+                "OK",
+                null
+            )
+            .show()
     }
 
     private fun requestNeededPermissions() {
@@ -580,12 +907,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     PackageManager.PERMISSION_GRANTED
             }
 
-        if (missing.isEmpty()) {
+        if (
+            missing.isEmpty()
+        ) {
             bindCamera()
         } else {
             requestPermissions(
                 missing.toTypedArray(),
-                1831
+                1841
             )
         }
     }
@@ -601,7 +930,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             grantResults
         )
 
-        if (requestCode == 1831) {
+        if (
+            requestCode ==
+            1841
+        ) {
             if (
                 ContextCompat.checkSelfPermission(
                     this,
@@ -619,15 +951,15 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     }
 
     private fun bindCamera() {
-        val providerFuture =
+        val future =
             ProcessCameraProvider.getInstance(
                 this
             )
 
-        providerFuture.addListener(
+        future.addListener(
             {
                 val provider =
-                    providerFuture.get()
+                    future.get()
 
                 provider.unbindAll()
 
@@ -654,6 +986,41 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         recorder
                     )
 
+                overlayEffect =
+                    OverlayEffect(
+                        CameraEffect.PREVIEW or
+                            CameraEffect.VIDEO_CAPTURE,
+                        0,
+                        Handler(
+                            Looper.getMainLooper()
+                        )
+                    ) { throwable ->
+                        toast(
+                            "LIVE graphics warning: " +
+                                (
+                                    throwable.message
+                                        ?: "unknown"
+                                    )
+                        )
+                    }.also { effect ->
+                        effect.setOnDrawListener { frame ->
+                            drawLiveBroadcastOverlay(
+                                frame
+                            )
+                            true
+                        }
+                    }
+
+                val session =
+                    SessionConfig.Builder(
+                        preview,
+                        videoCapture!!
+                    )
+                        .addEffect(
+                            overlayEffect!!
+                        )
+                        .build()
+
                 val selector =
                     if (useFront) {
                         CameraSelector.DEFAULT_FRONT_CAMERA
@@ -665,8 +1032,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     provider.bindToLifecycle(
                         this,
                         selector,
-                        preview,
-                        videoCapture
+                        session
                     )
 
                 camLamp.setTextColor(
@@ -679,22 +1045,550 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
     }
 
+    private fun drawLiveBroadcastOverlay(
+        frame: Frame
+    ) {
+        val canvas =
+            frame.overlayCanvas
+
+        val crop =
+            frame.cropRect
+
+        if (
+            crop.width() <= 0 ||
+            crop.height() <= 0
+        ) {
+            return
+        }
+
+        canvas.drawColor(
+            Color.TRANSPARENT,
+            android.graphics.PorterDuff.Mode.CLEAR
+        )
+
+        if (
+            !graphicsEnabled
+        ) {
+            return
+        }
+
+        val rotation =
+            (
+                (
+                    frame.rotationDegrees %
+                        360
+                    ) +
+                    360
+                ) %
+                360
+
+        val finalWidth =
+            if (
+                rotation == 90 ||
+                rotation == 270
+            ) {
+                crop.height().toFloat()
+            } else {
+                crop.width().toFloat()
+            }
+
+        val finalHeight =
+            if (
+                rotation == 90 ||
+                rotation == 270
+            ) {
+                crop.width().toFloat()
+            } else {
+                crop.height().toFloat()
+            }
+
+        val l =
+            crop.left.toFloat()
+        val t =
+            crop.top.toFloat()
+        val r =
+            crop.right.toFloat()
+        val b =
+            crop.bottom.toFloat()
+
+        val nonMirrored =
+            when (
+                rotation
+            ) {
+                90 ->
+                    floatArrayOf(
+                        l, b,
+                        l, t,
+                        r, t,
+                        r, b
+                    )
+
+                180 ->
+                    floatArrayOf(
+                        r, b,
+                        l, b,
+                        l, t,
+                        r, t
+                    )
+
+                270 ->
+                    floatArrayOf(
+                        r, t,
+                        r, b,
+                        l, b,
+                        l, t
+                    )
+
+                else ->
+                    floatArrayOf(
+                        l, t,
+                        r, t,
+                        r, b,
+                        l, b
+                    )
+            }
+
+        val destination =
+            if (
+                frame.isMirroring
+            ) {
+                floatArrayOf(
+                    nonMirrored[2],
+                    nonMirrored[3],
+                    nonMirrored[0],
+                    nonMirrored[1],
+                    nonMirrored[6],
+                    nonMirrored[7],
+                    nonMirrored[4],
+                    nonMirrored[5]
+                )
+            } else {
+                nonMirrored
+            }
+
+        val source =
+            floatArrayOf(
+                0f,
+                0f,
+                finalWidth,
+                0f,
+                finalWidth,
+                finalHeight,
+                0f,
+                finalHeight
+            )
+
+        val matrix =
+            Matrix()
+
+        if (
+            !matrix.setPolyToPoly(
+                source,
+                0,
+                destination,
+                0,
+                4
+            )
+        ) {
+            return
+        }
+
+        canvas.save()
+        canvas.concat(
+            matrix
+        )
+
+        val u =
+            minOf(
+                finalWidth,
+                finalHeight
+            ) /
+                1000f
+
+        val safeLeft =
+            finalWidth *
+                0.08f
+
+        val safeTop =
+            finalHeight *
+                0.08f
+
+        val safeRight =
+            finalWidth *
+                0.92f
+
+        val paint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                typeface =
+                    Typeface.create(
+                        Typeface.MONOSPACE,
+                        Typeface.BOLD
+                    )
+
+                setShadowLayer(
+                    3.0f * u,
+                    0.8f * u,
+                    0.8f * u,
+                    0xE0000000.toInt()
+                )
+            }
+
+        val liveOn =
+            recording != null
+
+        val blink =
+            (
+                SystemClock.elapsedRealtime() /
+                    500L
+                ) %
+                2L ==
+                0L
+
+        val livePaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    red
+
+                alpha =
+                    if (
+                        liveOn &&
+                        !blink
+                    ) {
+                        90
+                    } else {
+                        255
+                    }
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        canvas.drawCircle(
+            safeLeft +
+                (9f * u),
+            safeTop -
+                (6f * u),
+            6f * u,
+            livePaint
+        )
+
+        paint.textSize =
+            26f * u
+
+        paint.color =
+            amber
+
+        canvas.drawText(
+            "develop.uganda",
+            safeLeft +
+                (23f * u),
+            safeTop,
+            paint
+        )
+
+        paint.textSize =
+            13f * u
+
+        paint.color =
+            if (
+                liveOn
+            ) {
+                red
+            } else {
+                white
+            }
+
+        canvas.drawText(
+            if (
+                liveOn
+            ) {
+                "LIVE"
+            } else {
+                "LIVE READY"
+            },
+            safeRight -
+                (120f * u),
+            safeTop,
+            paint
+        )
+
+        val rule =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    0xB0FF3B32.toInt()
+
+                strokeWidth =
+                    1.6f * u
+            }
+
+        canvas.drawLine(
+            safeLeft,
+            safeTop +
+                (12f * u),
+            safeRight,
+            safeTop +
+                (12f * u),
+            rule
+        )
+
+        paint.textSize =
+            12f * u
+
+        paint.color =
+            white
+
+        canvas.drawText(
+            "${profiles[profileIndex]} • $reporterName • STORY $storyId",
+            safeLeft,
+            safeTop +
+                (36f * u),
+            paint
+        )
+
+        paint.textSize =
+            11.5f * u
+
+        paint.color =
+            cyan
+
+        canvas.drawText(
+            "TC ${liveTimecode()} • ${ZoneId.systemDefault().id} • $qualityLabel • ${if (audioEnabled) "MIC ON" else "MIC OFF"}",
+            safeLeft,
+            safeTop +
+                (56f * u),
+            paint
+        )
+
+        val lowerY =
+            finalHeight *
+                0.80f
+
+        val lowerBg =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    0x9A05080A.toInt()
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        val lowerH =
+            88f * u
+
+        canvas.drawRoundRect(
+            safeLeft,
+            lowerY,
+            safeRight,
+            lowerY +
+                lowerH,
+            12f * u,
+            12f * u,
+            lowerBg
+        )
+
+        val redRail =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    red
+
+                strokeWidth =
+                    5f * u
+            }
+
+        canvas.drawLine(
+            safeLeft +
+                (8f * u),
+            lowerY +
+                (10f * u),
+            safeLeft +
+                (8f * u),
+            lowerY +
+                lowerH -
+                (10f * u),
+            redRail
+        )
+
+        paint.color =
+            red
+
+        paint.textSize =
+            12f * u
+
+        canvas.drawText(
+            if (
+                liveOn
+            ) {
+                "● LIVE"
+            } else {
+                "LIVE STUDIO"
+            },
+            safeLeft +
+                (22f * u),
+            lowerY +
+                (24f * u),
+            paint
+        )
+
+        paint.color =
+            white
+
+        paint.textSize =
+            18f * u
+
+        drawFitText(
+            canvas,
+            headline,
+            safeLeft +
+                (22f * u),
+            lowerY +
+                (51f * u),
+            safeRight -
+                safeLeft -
+                (40f * u),
+            paint,
+            11f * u
+        )
+
+        paint.color =
+            0xFFD0D8DC.toInt()
+
+        paint.textSize =
+            10f * u
+
+        canvas.drawText(
+            "REPORTER $reporterName • STORY $storyId",
+            safeLeft +
+                (22f * u),
+            lowerY +
+                (72f * u),
+            paint
+        )
+
+        canvas.restore()
+    }
+
+    private fun drawFitText(
+        canvas: Canvas,
+        value: String,
+        x: Float,
+        y: Float,
+        maxWidth: Float,
+        paint: Paint,
+        minSize: Float
+    ) {
+        val original =
+            paint.textSize
+
+        var size =
+            original
+
+        while (
+            paint.measureText(
+                value
+            ) >
+                maxWidth &&
+            size >
+                minSize
+        ) {
+            size -=
+                0.7f
+
+            paint.textSize =
+                size
+        }
+
+        canvas.drawText(
+            value,
+            x,
+            y,
+            paint
+        )
+
+        paint.textSize =
+            original
+    }
+
+    private fun liveTimecode(): String {
+        if (
+            recording == null ||
+            recordStartMs == 0L
+        ) {
+            return "00:00:00"
+        }
+
+        val total =
+            (
+                SystemClock.elapsedRealtime() -
+                    recordStartMs
+                ) /
+                1000L
+
+        return String.format(
+            Locale.US,
+            "%02d:%02d:%02d",
+            total / 3600L,
+            (total / 60L) % 60L,
+            total % 60L
+        )
+    }
+
+    private fun cycleProfile() {
+        if (
+            recording != null
+        ) {
+            toast(
+                "Stop LIVE REC before changing profile"
+            )
+            return
+        }
+
+        profileIndex =
+            (
+                profileIndex +
+                    1
+                ) %
+                profiles.size
+
+        profileButton.text =
+            "PROFILE\n${profiles[profileIndex]}"
+
+        liveSubTitle.text =
+            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+    }
+
     private fun cycleQuality() {
-        if (recording != null) {
+        if (
+            recording != null
+        ) {
             toast(
                 "Stop LIVE REC before changing quality"
             )
             return
         }
 
-        if (quality == Quality.FHD) {
+        if (
+            quality ==
+            Quality.FHD
+        ) {
             quality =
                 Quality.HD
+
             qualityLabel =
                 "HD"
         } else {
             quality =
                 Quality.FHD
+
             qualityLabel =
                 "FHD"
         }
@@ -705,19 +1599,51 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         bindCamera()
     }
 
+    private fun toggleTorch() {
+        val state =
+            camera
+                ?.cameraInfo
+                ?.torchState
+                ?.value
+                ?: 0
+
+        val enable =
+            state !=
+                androidx.camera.core.TorchState.ON
+
+        camera
+            ?.cameraControl
+            ?.enableTorch(
+                enable
+            )
+
+        lightButton.text =
+            "LIGHT\n" +
+                if (
+                    enable
+                ) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+    }
+
     private fun toggleRecording() {
-        if (recording != null) {
+        if (
+            recording != null
+        ) {
             recording?.stop()
             return
         }
 
         val capture =
-            videoCapture ?: run {
-                toast(
-                    "Camera is not ready"
-                )
-                return
-            }
+            videoCapture
+                ?: run {
+                    toast(
+                        "Camera is not ready"
+                    )
+                    return
+                }
 
         val stamp =
             SimpleDateFormat(
@@ -731,12 +1657,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ContentValues().apply {
                 put(
                     MediaStore.Video.Media.DISPLAY_NAME,
-                    "DEVELOP_UGANDA_LIVE_$stamp.mp4"
+                    "DEVELOP_UGANDA_LIVE_${profiles[profileIndex]}_$stamp.mp4"
                 )
+
                 put(
                     MediaStore.Video.Media.MIME_TYPE,
                     "video/mp4"
                 )
+
                 if (
                     android.os.Build.VERSION.SDK_INT >=
                     29
@@ -783,7 +1711,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     this
                 )
             ) { event ->
-                when (event) {
+                when (
+                    event
+                ) {
                     is VideoRecordEvent.Start -> {
                         recordStartMs =
                             SystemClock.elapsedRealtime()
@@ -793,7 +1723,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         )
 
                         liveSubTitle.text =
-                            "LIVE STUDIO • RECORDING TO GALLERY"
+                            "LIVE STUDIO • ${profiles[profileIndex]} • RECORDING"
 
                         recLamp.setTextColor(
                             red
@@ -809,7 +1739,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             audioEnabled &&
                             event.recordingStats
                                 .audioStats
-                                .audioAmplitude > 0.0
+                                .audioAmplitude >
+                                0.0
                         ) {
                             micLamp.setTextColor(
                                 green
@@ -826,7 +1757,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         )
 
                         liveSubTitle.text =
-                            "LIVE STUDIO • LOCAL CAPTURE"
+                            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
 
                         recLamp.setTextColor(
                             0xFF657078.toInt()
@@ -851,14 +1782,194 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
     }
 
-    private fun showOutputInfo() {
+    private fun showLowerThirdEditor() {
+        val box =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(18),
+                    dp(8),
+                    dp(18),
+                    dp(4)
+                )
+            }
+
+        val headlineField =
+            EditText(this).apply {
+                hint =
+                    "Live headline"
+
+                setText(
+                    headline
+                )
+            }
+
+        box.addView(
+            headlineField
+        )
+
         AlertDialog.Builder(this)
             .setTitle(
-                "LIVE OUTPUT"
+                "LIVE LOWER THIRD"
+            )
+            .setView(
+                box
+            )
+            .setPositiveButton(
+                "SAVE"
+            ) { _, _ ->
+                headline =
+                    headlineField.text
+                        .toString()
+                        .trim()
+                        .ifBlank {
+                            "LIVE REPORT"
+                        }
+
+                getSharedPreferences(
+                    "develop_uganda_newsroom",
+                    Context.MODE_PRIVATE
+                )
+                    .edit()
+                    .putString(
+                        "headline",
+                        headline
+                    )
+                    .apply()
+            }
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .show()
+    }
+
+    private fun showOutputSetup() {
+        val prefs =
+            getSharedPreferences(
+                "develop_uganda_stream",
+                Context.MODE_PRIVATE
+            )
+
+        val box =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(18),
+                    dp(8),
+                    dp(18),
+                    dp(4)
+                )
+            }
+
+        val url =
+            EditText(this).apply {
+                hint =
+                    "RTMP / SRT / WebRTC destination"
+
+                setText(
+                    prefs.getString(
+                        "url",
+                        ""
+                    )
+                )
+            }
+
+        val key =
+            EditText(this).apply {
+                hint =
+                    "Stream key / token"
+
+                setText(
+                    prefs.getString(
+                        "key",
+                        ""
+                    )
+                )
+            }
+
+        box.addView(
+            url
+        )
+
+        box.addView(
+            key
+        )
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "LIVE OUTPUT SETUP"
             )
             .setMessage(
-                "V183 LIVE STUDIO records the dedicated live-feed camera to the phone Gallery. " +
-                    "The interface is ready for a future RTMP/SRT/WebRTC destination, but this build does not falsely claim an internet livestream is connected."
+                "V184 stores a destination for the next streaming-backend phase. " +
+                    "This APK still records locally and does not pretend the internet stream is active."
+            )
+            .setView(
+                box
+            )
+            .setPositiveButton(
+                "SAVE"
+            ) { _, _ ->
+                prefs.edit()
+                    .putString(
+                        "url",
+                        url.text
+                            .toString()
+                            .trim()
+                    )
+                    .putString(
+                        "key",
+                        key.text
+                            .toString()
+                            .trim()
+                    )
+                    .apply()
+
+                val ready =
+                    url.text
+                        .toString()
+                        .trim()
+                        .isNotBlank()
+
+                outputButton.text =
+                    "OUTPUT\n" +
+                        if (
+                            ready
+                        ) {
+                            "SET"
+                        } else {
+                            "LOCAL"
+                        }
+
+                outputStatus.text =
+                    if (
+                        ready
+                    ) {
+                        "OUTPUT • DESTINATION SAVED • LOCAL CAPTURE ACTIVE"
+                    } else {
+                        "OUTPUT • LOCAL LIVE CAPTURE • STREAM DESTINATION NOT CONNECTED"
+                    }
+            }
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .show()
+    }
+
+    private fun showSignalInfo() {
+        AlertDialog.Builder(this)
+            .setTitle(
+                "LIVE SIGNALS"
+            )
+            .setMessage(
+                "GREEN = ready/healthy. AMBER = limited or permission dependent. " +
+                    "RED = unavailable or actively recording for REC. " +
+                    "NET reports internet capability, GPS reports permission readiness, MIC reports audio readiness, CAM reports the bound camera, and BAT changes by remaining charge."
             )
             .setPositiveButton(
                 "OK",
@@ -869,7 +1980,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private fun updateSignals() {
         netLamp.setTextColor(
-            if (isNetworkConnected()) {
+            if (
+                isNetworkConnected()
+            ) {
                 green
             } else {
                 red
@@ -906,7 +2019,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         camLamp.setTextColor(
-            if (camera != null) {
+            if (
+                camera != null
+            ) {
                 green
             } else {
                 red
@@ -914,7 +2029,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         recLamp.setTextColor(
-            if (recording != null) {
+            if (
+                recording !=
+                null
+            ) {
                 red
             } else {
                 0xFF657078.toInt()
@@ -936,43 +2054,31 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         batteryLamp.setTextColor(
             when {
-                percent >= 30 -> green
-                percent >= 15 -> amber
-                else -> red
+                percent >= 30 ->
+                    green
+
+                percent >= 15 ->
+                    amber
+
+                else ->
+                    red
             }
         )
     }
 
     private fun updateTimer() {
-        if (
-            recording == null ||
-            recordStartMs == 0L
-        ) {
-            timerView.text =
-                "00:00:00"
-            return
-        }
-
-        val seconds =
-            (
-                SystemClock.elapsedRealtime() -
-                    recordStartMs
-                ) / 1000L
-
         timerView.text =
-            String.format(
-                Locale.US,
-                "%02d:%02d:%02d",
-                seconds / 3600L,
-                (seconds / 60L) % 60L,
-                seconds % 60L
-            )
+            liveTimecode()
     }
 
     private fun updateBlink() {
-        if (recording == null) {
+        if (
+            recording ==
+            null
+        ) {
             liveBadge.alpha =
                 0.85f
+
             return
         }
 
@@ -980,7 +2086,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             !liveBlinkOn
 
         liveBadge.alpha =
-            if (liveBlinkOn) {
+            if (
+                liveBlinkOn
+            ) {
                 1f
             } else {
                 0.25f
@@ -1000,7 +2108,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         val caps =
             cm.getNetworkCapabilities(
                 network
-            ) ?: return false
+            )
+                ?: return false
 
         return caps.hasCapability(
             NetworkCapabilities.NET_CAPABILITY_INTERNET
@@ -1008,26 +2117,31 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     }
 
     private fun liveSettingButton(
-        textValue: String,
+        value: String,
         accent: Int,
         action: () -> Unit
     ): Button {
         return Button(this).apply {
             text =
-                textValue
+                value
+
             textSize =
                 9f
+
             isAllCaps =
                 false
+
             setTextColor(
                 white
             )
+
             background =
                 rounded(
                     0x7A11171A,
                     accent,
                     18
                 )
+
             setOnClickListener {
                 action.invoke()
             }
@@ -1057,15 +2171,20 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         return TextView(this).apply {
             text =
                 value
+
             textSize =
                 size
+
             setTextColor(
                 color
             )
+
             typeface =
                 Typeface.create(
                     Typeface.DEFAULT,
-                    if (bold) {
+                    if (
+                        bold
+                    ) {
                         Typeface.BOLD
                     } else {
                         Typeface.NORMAL
@@ -1082,9 +2201,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         return GradientDrawable().apply {
             shape =
                 GradientDrawable.RECTANGLE
+
             cornerRadius =
                 dp(radius).toFloat()
-            setColor(fill)
+
+            setColor(
+                fill
+            )
 
             if (
                 stroke !=
@@ -1102,11 +2225,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         LinearLayout.LayoutParams {
         return LinearLayout.LayoutParams(
             0,
-            dp(58),
+            dp(56),
             1f
         ).apply {
             marginStart =
                 dp(4)
+
             marginEnd =
                 dp(4)
         }
@@ -1122,11 +2246,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     }
 
     private fun toast(
-        message: String
+        value: String
     ) {
         Toast.makeText(
             this,
-            message,
+            value,
             Toast.LENGTH_SHORT
         ).show()
     }
@@ -1141,8 +2265,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ).apply {
                 style =
                     Paint.Style.STROKE
+
                 strokeWidth =
                     5f
+
                 color =
                     0xFFFF3B32.toInt()
             }
@@ -1153,8 +2279,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ).apply {
                 style =
                     Paint.Style.STROKE
+
                 strokeWidth =
-                    10f
+                    11f
+
                 color =
                     0xFFFF3B32.toInt()
             }
@@ -1165,16 +2293,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ).apply {
                 style =
                     Paint.Style.FILL
+
                 color =
                     0xFF5E1110.toInt()
             }
 
-        private val stop =
+        private val centerMark =
             Paint(
                 Paint.ANTI_ALIAS_FLAG
             ).apply {
                 style =
                     Paint.Style.FILL
+
                 color =
                     Color.WHITE
             }
@@ -1187,7 +2317,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 Looper.getMainLooper()
             )
 
-        private val pulseRunnable =
+        private val pulse =
             object : Runnable {
                 override fun run() {
                     invalidate()
@@ -1215,20 +2345,23 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 value
 
             center.color =
-                if (value) {
+                if (
+                    value
+                ) {
                     0xFFFF2D24.toInt()
                 } else {
                     0xFF5E1110.toInt()
                 }
 
-            pulseHandler
-                .removeCallbacks(
-                    pulseRunnable
-                )
+            pulseHandler.removeCallbacks(
+                pulse
+            )
 
-            if (value) {
+            if (
+                value
+            ) {
                 pulseHandler.post(
-                    pulseRunnable
+                    pulse
                 )
             }
 
@@ -1244,13 +2377,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
             val cx =
                 width / 2f
+
             val cy =
                 height / 2f
+
             val base =
                 minOf(
                     width,
                     height
-                ) * 0.29f
+                ) *
+                    0.29f
 
             if (
                 isRecording
@@ -1262,12 +2398,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                                 180.0
                         ) +
                             1.0
-                        ) / 2.0
+                        ) /
+                        2.0
 
                 glow.alpha =
                     (
                         45 +
-                            (wave * 115)
+                            (
+                                wave *
+                                    120
+                                )
                         ).roundToInt()
 
                 canvas.drawCircle(
@@ -1275,7 +2415,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     cy,
                     base +
                         13f +
-                        (wave * 7f).toFloat(),
+                        (
+                            wave *
+                                8f
+                            ).toFloat(),
                     glow
                 )
             }
@@ -1283,7 +2426,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             canvas.drawCircle(
                 cx,
                 cy,
-                base + 7f,
+                base +
+                    7f,
                 ring
             )
 
@@ -1298,131 +2442,33 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 isRecording
             ) {
                 val half =
-                    base * 0.28f
+                    base *
+                        0.28f
 
                 canvas.drawRoundRect(
-                    cx - half,
-                    cy - half,
-                    cx + half,
-                    cy + half,
-                    half * 0.28f,
-                    half * 0.28f,
-                    stop
+                    cx -
+                        half,
+                    cy -
+                        half,
+                    cx +
+                        half,
+                    cy +
+                        half,
+                    half *
+                        0.28f,
+                    half *
+                        0.28f,
+                    centerMark
                 )
             } else {
-                val dot =
-                    base * 0.17f
-
                 canvas.drawCircle(
                     cx,
                     cy,
-                    dot,
-                    stop
+                    base *
+                        0.17f,
+                    centerMark
                 )
             }
-        }
-    }
-
-    private class LiveGraphicsView(
-        context: Context
-    ) : View(context) {
-
-        private val grid =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    0x40FFFFFF
-                strokeWidth =
-                    1f
-            }
-
-        private val red =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    0xAAFF3B32.toInt()
-                strokeWidth =
-                    3f
-                style =
-                    Paint.Style.STROKE
-            }
-
-        private val green =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    0xAA62E889.toInt()
-                strokeWidth =
-                    2f
-                style =
-                    Paint.Style.STROKE
-            }
-
-        override fun onDraw(
-            canvas: Canvas
-        ) {
-            super.onDraw(
-                canvas
-            )
-
-            val w =
-                width.toFloat()
-            val h =
-                minOf(
-                    height.toFloat(),
-                    w * 16f / 9f
-                )
-
-            canvas.drawLine(
-                w / 3f,
-                0f,
-                w / 3f,
-                h,
-                grid
-            )
-            canvas.drawLine(
-                w * 2f / 3f,
-                0f,
-                w * 2f / 3f,
-                h,
-                grid
-            )
-            canvas.drawLine(
-                0f,
-                h / 3f,
-                w,
-                h / 3f,
-                grid
-            )
-            canvas.drawLine(
-                0f,
-                h * 2f / 3f,
-                w,
-                h * 2f / 3f,
-                grid
-            )
-
-            val cx =
-                w / 2f
-            val cy =
-                h / 2f
-
-            canvas.drawCircle(
-                cx,
-                cy,
-                42f,
-                green
-            )
-
-            canvas.drawCircle(
-                cx,
-                cy,
-                58f,
-                red
-            )
         }
     }
 }

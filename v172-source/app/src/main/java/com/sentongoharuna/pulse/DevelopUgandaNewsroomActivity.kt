@@ -85,7 +85,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "MOBILE NEWSROOM • V183",
+                "MOBILE NEWSROOM • V185",
                 9f,
                 white,
                 true
@@ -213,8 +213,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "THE STORY STARTS HERE",
-                "Capture • Live Studio • Edit • Package • Publish"
+                "CONTROL ROOM",
+                "REPORT • LIVE • EDIT • DESK • PUBLISH"
             )
         )
 
@@ -227,7 +227,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "Evidence-rich reporting camera",
+                "Evidence-rich reporting camera • full/half view • detailed report settings",
                 "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -239,8 +239,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "A completely different live-feed recording interface",
-                "Blinking LIVE REC • signal lamps • action lights • live-only controls • glowing record ring",
+                "Dedicated LIVE broadcast deck • full/half view • detailed live settings",
+                "Blinking LIVE • signal lamps • LIVE profiles • lower third • pulsing red record ring • full/half preview • live graphics burned into the saved clip",
                 red,
                 "OPEN LIVE STUDIO"
             ) {
@@ -323,8 +323,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "LIVE STUDIO",
-                "Built only for live-feed style reporting — not a copy of the Field Report camera."
+                "LIVE CONTROL ROOM",
+                "A separate broadcast deck for breaking news, interviews, events and community live-style coverage."
             )
         )
 

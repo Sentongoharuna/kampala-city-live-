@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 18300
-        versionName = "183.0-dual-camera-live-studio"
+        versionCode = 18500
+        versionName = "185.0-dual-preview-detailed-settings"
     }
 
     buildTypes {
