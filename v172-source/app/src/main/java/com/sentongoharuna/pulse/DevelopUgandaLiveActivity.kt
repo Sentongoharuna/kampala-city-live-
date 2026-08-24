@@ -2037,25 +2037,55 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 if (
                     blink
                 ) {
-                    230
+                    245
                 } else {
-                    95
+                    110
                 }
 
             val badgeLeft =
                 safeRight -
-                    (152f * u)
+                    (178f * u)
 
             val badgeTop =
                 safeTop -
-                    (23f * u)
+                    (28f * u)
 
             val badgeRight =
                 safeRight
 
             val badgeBottom =
                 safeTop +
-                    (7f * u)
+                    (10f * u)
+
+            val badgeGlow =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        Color.argb(
+                            if (blink) 95 else 38,
+                            255,
+                            59,
+                            50
+                        )
+
+                    style =
+                        Paint.Style.FILL
+                }
+
+            canvas.drawRoundRect(
+                badgeLeft -
+                    (6f * u),
+                badgeTop -
+                    (6f * u),
+                badgeRight +
+                    (2f * u),
+                badgeBottom +
+                    (6f * u),
+                14f * u,
+                14f * u,
+                badgeGlow
+            )
 
             val badgeBackground =
                 Paint(
@@ -2078,12 +2108,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 badgeTop,
                 badgeRight,
                 badgeBottom,
-                10f * u,
-                10f * u,
+                12f * u,
+                12f * u,
                 badgeBackground
             )
 
-            val badgeText =
+            val signalDot =
                 Paint(
                     Paint.ANTI_ALIAS_FLAG
                 ).apply {
@@ -2095,8 +2125,61 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             255
                         )
 
+                    style =
+                        Paint.Style.FILL
+                }
+
+            canvas.drawCircle(
+                badgeLeft +
+                    (15f * u),
+                safeTop -
+                    (8f * u),
+                5.2f * u,
+                signalDot
+            )
+
+            val pulseRing =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        Color.argb(
+                            if (blink) 235 else 110,
+                            255,
+                            255,
+                            255
+                        )
+
+                    style =
+                        Paint.Style.STROKE
+
+                    strokeWidth =
+                        1.6f * u
+                }
+
+            canvas.drawCircle(
+                badgeLeft +
+                    (15f * u),
+                safeTop -
+                    (8f * u),
+                if (blink) 9.5f * u else 7.2f * u,
+                pulseRing
+            )
+
+            val badgeText =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        Color.argb(
+                            if (blink) 255 else 168,
+                            255,
+                            255,
+                            255
+                        )
+
                     textSize =
-                        15.5f *
+                        14.8f *
                             u
 
                     typeface =
@@ -2107,9 +2190,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 }
 
             canvas.drawText(
-                "● LIVE REC",
+                "LIVE FEED  REC",
                 badgeLeft +
-                    (11f * u),
+                    (28f * u),
                 safeTop -
                     (2f * u),
                 badgeText

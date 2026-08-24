@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "SOCIAL CAMERA PRO • V200",
+                "DYNAMIC SIDE HUD PRO • V201",
                 9f,
                 white,
                 true
@@ -256,7 +256,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             compactStatus(
                 "SOCIAL CAMERA ENGINE",
-                "1080P PREFERRED • HIGH BITRATE • DEVICE AE/AF/AWB • 9:16 PHONE CAPTURE • SAVED VIDEO FX",
+                "SIDE HUD REPORT OVERLAY • DYNAMIC MOVING DATA • GLOWING LIVE FEED SIGNAL • HIGH BITRATE SOCIAL VIDEO",
                 cyan
             )
         )
@@ -352,7 +352,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • social 1080p/high-bitrate camera tune • expanded LOOK effects • readable burn-in • presets",
+                "FIELD REPORT • bigger side-positioned dynamic telemetry • static rows removed • clearer moving data • presets",
                 "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -364,7 +364,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • blinking LIVE REC burned into saved video • 1080p/high-bitrate tune • VIDEO FX • MARK",
+                "LIVE STUDIO • glowing blinking LIVE FEED REC signal burned into saved video • 1080p/high-bitrate tune • VIDEO FX",
                 "Signals • reporter identity • output setup • broadcast profiles • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"

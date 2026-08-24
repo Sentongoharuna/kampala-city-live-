@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 20000
-        versionName = "200.0-social-camera-pro"
+        versionCode = 20100
+        versionName = "201.0-dynamic-side-hud-pro"
     }
 
     buildTypes {

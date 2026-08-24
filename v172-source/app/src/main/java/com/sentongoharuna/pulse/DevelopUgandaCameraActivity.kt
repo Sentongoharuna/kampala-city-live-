@@ -3115,7 +3115,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    private fun drawReporterOverlay(frame: Frame) {
+        private fun drawReporterOverlay(frame: Frame) {
         val c = frame.overlayCanvas
         val crop = frame.cropRect
 
@@ -3250,26 +3250,17 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     reportHudSizeIndex
                 ]
 
-        // V177 social-safe broadcast HUD:
-        // all telemetry is retained, but reorganized into deliberate rows.
-        // Values such as LAT/LON/ALT/HDG/SPD/FIX/DIST continue changing live.
-        // V178 uses a deeper social-safe inset. The previous transform
-        // placed the left edge too close to the exported crop on some phones.
-        // V181 WYSIWYG preview + V180 broadcast-safe recorded layout:
-        // identity stays inside social-media safe margins while the
-        // upper-right is reserved for the live compass/level instruments.
-        // V180: deliberately deeper safe margins for both the CameraX
-        // preview crop and the exported 9:16 video. This prevents the brand,
-        // telemetry and instruments from being clipped at the phone edges.
-        // V198: wider protected narration lane. It still stays well
-        // inside the 9:16 frame, but long telemetry lines no longer need
-        // to collapse into tiny lettering.
+        // V201: move the REPORT burn-in to a deliberate left-side telemetry
+        // column, make the type larger, and keep only values that genuinely
+        // change while the camera moves.
         val safeLeft =
-            finalWidth * 0.16f
+            finalWidth * 0.045f
+
         val safeTop =
-            finalHeight * 0.105f
+            finalHeight * 0.115f
+
         val maxWidth =
-            finalWidth * 0.62f
+            finalWidth * 0.39f
 
         var y = safeTop
 
@@ -3278,20 +3269,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         ).apply {
             typeface = Typeface.create(
                 Typeface.MONOSPACE,
-                Typeface.NORMAL
+                Typeface.BOLD
             )
 
             setShadowLayer(
                 reportHudShadowRadius(
                     u
                 ),
-                0.6f * u,
-                0.6f * u,
+                0.45f * u,
+                0.45f * u,
                 reportHudOutlineColor()
             )
         }
 
-        // Minimal broadcast signature: no black panel, only a brand rail.
         val rail = Paint(
             Paint.ANTI_ALIAS_FLAG
         ).apply {
@@ -3301,28 +3291,26 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 } else {
                     0xFFD8B85B.toInt()
                 }
-            strokeWidth = 3.2f * u
+
+            strokeWidth =
+                4.0f * u
         }
 
         c.drawLine(
-            safeLeft - (10f * u),
-            y - (4f * u),
-            safeLeft - (10f * u),
-            y + (246f * u),
+            safeLeft - (8f * u),
+            y - (8f * u),
+            safeLeft - (8f * u),
+            finalHeight * 0.67f,
             rail
         )
 
-        // 1. Signature.
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
         text.color =
             0xFFD8B85B.toInt()
         text.textSize =
-            35f * u
+            42f * u
 
-        val brand = "develop.uganda"
+        val brand =
+            "develop.uganda"
 
         drawStrongRecordedText(
             c,
@@ -3332,58 +3320,40 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             text
         )
 
-        // V182: keep develop.uganda and the report type on one broadcast line.
-        // The WYSIWYG preview now shows the complete 9:16 frame, so both labels
-        // can stay together without being cropped.
         val brandWidth =
-            text.measureText(brand)
+            text.measureText(
+                brand
+            )
 
         text.color =
-            if (reportDisplayMode == "LIVE EFFECT") {
+            if (
+                reportDisplayMode ==
+                "LIVE EFFECT"
+            ) {
                 0xFFFF5A52.toInt()
             } else {
                 Color.WHITE
             }
+
         text.textSize =
-            14.0f * u
+            15.8f * u
 
         drawStrongRecordedText(
             c,
             sceneTag(),
             safeLeft +
                 brandWidth +
-                (14f * u),
+                (11f * u),
             y,
             text
         )
 
-        val accent = Paint(
-            Paint.ANTI_ALIAS_FLAG
-        ).apply {
-            color =
-                0xB3FFC21A.toInt()
-            strokeWidth =
-                1.35f * u
-        }
-
-        c.drawLine(
-            safeLeft,
-            y + (10f * u),
-            safeLeft + maxWidth,
-            y + (10f * u),
-            accent
-        )
-
-        // Real live field instruments. These are part of the recorded HUD.
-        // V192: navigation instruments live at the extreme lower-right of
-        // the recorded feed, leaving the upper narration clean and spacious.
+        // Keep the moving instruments at the lower-right.
         val instrumentCenterX =
-            finalWidth *
-                0.79f
+            finalWidth * 0.80f
 
         val compassCenterY =
-            finalHeight *
-                0.875f
+            finalHeight * 0.875f
 
         drawCompassInstrument(
             c,
@@ -3395,12 +3365,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawAudioMeterInstrument(
             c,
-            finalWidth *
-                0.705f,
-            finalHeight *
-                0.815f,
-            finalWidth *
-                0.15f,
+            finalWidth * 0.705f,
+            finalHeight * 0.815f,
+            finalWidth * 0.15f,
             10f * u,
             u
         )
@@ -3408,57 +3375,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         drawLevelInstrument(
             c,
             instrumentCenterX,
-            finalHeight *
-                0.935f,
+            finalHeight * 0.935f,
             92f * u,
             28f * u,
             u
         )
 
-        // 2. Stable report identity rows. Shorter rows keep the full
-        // develop.uganda identity readable instead of shrinking off-screen.
-        y += 28f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
-        text.color = Color.WHITE
-        text.textSize = 15.0f * u
-
-        drawFitText(
-            c,
-            "REPORT ID • $reportId   |   CLIP • ${clipSequenceText()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            11.2f * u
-        )
-
-        y += 15f * u
-        drawFitText(
-            c,
-            "REPORTER • ${reporterDisplayName()}   |   STORY • ${storyDisplayId()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            11.0f * u
-        )
-
-        // 3. REC / timecode / date and local clock.
-        y += 17f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
-        text.textSize = 15.8f * u
+        // Dynamic-only rows.
+        y += 30f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
             } else {
-                0xFFFFFFFF.toInt()
+                Color.WHITE
             }
+        text.textSize =
+            18.0f * u
 
         val recState =
             when {
@@ -3469,230 +3401,250 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "$recState   |   TIMECODE • ${tc()}   |   ${clock.format(Date())}",
+            "$recState   |   TC ${tc()}",
             safeLeft,
             y,
             maxWidth,
             text,
-            11.8f * u
+            15.2f * u
         )
 
-        y += 15f * u
-        text.textSize = 13.2f * u
-        drawFitText(
-            c,
-            "LOCAL ${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            10.0f * u
-        )
-
-        // 4. Editorial / camera identity.
-        y += 16f * u
-        text.color =
-            0xFFD8B85B.toInt()
-        text.textSize =
-            14.0f * u
-
-        drawFitText(
-            c,
-            "MODE • ${sceneModes[sceneIndex]}   |   LOOK • ${lookModes[lookIndex]}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            10.0f * u
-        )
-
-        y += 16f * u
-        drawFitText(
-            c,
-            "FORMAT • ${qualityModes[qualityIndex]}   |   CAPTURE • ${captureModes[captureModeIndex]}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            10.0f * u
-        )
-
-        // 5. Place.
-        y += 17f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
+        y += 20f * u
         text.color = Color.WHITE
-        text.textSize = 14.6f * u
-
-        drawFitText(
-            c,
-            "LOCATION • $placeName",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            10.4f * u
-        )
-
-        // 6. Live changing coordinates.
-        y += 16f * u
-        text.color =
-            0xFF83C7D4.toInt()
         text.textSize =
-            13.0f * u
+            16.0f * u
 
         drawFitText(
             c,
-            "POSITION • ${coordinatePrimaryOverlay()}",
+            "LOCAL ${clock.format(Date())}   |   UTC ${utcClockText()}",
             safeLeft,
             y,
             maxWidth,
             text,
-            9.9f * u
+            13.6f * u
         )
 
-        // 7. GPS altitude / accuracy / satellites / fix age.
-        y += 15f * u
-        text.color =
-            0xFF83C7D4.toInt()
-        text.textSize =
-            13.0f * u
-
-        drawFitText(
-            c,
-            "GPS STATUS • ${gnssOverlay()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            9.7f * u
-        )
-
-        // 8. Compass / GPS bearing / speed / motion / distance.
-        y += 15f * u
-        text.color =
-            0xFF83C7D4.toInt()
-        text.textSize =
-            13.0f * u
-
-        drawFitText(
-            c,
-            "NAVIGATION • ${navigationOverlay()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            9.6f * u
-        )
-
-        // 9. Real phone orientation / horizon angle.
-        y += 15f * u
-        text.color =
-            0xFFFFFFFF.toInt()
-        text.textSize =
-            12.8f * u
-
-        drawFitText(
-            c,
-            "LEVEL • ${orientationOverlay()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            9.4f * u
-        )
-
-        // 10. Weather.
-        y += 15f * u
+        y += 20f * u
         text.color =
             0xFF9FD9FF.toInt()
         text.textSize =
-            12.5f * u
+            16.8f * u
 
         drawFitText(
             c,
-            "WEATHER • ${weatherOverlay().removePrefix("WX ")}",
+            "POSITION",
             safeLeft,
             y,
             maxWidth,
             text,
-            9.6f * u
+            15.0f * u
         )
 
-        // 11. Real recording audio amplitude + network / battery / storage.
-        y += 15f * u
-        text.color =
-            0xFF83B995.toInt()
-        text.textSize =
-            13.0f * u
-
-        drawFitText(
-            c,
-            "AUDIO • ${audioLevelOverlay()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            9.5f * u
-        )
-
-        y += 15f * u
-        drawFitText(
-            c,
-            "SYSTEM • ${systemOverlay()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            9.5f * u
-        )
-
-        // 12. Active camera state.
-        y += 17f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
-        )
-        text.color =
-            0xFFD8B85B.toInt()
-        text.textSize =
-            12.0f * u
-
-        drawFitText(
-            c,
-            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • SOCIAL HIGH BITRATE • EXP $sceneExposureTarget",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            9.5f * u
-        )
-
-        // 13. Keep all automatic/manual-capability information.
         y += 16f * u
-        text.typeface = Typeface.create(
-            Typeface.MONOSPACE,
-            Typeface.BOLD
+        text.color =
+            0xFF83C7D4.toInt()
+        text.textSize =
+            15.2f * u
+
+        drawFitText(
+            c,
+            coordinatePrimaryOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            13.2f * u
         )
+
+        y += 20f * u
+        text.color =
+            0xFF9FD9FF.toInt()
+        text.textSize =
+            16.8f * u
+
+        drawFitText(
+            c,
+            "GPS STATUS",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            15.0f * u
+        )
+
+        y += 16f * u
+        text.color =
+            0xFF83C7D4.toInt()
+        text.textSize =
+            15.2f * u
+
+        drawFitText(
+            c,
+            gnssOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            13.0f * u
+        )
+
+        y += 20f * u
+        text.color =
+            0xFF9FD9FF.toInt()
+        text.textSize =
+            16.8f * u
+
+        drawFitText(
+            c,
+            "NAVIGATION",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            15.0f * u
+        )
+
+        y += 16f * u
+        text.color =
+            0xFF83C7D4.toInt()
+        text.textSize =
+            15.2f * u
+
+        drawFitText(
+            c,
+            navigationOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            13.0f * u
+        )
+
+        y += 20f * u
         text.color =
             0xFFFFFFFF.toInt()
         text.textSize =
-            11.4f * u
+            16.8f * u
 
         drawFitText(
             c,
-            "AUTO ISO • AUTO SHUTTER • AUTO WB • MIC ON • GPS ON • GRID • LEVEL • ${captureModes[captureModeIndex]}",
+            "LEVEL",
             safeLeft,
             y,
             maxWidth,
             text,
-            9.2f * u
+            15.0f * u
+        )
+
+        y += 16f * u
+        text.textSize =
+            15.0f * u
+
+        drawFitText(
+            c,
+            orientationOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            12.9f * u
+        )
+
+        y += 20f * u
+        text.color =
+            0xFF9FD9FF.toInt()
+        text.textSize =
+            16.8f * u
+
+        drawFitText(
+            c,
+            "WEATHER",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            15.0f * u
+        )
+
+        y += 16f * u
+        text.color =
+            0xFF9FD9FF.toInt()
+        text.textSize =
+            15.0f * u
+
+        drawFitText(
+            c,
+            weatherOverlay().removePrefix("WX "),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            12.9f * u
+        )
+
+        y += 20f * u
+        text.color =
+            0xFF83B995.toInt()
+        text.textSize =
+            16.8f * u
+
+        drawFitText(
+            c,
+            "AUDIO",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            15.0f * u
+        )
+
+        y += 16f * u
+        text.textSize =
+            15.0f * u
+
+        drawFitText(
+            c,
+            audioLevelOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            12.9f * u
+        )
+
+        y += 20f * u
+        text.color =
+            0xFF83B995.toInt()
+        text.textSize =
+            16.8f * u
+
+        drawFitText(
+            c,
+            "SYSTEM",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            15.0f * u
+        )
+
+        y += 16f * u
+        text.textSize =
+            15.0f * u
+
+        drawFitText(
+            c,
+            systemOverlay(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            12.9f * u
         )
 
         c.restore()
     }
+
 
     private fun drawStrongRecordedText(
         canvas: Canvas,
