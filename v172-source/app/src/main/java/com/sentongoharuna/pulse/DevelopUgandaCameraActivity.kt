@@ -97,6 +97,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         const val ACTION_IDENTITY = 8
         const val ACTION_VIEW_MODE = 9
         const val ACTION_SETTINGS = 10
+        const val ACTION_GUIDES = 11
+        const val ACTION_RESET = 12
     }
 
 
@@ -122,11 +124,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var identityButton: Button
     private lateinit var viewModeButton: Button
     private lateinit var settingsButton: Button
+    private lateinit var guidesButton: Button
+    private lateinit var resetButton: Button
     private lateinit var settingsSummaryView: TextView
     private lateinit var reportRecordGlow: ReportRecordGlowView
 
     private var halfPreviewMode = false
     private var detailedSettingsVisible = false
+    private var previewGuidesEnabled = true
 
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
@@ -346,7 +351,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             // even though the exported video was correct. FIT_START keeps the
             // entire recorded frame visible and places any spare screen space
             // below it, where the operator controls already live.
-            scaleType = PreviewView.ScaleType.FIT_START
+            scaleType = PreviewView.ScaleType.FILL_CENTER
         }
 
         root.addView(
@@ -496,28 +501,35 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             0xFF7FE8FF.toInt()
         )
 
-        reportToolsRow.addView(
+        guidesButton = deckButton(
+            "GUIDES\nON",
+            0xFFFFC21A.toInt()
+        )
+
+        resetButton = deckButton(
+            "RESET\nCAM",
+            0xFFFF8A84.toInt()
+        )
+
+        listOf(
             viewModeButton,
-            LinearLayout.LayoutParams(
-                0,
-                dp(38),
-                1f
-            )
-        )
-
-        reportToolsRow.addView(
-            space(dp(7)),
-            wrap(7, 1)
-        )
-
-        reportToolsRow.addView(
             settingsButton,
-            LinearLayout.LayoutParams(
-                0,
-                dp(38),
-                1f
+            guidesButton,
+            resetButton
+        ).forEachIndexed { index, button ->
+            reportToolsRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(34),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart = dp(5)
+                    }
+                }
             )
-        )
+        }
 
         bottomDeck.addView(reportToolsRow)
 
@@ -703,6 +715,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             DeckTouchListener(ACTION_SETTINGS)
         )
 
+        guidesButton.setOnTouchListener(
+            DeckTouchListener(ACTION_GUIDES)
+        )
+
+        resetButton.setOnTouchListener(
+            DeckTouchListener(ACTION_RESET)
+        )
+
         lensButton.setOnTouchListener(
             DeckTouchListener(ACTION_LENS)
         )
@@ -762,22 +782,30 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 previewHeight
-            )
-
-        previewParams.gravity =
-            Gravity.TOP
+            ).apply {
+                gravity = Gravity.TOP
+            }
 
         previewView.layoutParams =
             previewParams
+
+        // FULL intentionally fills under every control including the red
+        // record button. HALF shows the complete 9:16 camera frame in the
+        // upper half and leaves a dedicated operator/settings area below.
+        previewView.scaleType =
+            if (halfPreviewMode) {
+                PreviewView.ScaleType.FIT_CENTER
+            } else {
+                PreviewView.ScaleType.FILL_CENTER
+            }
 
         val guideParams =
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 previewHeight
-            )
-
-        guideParams.gravity =
-            Gravity.TOP
+            ).apply {
+                gravity = Gravity.TOP
+            }
 
         guidesView.layoutParams =
             guideParams
@@ -795,39 +823,123 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 true
             settingsSummaryView.visibility =
                 View.VISIBLE
+        } else {
+            settingsSummaryView.visibility =
+                if (detailedSettingsVisible) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
         }
 
         refreshReportSettingsSummary()
 
         toast(
             if (halfPreviewMode) {
-                "Half-screen report preview"
+                "Half-screen report view"
             } else {
-                "Full-screen report preview"
+                "Full-screen camera behind controls"
             }
         )
     }
 
-    private fun toggleDetailedReportSettings() {
+    private fun showReportDetailedSettings() {
         detailedSettingsVisible =
-            !detailedSettingsVisible
+            true
 
         settingsSummaryView.visibility =
-            if (detailedSettingsVisible) {
+            if (halfPreviewMode) {
                 View.VISIBLE
             } else {
                 View.GONE
             }
 
-        settingsButton.text =
-            "SETTINGS\n" +
-                if (detailedSettingsVisible) {
-                    "OPEN"
+        refreshReportSettingsSummary()
+
+        val message =
+            buildString {
+                append(reportSettingsSummary())
+                append("\n\nRECORD OUTPUT\n")
+                append("9:16 portrait • telemetry burn-in • Report ID • reporter/story identity")
+                append("\n\nPREVIEW\n")
+                append(
+                    if (halfPreviewMode) {
+                        "HALF — complete camera frame above operator controls"
+                    } else {
+                        "FULL — camera image fills the phone behind all controls"
+                    }
+                )
+                append("\n\nROLE\n")
+                append("FIELD REPORT settings remain independent from LIVE STUDIO settings.")
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle("FIELD REPORT SETTINGS")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    private fun togglePreviewGuides() {
+        previewGuidesEnabled =
+            !previewGuidesEnabled
+
+        guidesView.visibility =
+            if (previewGuidesEnabled) {
+                View.VISIBLE
+            } else {
+                View.INVISIBLE
+            }
+
+        guidesButton.text =
+            "GUIDES\n" +
+                if (previewGuidesEnabled) {
+                    "ON"
                 } else {
-                    "REPORT"
+                    "OFF"
                 }
 
+        toast(
+            if (previewGuidesEnabled) {
+                "Preview guides on"
+            } else {
+                "Preview guides off"
+            }
+        )
+    }
+
+    private fun resetReportCameraSettings() {
+        if (recording != null) {
+            toast("Stop recording before reset")
+            return
+        }
+
+        sceneIndex = 0
+        lookIndex = 0
+        qualityIndex = 0
+        captureModeIndex = 0
+        sceneExposureTarget = 0
+
+        sceneButton.text =
+            "SCENE\n${sceneModes[sceneIndex]}"
+
+        lookButton.text =
+            "LOOK\n${lookModes[lookIndex]}"
+
+        qualityButton.text =
+            "FORMAT\n${qualityDeckLabel()}"
+
+        captureModeButton.text =
+            "CAPTURE\n${captureModes[captureModeIndex]}"
+
+        exposureSeek.progress = 6
+
+        camera?.cameraControl
+            ?.setExposureCompensationIndex(0)
+
         refreshReportSettingsSummary()
+        bindCamera()
+        toast("Field Report camera reset")
     }
 
     private fun refreshReportSettingsSummary() {
@@ -895,7 +1007,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             append(" • ZOOM LIVE • TAP AF")
             append("\n")
 
-            append("TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
+            append("GUIDES ")
+            append(
+                if (previewGuidesEnabled) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+            )
+            append(" • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
             append("\n")
 
             append("REPORT ID ")
@@ -3883,16 +4003,19 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         ): Boolean {
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    v?.alpha = 0.82f
+                    v?.isPressed = true
+                    v?.alpha = 0.94f
                     return true
                 }
 
                 MotionEvent.ACTION_CANCEL -> {
+                    v?.isPressed = false
                     v?.alpha = 1f
                     return true
                 }
 
                 MotionEvent.ACTION_UP -> {
+                    v?.isPressed = false
                     v?.alpha = 1f
                     v?.performClick()
 
@@ -3903,7 +4026,9 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         ACTION_CAPTURE_MODE -> cycleCaptureMode()
                         ACTION_IDENTITY -> showIdentityDialog()
                         ACTION_VIEW_MODE -> togglePreviewMode()
-                        ACTION_SETTINGS -> toggleDetailedReportSettings()
+                        ACTION_SETTINGS -> showReportDetailedSettings()
+                        ACTION_GUIDES -> togglePreviewGuides()
+                        ACTION_RESET -> resetReportCameraSettings()
 
                         ACTION_LENS -> {
                             if (recording == null) {
@@ -4007,12 +4132,15 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         value: String,
         accentColor: Int
     ): Button {
-        return Button(this).apply {
+        return GlowSettingButton(
+            this,
+            accentColor
+        ).apply {
             text = value
-            textSize = 6.5f
+            textSize = 5.9f
             isAllCaps = false
             setTextColor(Color.WHITE)
-            minHeight = dp(40)
+            minHeight = dp(34)
             setPadding(
                 dp(4),
                 0,
@@ -4113,6 +4241,65 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             value,
             Toast.LENGTH_SHORT
         ).show()
+    }
+
+    private class GlowSettingButton(
+        context: Context,
+        private val accent: Int
+    ) : Button(context) {
+
+        private val glowPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 3f
+                color = accent
+                setShadowLayer(
+                    12f,
+                    0f,
+                    0f,
+                    accent
+                )
+            }
+
+        init {
+            setLayerType(
+                LAYER_TYPE_SOFTWARE,
+                null
+            )
+        }
+
+        override fun drawableStateChanged() {
+            super.drawableStateChanged()
+            invalidate()
+        }
+
+        override fun onDraw(
+            canvas: Canvas
+        ) {
+            super.onDraw(canvas)
+
+            if (
+                isPressed ||
+                isSelected
+            ) {
+                val inset = 4f
+                val radius =
+                    height *
+                        0.45f
+
+                canvas.drawRoundRect(
+                    inset,
+                    inset,
+                    width - inset,
+                    height - inset,
+                    radius,
+                    radius,
+                    glowPaint
+                )
+            }
+        }
     }
 
     private class ReportRecordGlowView(

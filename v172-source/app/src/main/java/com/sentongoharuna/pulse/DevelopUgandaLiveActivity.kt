@@ -77,6 +77,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var outputButton: Button
     private lateinit var viewModeButton: Button
     private lateinit var settingsButton: Button
+    private lateinit var identityButton: Button
+    private lateinit var resetButton: Button
     private lateinit var recordButton: LiveRecordButtonView
 
     private lateinit var timerView: TextView
@@ -135,7 +137,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private val amber = 0xFFFFC21A.toInt()
     private val cyan = 0xFF77E9FF.toInt()
     private val white = Color.WHITE
-    private val panel = 0xB80A0E11.toInt()
+    private val panel = 0x280A0E11.toInt()
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -229,7 +231,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     PreviewView.ImplementationMode.COMPATIBLE
 
                 scaleType =
-                    PreviewView.ScaleType.FIT_START
+                    PreviewView.ScaleType.FILL_CENTER
             }
 
         root.addView(
@@ -254,7 +256,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 background =
                     rounded(
-                        0x6E000000,
+                        0x3A000000,
                         Color.TRANSPARENT,
                         0
                     )
@@ -651,7 +653,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 setPadding(
                     0,
-                    dp(6),
+                    dp(5),
                     0,
                     0
                 )
@@ -673,15 +675,41 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 showLiveDetailedSettings()
             }
 
-        row4.addView(
-            viewModeButton,
-            weight()
-        )
+        identityButton =
+            liveSettingButton(
+                "REPORTER\nID",
+                amber
+            ) {
+                showLiveIdentityEditor()
+            }
 
-        row4.addView(
+        resetButton =
+            liveSettingButton(
+                "RESET\nLIVE",
+                red
+            ) {
+                resetLiveSettings()
+            }
+
+        listOf(
+            viewModeButton,
             settingsButton,
-            weight()
-        )
+            identityButton,
+            resetButton
+        ).forEachIndexed { index, button ->
+            row4.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(42),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart = dp(4)
+                    }
+                }
+            )
+        }
 
         liveDeck.addView(
             row4
@@ -755,13 +783,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 height
-            )
-
-        params.gravity =
-            Gravity.TOP
+            ).apply {
+                gravity = Gravity.TOP
+            }
 
         previewView.layoutParams =
             params
+
+        previewView.scaleType =
+            if (halfPreviewMode) {
+                PreviewView.ScaleType.FIT_CENTER
+            } else {
+                PreviewView.ScaleType.FILL_CENTER
+            }
 
         viewModeButton.text =
             "VIEW\n" +
@@ -773,11 +807,133 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         toast(
             if (halfPreviewMode) {
-                "Half-screen LIVE preview"
+                "Half-screen LIVE view"
             } else {
-                "Full-screen LIVE preview"
+                "Full-screen LIVE camera behind controls"
             }
         )
+    }
+
+    private fun showLiveIdentityEditor() {
+        val box =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(18),
+                    dp(8),
+                    dp(18),
+                    dp(4)
+                )
+            }
+
+        val reporterField =
+            EditText(this).apply {
+                hint = "Reporter name"
+                setText(reporterName)
+            }
+
+        val storyField =
+            EditText(this).apply {
+                hint = "Story ID"
+                setText(storyId)
+            }
+
+        box.addView(reporterField)
+        box.addView(storyField)
+
+        AlertDialog.Builder(this)
+            .setTitle("LIVE REPORTER ID")
+            .setView(box)
+            .setPositiveButton(
+                "SAVE"
+            ) { _, _ ->
+                reporterName =
+                    reporterField.text
+                        .toString()
+                        .trim()
+                        .ifBlank {
+                            "CITIZEN"
+                        }
+
+                storyId =
+                    storyField.text
+                        .toString()
+                        .trim()
+                        .ifBlank {
+                            "--"
+                        }
+
+                getSharedPreferences(
+                    "develop_uganda_reporter",
+                    Context.MODE_PRIVATE
+                )
+                    .edit()
+                    .putString(
+                        "reporter_name",
+                        reporterName
+                    )
+                    .putString(
+                        "story_id",
+                        storyId
+                    )
+                    .apply()
+
+                toast("LIVE reporter identity saved")
+            }
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .show()
+    }
+
+    private fun resetLiveSettings() {
+        if (recording != null) {
+            toast("Stop LIVE REC before reset")
+            return
+        }
+
+        profileIndex = 0
+        quality = Quality.FHD
+        qualityLabel = "FHD"
+        audioEnabled = true
+        graphicsEnabled = true
+        useFront = false
+        halfPreviewMode = false
+
+        profileButton.text =
+            "PROFILE\\n${profiles[profileIndex]}"
+
+        qualityButton.text =
+            "QUALITY\\nFHD"
+
+        audioButton.text =
+            "AUDIO\\nON"
+
+        graphicsButton.text =
+            "GRAPHICS\\nON"
+
+        lensButton.text =
+            "LENS\\nBACK"
+
+        viewModeButton.text =
+            "VIEW\\nFULL"
+
+        previewView.layoutParams =
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            ).apply {
+                gravity = Gravity.TOP
+            }
+
+        previewView.scaleType =
+            PreviewView.ScaleType.FILL_CENTER
+
+        bindCamera()
+        toast("LIVE STUDIO reset")
     }
 
     private fun showLiveDetailedSettings() {
@@ -1205,17 +1361,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             ) /
                 1000f
 
+        // V186: conservative social-safe margins. V184/V185 used 8% and
+        // the CameraX crop could place the left side outside the saved MP4.
         val safeLeft =
             finalWidth *
-                0.08f
+                0.19f
 
         val safeTop =
             finalHeight *
-                0.08f
+                0.09f
 
         val safeRight =
             finalWidth *
-                0.92f
+                0.81f
 
         val paint =
             Paint(
@@ -1343,12 +1501,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         paint.color =
             white
 
-        canvas.drawText(
+        drawFitText(
+            canvas,
             "${profiles[profileIndex]} • $reporterName • STORY $storyId",
             safeLeft,
             safeTop +
                 (36f * u),
-            paint
+            safeRight -
+                safeLeft,
+            paint,
+            8.5f * u
         )
 
         paint.textSize =
@@ -1357,17 +1519,21 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         paint.color =
             cyan
 
-        canvas.drawText(
+        drawFitText(
+            canvas,
             "TC ${liveTimecode()} • ${ZoneId.systemDefault().id} • $qualityLabel • ${if (audioEnabled) "MIC ON" else "MIC OFF"}",
             safeLeft,
             safeTop +
                 (56f * u),
-            paint
+            safeRight -
+                safeLeft,
+            paint,
+            8.2f * u
         )
 
         val lowerY =
             finalHeight *
-                0.80f
+                0.76f
 
         val lowerBg =
             Paint(
@@ -1465,13 +1631,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         paint.textSize =
             10f * u
 
-        canvas.drawText(
+        drawFitText(
+            canvas,
             "REPORTER $reporterName • STORY $storyId",
             safeLeft +
                 (22f * u),
             lowerY +
                 (72f * u),
-            paint
+            safeRight -
+                safeLeft -
+                (40f * u),
+            paint,
+            7.8f * u
         )
 
         canvas.restore()
@@ -2121,12 +2292,15 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         accent: Int,
         action: () -> Unit
     ): Button {
-        return Button(this).apply {
+        return LiveGlowButton(
+            this,
+            accent
+        ).apply {
             text =
                 value
 
             textSize =
-                9f
+                7.7f
 
             isAllCaps =
                 false
@@ -2225,7 +2399,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         LinearLayout.LayoutParams {
         return LinearLayout.LayoutParams(
             0,
-            dp(56),
+            dp(44),
             1f
         ).apply {
             marginStart =
@@ -2253,6 +2427,65 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             value,
             Toast.LENGTH_SHORT
         ).show()
+    }
+
+    private class LiveGlowButton(
+        context: Context,
+        private val accent: Int
+    ) : Button(context) {
+
+        private val glowPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 3f
+                color = accent
+                setShadowLayer(
+                    13f,
+                    0f,
+                    0f,
+                    accent
+                )
+            }
+
+        init {
+            setLayerType(
+                LAYER_TYPE_SOFTWARE,
+                null
+            )
+        }
+
+        override fun drawableStateChanged() {
+            super.drawableStateChanged()
+            invalidate()
+        }
+
+        override fun onDraw(
+            canvas: Canvas
+        ) {
+            super.onDraw(canvas)
+
+            if (
+                isPressed ||
+                isSelected
+            ) {
+                val inset = 4f
+                val radius =
+                    height *
+                        0.44f
+
+                canvas.drawRoundRect(
+                    inset,
+                    inset,
+                    width - inset,
+                    height - inset,
+                    radius,
+                    radius,
+                    glowPaint
+                )
+            }
+        }
     }
 
     private class LiveRecordButtonView(
