@@ -2728,7 +2728,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         val safeTop =
             finalHeight * 0.125f
         val maxWidth =
-            finalWidth * 0.47f
+            finalWidth * 0.49f
 
         var y = safeTop
 
@@ -2777,7 +2777,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.color =
             0xFFFFC21A.toInt()
         text.textSize =
-            32f * u
+            33f * u
 
         val brand = "develop.uganda"
 
@@ -2869,11 +2869,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.BOLD
         )
         text.color = Color.WHITE
-        text.textSize = 12.4f * u
+        text.textSize = 12.8f * u
 
         drawFitText(
             c,
-            "REPORT ID $reportId • CLIP ${clipSequenceText()}",
+            "REPORT $reportId • CLIP ${clipSequenceText()}",
             safeLeft,
             y,
             maxWidth,
@@ -2898,7 +2898,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.MONOSPACE,
             Typeface.BOLD
         )
-        text.textSize = 13.0f * u
+        text.textSize = 13.3f * u
         text.color =
             if (recording != null) {
                 0xFFFF4138.toInt()
@@ -2915,7 +2915,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "$recState • TC ${tc()} • ${clock.format(Date())}",
+            "$recState • TIMECODE ${tc()} • ${clock.format(Date())}",
             safeLeft,
             y,
             maxWidth,
@@ -2927,7 +2927,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         text.textSize = 11.4f * u
         drawFitText(
             c,
-            "${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
+            "LOCAL ${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
             safeLeft,
             y,
             maxWidth,
@@ -2944,7 +2944,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}",
+            "MODE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • FORMAT ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}",
             safeLeft,
             y,
             maxWidth,
@@ -2959,11 +2959,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             Typeface.NORMAL
         )
         text.color = Color.WHITE
-        text.textSize = 12.0f * u
+        text.textSize = 12.3f * u
 
         drawFitText(
             c,
-            placeName,
+            "LOCATION • $placeName",
             safeLeft,
             y,
             maxWidth,
@@ -2980,7 +2980,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            coordinatePrimaryOverlay(),
+            "POSITION • ${coordinatePrimaryOverlay()}",
             safeLeft,
             y,
             maxWidth,
@@ -2997,7 +2997,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            gnssOverlay(),
+            "GPS STATUS • ${gnssOverlay()}",
             safeLeft,
             y,
             maxWidth,
@@ -3014,7 +3014,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            navigationOverlay(),
+            "NAVIGATION • ${navigationOverlay()}",
             safeLeft,
             y,
             maxWidth,
@@ -3031,7 +3031,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            orientationOverlay(),
+            "LEVEL • ${orientationOverlay()}",
             safeLeft,
             y,
             maxWidth,
@@ -3048,7 +3048,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            weatherOverlay(),
+            "WEATHER • ${weatherOverlay().removePrefix("WX ")}",
             safeLeft,
             y,
             maxWidth,
@@ -3086,7 +3086,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "CAM ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • TAP AF • HIGH BITRATE",
+            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • TAP AF • HIGH BITRATE",
             safeLeft,
             y,
             maxWidth,
@@ -3107,7 +3107,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         drawFitText(
             c,
-            "ISO AUTO • SHUTTER AUTO • WB AUTO • MIC • GPS • GRID • LEVEL • ${captureModes[captureModeIndex]}",
+            "AUTO ISO • AUTO SHUTTER • AUTO WB • MIC ON • GPS ON • GRID • LEVEL • ${captureModes[captureModeIndex]}",
             safeLeft,
             y,
             maxWidth,
@@ -4719,10 +4719,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         values.forEach {
             pair ->
             pair.first.background =
-                solidPillBackground(
-                    pair.second,
-                    pair.first.isSelected
+                ColorDrawable(
+                    Color.TRANSPARENT
                 )
+
+            pair.first.invalidate()
         }
     }
 
@@ -5619,22 +5620,29 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             accentColor
         ).apply {
             text = value
-            textSize = 5.5f
+            textSize = 5.7f
             isAllCaps = false
             setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
             minHeight = dp(34)
+
             setPadding(
-                dp(4),
+                dp(5),
                 0,
-                dp(4),
+                dp(5),
                 0
             )
 
+            // V191: the custom button itself draws the thick bright ring.
+            // It becomes fully filled only when isSelected == true.
             background =
-                solidPillBackground(
-                    accentColor,
-                    isSelected
+                ColorDrawable(
+                    Color.TRANSPARENT
                 )
+
+            stateListAnimator =
+                null
         }
     }
 
@@ -5848,11 +5856,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         0
                     )
 
+                    isSelected =
+                        index ==
+                            selectedIndex
+
                     background =
-                        solidPillBackground(
-                            accent,
-                            index ==
-                                selectedIndex
+                        ColorDrawable(
+                            Color.TRANSPARENT
                         )
 
                     setOnClickListener {
@@ -6294,15 +6304,87 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         private val accent: Int
     ) : Button(context) {
 
+        private val density =
+            context.resources
+                .displayMetrics
+                .density
+
+        private val ringPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.STROKE
+
+                strokeWidth =
+                    4.2f *
+                        density
+
+                color =
+                    accent
+            }
+
+        private val idleFillPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    0x26000000
+            }
+
+        private val pressedFillPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    Color.argb(
+                        78,
+                        Color.red(
+                            accent
+                        ),
+                        Color.green(
+                            accent
+                        ),
+                        Color.blue(
+                            accent
+                        )
+                    )
+            }
+
+        private val selectedFillPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    accent
+            }
+
         private val glowPaint =
             Paint(
                 Paint.ANTI_ALIAS_FLAG
             ).apply {
-                style = Paint.Style.STROKE
-                strokeWidth = 3f
-                color = accent
+                style =
+                    Paint.Style.STROKE
+
+                strokeWidth =
+                    5.5f *
+                        density
+
+                color =
+                    accent
+
                 setShadowLayer(
-                    6f,
+                    7f *
+                        density,
                     0f,
                     0f,
                     accent
@@ -6314,37 +6396,134 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                 LAYER_TYPE_SOFTWARE,
                 null
             )
+
+            gravity =
+                Gravity.CENTER
+
+            background =
+                ColorDrawable(
+                    Color.TRANSPARENT
+                )
+
+            stateListAnimator =
+                null
+        }
+
+        private fun selectedWordColor(): Int {
+            val luminance =
+                (
+                    Color.red(
+                        accent
+                    ) *
+                        299 +
+                        Color.green(
+                            accent
+                        ) *
+                        587 +
+                        Color.blue(
+                            accent
+                        ) *
+                        114
+                    ) /
+                    1000
+
+            return if (
+                luminance >=
+                155
+            ) {
+                Color.BLACK
+            } else {
+                Color.WHITE
+            }
         }
 
         override fun drawableStateChanged() {
             super.drawableStateChanged()
+
+            setTextColor(
+                if (
+                    isSelected
+                ) {
+                    selectedWordColor()
+                } else {
+                    Color.WHITE
+                }
+            )
+
             invalidate()
         }
 
         override fun onDraw(
             canvas: Canvas
         ) {
-            super.onDraw(canvas)
+            val inset =
+                4.5f *
+                    density
 
+            val radius =
+                (
+                    height -
+                        inset *
+                            2f
+                    ) /
+                    2f
+
+            // Dark/transparent centre until a real selection is active.
+            canvas.drawRoundRect(
+                inset,
+                inset,
+                width -
+                    inset,
+                height -
+                    inset,
+                radius,
+                radius,
+                when {
+                    isSelected ->
+                        selectedFillPaint
+
+                    isPressed ->
+                        pressedFillPaint
+
+                    else ->
+                        idleFillPaint
+                }
+            )
+
+            // Thick bright coloured ring is always visible.
+            canvas.drawRoundRect(
+                inset,
+                inset,
+                width -
+                    inset,
+                height -
+                    inset,
+                radius,
+                radius,
+                ringPaint
+            )
+
+            // Pressing gives a glow, but does not count as a full selection.
             if (
-                isPressed ||
-                isSelected
+                isPressed &&
+                !isSelected
             ) {
-                val inset = 4f
-                val radius =
-                    height *
-                        0.45f
-
                 canvas.drawRoundRect(
                     inset,
                     inset,
-                    width - inset,
-                    height - inset,
+                    width -
+                        inset,
+                    height -
+                        inset,
                     radius,
                     radius,
                     glowPaint
                 )
             }
+
+            super.onDraw(
+                canvas
+            )
         }
     }
 

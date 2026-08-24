@@ -1668,7 +1668,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            29f * u
+            30f * u
 
         paint.color =
             amber
@@ -1682,7 +1682,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            14f * u
+            14.5f * u
 
         paint.color =
             if (
@@ -1697,12 +1697,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             if (
                 liveOn
             ) {
-                "LIVE"
+                "ON AIR"
             } else {
-                "LIVE READY"
+                "READY"
             },
             safeRight -
-                (120f * u),
+                (121f * u),
             safeTop,
             paint
         )
@@ -1736,7 +1736,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${profiles[profileIndex]} • $reporterName • STORY $storyId",
+            "${profiles[profileIndex]} • REPORTER $reporterName • STORY $storyId",
             safeLeft,
             safeTop +
                 (36f * u),
@@ -1747,14 +1747,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.textSize =
-            12.4f * u
+            12.8f * u
 
         paint.color =
             cyan
 
         drawFitText(
             canvas,
-            "TC ${liveTimecode()} • ${ZoneId.systemDefault().id} • $qualityLabel • ${if (audioEnabled) "MIC ON" else "MIC OFF"}",
+            "${if (liveOn) "ON AIR" else "READY"} ${liveTimecode()} • ${ZoneId.systemDefault().id} • $qualityLabel • ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
             safeLeft,
             safeTop +
                 (56f * u),
@@ -1841,7 +1841,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             safeLeft +
                 (8f * u),
             lowerY +
-                (10f * u),
+                (10.6f * u),
             safeLeft +
                 (8f * u),
             lowerY +
@@ -1860,9 +1860,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             if (
                 liveOn
             ) {
-                "● LIVE • $lowerStyle"
+                "● LIVE NOW • $lowerStyle"
             } else {
-                "LIVE STUDIO • $lowerStyle"
+                "LIVE READY • $lowerStyle"
             },
             safeLeft +
                 (22f * u),
@@ -1899,7 +1899,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "REPORTER $reporterName • STORY $storyId",
+            "REPORTER $reporterName • STORY $storyId • develop.uganda",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -2851,7 +2851,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 value
 
             textSize =
-                6.2f
+                6.4f
 
             isAllCaps =
                 false
@@ -2860,11 +2860,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 white
             )
 
+            gravity =
+                Gravity.CENTER
+
+            includeFontPadding =
+                false
+
             background =
-                liveSolidPillBackground(
-                    accent,
-                    isSelected
+                ColorDrawable(
+                    Color.TRANSPARENT
                 )
+
+            stateListAnimator =
+                null
 
             setOnClickListener {
                 if (
@@ -3069,11 +3077,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     gravity =
                         Gravity.CENTER
 
+                    isSelected =
+                        index ==
+                            selectedIndex
+
                     background =
-                        liveSolidPillBackground(
-                            accent,
-                            index ==
-                                selectedIndex
+                        ColorDrawable(
+                            Color.TRANSPARENT
                         )
 
                     setOnClickListener {
@@ -3486,15 +3496,87 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         private val accent: Int
     ) : Button(context) {
 
-        private val glowPaint =
+        private val density =
+            context.resources
+                .displayMetrics
+                .density
+
+        private val ringPaint =
             Paint(
                 Paint.ANTI_ALIAS_FLAG
             ).apply {
-                style = Paint.Style.STROKE
-                strokeWidth = 3f
-                color = accent
+                style =
+                    Paint.Style.STROKE
+
+                strokeWidth =
+                    4.2f *
+                        density
+
+                color =
+                    accent
+            }
+
+        private val idleFill =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    0x24000000
+            }
+
+        private val pressedFill =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    Color.argb(
+                        82,
+                        Color.red(
+                            accent
+                        ),
+                        Color.green(
+                            accent
+                        ),
+                        Color.blue(
+                            accent
+                        )
+                    )
+            }
+
+        private val selectedFill =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    accent
+            }
+
+        private val glow =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                style =
+                    Paint.Style.STROKE
+
+                strokeWidth =
+                    5.5f *
+                        density
+
+                color =
+                    accent
+
                 setShadowLayer(
-                    6f,
+                    7f *
+                        density,
                     0f,
                     0f,
                     accent
@@ -3506,37 +3588,131 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 LAYER_TYPE_SOFTWARE,
                 null
             )
+
+            gravity =
+                Gravity.CENTER
+
+            background =
+                ColorDrawable(
+                    Color.TRANSPARENT
+                )
+
+            stateListAnimator =
+                null
+        }
+
+        private fun selectedWordColor(): Int {
+            val luminance =
+                (
+                    Color.red(
+                        accent
+                    ) *
+                        299 +
+                        Color.green(
+                            accent
+                        ) *
+                        587 +
+                        Color.blue(
+                            accent
+                        ) *
+                        114
+                    ) /
+                    1000
+
+            return if (
+                luminance >=
+                155
+            ) {
+                Color.BLACK
+            } else {
+                Color.WHITE
+            }
         }
 
         override fun drawableStateChanged() {
             super.drawableStateChanged()
+
+            setTextColor(
+                if (
+                    isSelected
+                ) {
+                    selectedWordColor()
+                } else {
+                    Color.WHITE
+                }
+            )
+
             invalidate()
         }
 
         override fun onDraw(
             canvas: Canvas
         ) {
-            super.onDraw(canvas)
+            val inset =
+                4.5f *
+                    density
+
+            val radius =
+                (
+                    height -
+                        inset *
+                            2f
+                    ) /
+                    2f
+
+            canvas.drawRoundRect(
+                inset,
+                inset,
+                width -
+                    inset,
+                height -
+                    inset,
+                radius,
+                radius,
+                when {
+                    isSelected ->
+                        selectedFill
+
+                    isPressed ->
+                        pressedFill
+
+                    else ->
+                        idleFill
+                }
+            )
+
+            canvas.drawRoundRect(
+                inset,
+                inset,
+                width -
+                    inset,
+                height -
+                    inset,
+                radius,
+                radius,
+                ringPaint
+            )
 
             if (
-                isPressed ||
-                isSelected
+                isPressed &&
+                !isSelected
             ) {
-                val inset = 4f
-                val radius =
-                    height *
-                        0.44f
-
                 canvas.drawRoundRect(
                     inset,
                     inset,
-                    width - inset,
-                    height - inset,
+                    width -
+                        inset,
+                    height -
+                        inset,
                     radius,
                     radius,
-                    glowPaint
+                    glow
                 )
             }
+
+            super.onDraw(
+                canvas
+            )
         }
     }
 

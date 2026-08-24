@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "PILL DECK PRO • V190",
+                "BRIGHT RING DECK • V191",
                 9f,
                 white,
                 true
@@ -216,7 +216,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "PILL DECK PRO",
+                "BRIGHT RING DECK",
                 "REPORT • LIVE • EDIT • DESK • PUBLISH"
             )
         )
@@ -230,7 +230,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • coloured pill controls • dropdown pill choices • larger saved-video telemetry • REC HEALTH",
+                "FIELD REPORT • thick bright ring controls • selected pills fill completely • clearer saved-video narration",
                 "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -242,7 +242,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • coloured broadcast pills • dropdown choices • larger saved-video graphics • MARK + health",
+                "LIVE STUDIO • bright broadcast rings • full-colour selected pills • cleaner ON AIR/lower-third wording",
                 "Blinking LIVE • signal lamps • smaller glowing setting buttons • Reporter ID • lower third • safe recorded graphics • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"
