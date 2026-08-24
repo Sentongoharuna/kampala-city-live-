@@ -80,6 +80,7 @@ import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import org.json.JSONObject
 import kotlin.math.cos
 import kotlin.math.log10
 import kotlin.math.roundToInt
@@ -100,6 +101,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         const val ACTION_SETTINGS = 10
         const val ACTION_GUIDES = 11
         const val ACTION_RESET = 12
+        const val ACTION_AUTO_UI = 13
+        const val ACTION_LOCK = 14
+        const val ACTION_INTEGRITY = 15
+        const val ACTION_CAPABILITIES = 16
     }
 
 
@@ -145,9 +150,39 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var settingsSummaryView: TextView
     private lateinit var reportRecordGlow: ReportRecordGlowView
 
+    private lateinit var bottomDeck: LinearLayout
+    private lateinit var modeRow: LinearLayout
+    private lateinit var identityRow: LinearLayout
+    private lateinit var reportToolsRow: LinearLayout
+    private lateinit var reportAdvancedRow: LinearLayout
+    private lateinit var zoomRow: LinearLayout
+    private lateinit var exposureRow: LinearLayout
+    private lateinit var actionRow: LinearLayout
+
+    private lateinit var autoUiButton: Button
+    private lateinit var lockButton: Button
+    private lateinit var integrityButton: Button
+    private lateinit var capabilitiesButton: Button
+
     private var halfPreviewMode = false
     private var detailedSettingsVisible = false
     private var previewGuidesEnabled = true
+    private var autoHideOperatorUi = true
+    private var operatorLocked = false
+    private var integrityEnabled = true
+    private var operatorControlsHidden = false
+
+    private val autoHideRunnable =
+        Runnable {
+            if (
+                autoHideOperatorUi &&
+                recording != null
+            ) {
+                setReportOperatorControlsHidden(
+                    true
+                )
+            }
+        }
 
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
@@ -592,7 +627,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         // ORBIT DECK: a custom floating control system. No large black panel.
-        val bottomDeck = LinearLayout(this).apply {
+        bottomDeck = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(
                 dp(10),
@@ -603,7 +638,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             setBackgroundColor(Color.TRANSPARENT)
         }
 
-        val modeRow = row().apply {
+        modeRow = row().apply {
             gravity = Gravity.CENTER
         }
 
@@ -647,7 +682,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         }
         bottomDeck.addView(modeRow)
 
-        val identityRow = row().apply {
+        identityRow = row().apply {
             gravity = Gravity.CENTER
         }
         identityButton = deckButton(
@@ -666,7 +701,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         // V185: FIELD REPORT camera has its own role-specific view and
         // settings controls. These are deliberately separate from LIVE STUDIO.
-        val reportToolsRow = row().apply {
+        reportToolsRow = row().apply {
             gravity = Gravity.CENTER
         }
 
@@ -712,6 +747,66 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         bottomDeck.addView(reportToolsRow)
 
+        // V188: compact operator controls for the FIELD REPORT role.
+        reportAdvancedRow =
+            row().apply {
+                gravity =
+                    Gravity.CENTER
+            }
+
+        autoUiButton =
+            deckButton(
+                "AUTO UI\nON",
+                0xFF76E39A.toInt()
+            ).apply {
+                isSelected = true
+            }
+
+        lockButton =
+            deckButton(
+                "LOCK\nOFF",
+                0xFFFFC21A.toInt()
+            )
+
+        integrityButton =
+            deckButton(
+                "VERIFY\nSHA-256",
+                0xFF7FE8FF.toInt()
+            ).apply {
+                isSelected = true
+            }
+
+        capabilitiesButton =
+            deckButton(
+                "CAMERA\nCAPS",
+                0xFFE8F1F2.toInt()
+            )
+
+        listOf(
+            autoUiButton,
+            lockButton,
+            integrityButton,
+            capabilitiesButton
+        ).forEachIndexed { index, button ->
+            reportAdvancedRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(31),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart =
+                            dp(4)
+                    }
+                }
+            )
+        }
+
+        bottomDeck.addView(
+            reportAdvancedRow
+        )
+
         settingsSummaryView = hud(
             reportSettingsSummary(),
             5.9f,
@@ -742,7 +837,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
         bottomDeck.addView(settingsSummaryView)
 
-        val zoomRow = row()
+        zoomRow = row()
         zoomRow.addView(
             hud(
                 "ZOOM",
@@ -765,7 +860,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
         bottomDeck.addView(zoomRow)
 
-        val exposureRow = row()
+        exposureRow = row()
         exposureRow.addView(
             hud(
                 "EXP",
@@ -789,7 +884,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
         bottomDeck.addView(exposureRow)
 
-        val actionRow = row().apply {
+        actionRow = row().apply {
             gravity = Gravity.CENTER
         }
 
@@ -902,6 +997,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             DeckTouchListener(ACTION_RESET)
         )
 
+        autoUiButton.setOnTouchListener(
+            DeckTouchListener(ACTION_AUTO_UI)
+        )
+
+        lockButton.setOnTouchListener(
+            DeckTouchListener(ACTION_LOCK)
+        )
+
+        integrityButton.setOnTouchListener(
+            DeckTouchListener(ACTION_INTEGRITY)
+        )
+
+        capabilitiesButton.setOnTouchListener(
+            DeckTouchListener(ACTION_CAPABILITIES)
+        )
+
         lensButton.setOnTouchListener(
             DeckTouchListener(ACTION_LENS)
         )
@@ -928,6 +1039,13 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         )
 
         previewView.setOnTouchListener { _, event ->
+            if (
+                event.action ==
+                MotionEvent.ACTION_DOWN
+            ) {
+                showReportOperatorControlsTemporarily()
+            }
+
             if (
                 event.action ==
                 MotionEvent.ACTION_UP
@@ -1219,6 +1337,22 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     "OFF"
                 }
             )
+            append(" • AUTO UI ")
+            append(
+                if (autoHideOperatorUi) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+            )
+            append(" • VERIFY ")
+            append(
+                if (integrityEnabled) {
+                    "SHA-256"
+                } else {
+                    "OFF"
+                }
+            )
             append(" • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
             append("\n")
 
@@ -1234,6 +1368,507 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     "CITIZEN"
                 }
             )
+        }
+    }
+
+    private fun toggleReportAutoUi() {
+        autoHideOperatorUi =
+            !autoHideOperatorUi
+
+        autoUiButton.text =
+            "AUTO UI\n" +
+                if (autoHideOperatorUi) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+
+        autoUiButton.isSelected =
+            autoHideOperatorUi
+
+        if (!autoHideOperatorUi) {
+            uiHandler.removeCallbacks(
+                autoHideRunnable
+            )
+            setReportOperatorControlsHidden(
+                false
+            )
+        } else if (
+            recording != null
+        ) {
+            showReportOperatorControlsTemporarily()
+        }
+
+        refreshReportSettingsSummary()
+    }
+
+    private fun toggleReportOperatorLock() {
+        operatorLocked =
+            !operatorLocked
+
+        lockButton.text =
+            "LOCK\n" +
+                if (operatorLocked) {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+
+        lockButton.isSelected =
+            operatorLocked
+
+        toast(
+            if (operatorLocked) {
+                "Report controls locked"
+            } else {
+                "Report controls unlocked"
+            }
+        )
+    }
+
+    private fun toggleReportIntegrity() {
+        if (recording != null) {
+            toast(
+                "Change verification before recording"
+            )
+            return
+        }
+
+        integrityEnabled =
+            !integrityEnabled
+
+        integrityButton.text =
+            "VERIFY\n" +
+                if (integrityEnabled) {
+                    "SHA-256"
+                } else {
+                    "OFF"
+                }
+
+        integrityButton.isSelected =
+            integrityEnabled
+
+        refreshReportSettingsSummary()
+    }
+
+    private fun setReportOperatorControlsHidden(
+        hidden: Boolean
+    ) {
+        operatorControlsHidden =
+            hidden
+
+        val visibility =
+            if (hidden) {
+                View.INVISIBLE
+            } else {
+                View.VISIBLE
+            }
+
+        listOf(
+            modeRow,
+            identityRow,
+            reportToolsRow,
+            reportAdvancedRow,
+            zoomRow,
+            exposureRow
+        ).forEach {
+            it.visibility =
+                visibility
+        }
+
+        settingsSummaryView.visibility =
+            if (
+                hidden
+            ) {
+                View.GONE
+            } else if (
+                detailedSettingsVisible &&
+                halfPreviewMode
+            ) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        // Lens / record / light remain visible at all times.
+        actionRow.visibility =
+            View.VISIBLE
+    }
+
+    private fun showReportOperatorControlsTemporarily() {
+        if (
+            !autoHideOperatorUi
+        ) {
+            setReportOperatorControlsHidden(
+                false
+            )
+            return
+        }
+
+        setReportOperatorControlsHidden(
+            false
+        )
+
+        uiHandler.removeCallbacks(
+            autoHideRunnable
+        )
+
+        if (
+            recording != null
+        ) {
+            uiHandler.postDelayed(
+                autoHideRunnable,
+                3000L
+            )
+        }
+    }
+
+    private fun showCameraCapabilities() {
+        val info =
+            camera?.cameraInfo
+
+        if (info == null) {
+            toast(
+                "Camera capabilities not ready"
+            )
+            return
+        }
+
+        val zoom =
+            info.zoomState.value
+
+        val exposure =
+            info.exposureState
+
+        val range =
+            exposure.exposureCompensationRange
+
+        val message =
+            buildString {
+                append("DEVICE CAMERA CAPABILITIES\n\n")
+                append("LENS: ")
+                append(
+                    if (useFront) {
+                        "FRONT"
+                    } else {
+                        "BACK"
+                    }
+                )
+                append("\n")
+
+                append("FLASH/TORCH: ")
+                append(
+                    if (info.hasFlashUnit()) {
+                        "AVAILABLE"
+                    } else {
+                        "UNAVAILABLE"
+                    }
+                )
+                append("\n")
+
+                append("ZOOM: ")
+                append(
+                    String.format(
+                        Locale.US,
+                        "%.1fx – %.1fx",
+                        zoom?.minZoomRatio ?: 1f,
+                        zoom?.maxZoomRatio ?: 1f
+                    )
+                )
+                append("\n")
+
+                append("EXPOSURE COMP: ")
+                append(range.lower)
+                append(" to ")
+                append(range.upper)
+                append("\n")
+
+                append("CURRENT EXP: ")
+                append(
+                    exposure.exposureCompensationIndex
+                )
+                append("\n")
+
+                append("REQUESTED FORMAT: ")
+                append(
+                    qualityModes[
+                        qualityIndex
+                    ]
+                )
+                append("\n")
+
+                append("CAPTURE: ")
+                append(
+                    captureModes[
+                        captureModeIndex
+                    ]
+                )
+                append("\n\n")
+
+                append(
+                    "FPS, HDR, codec, stabilization and manual sensor controls remain DEVICE unless the CameraX/Camera2 layer confirms direct control."
+                )
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "FIELD CAMERA CAPABILITIES"
+            )
+            .setMessage(
+                message
+            )
+            .setPositiveButton(
+                "OK",
+                null
+            )
+            .show()
+    }
+
+    private fun createIntegrityRecord(
+        videoUri: Uri,
+        finishedUtc: String
+    ) {
+        if (
+            !integrityEnabled
+        ) {
+            return
+        }
+
+        val reportIdSnapshot =
+            reportId
+        val reporterSnapshot =
+            reporterDisplayName()
+        val storySnapshot =
+            storyDisplayId()
+        val startSnapshot =
+            recordStartUtc
+        val baseSnapshot =
+            baseName
+        val latSnapshot =
+            lat
+        val lonSnapshot =
+            lon
+        val altSnapshot =
+            alt
+        val accSnapshot =
+            accuracy
+        val sceneSnapshot =
+            sceneModes[
+                sceneIndex
+            ]
+        val lookSnapshot =
+            lookModes[
+                lookIndex
+            ]
+
+        Thread {
+            try {
+                val digest =
+                    MessageDigest.getInstance(
+                        "SHA-256"
+                    )
+
+                contentResolver
+                    .openInputStream(
+                        videoUri
+                    )
+                    ?.use { input ->
+                        val buffer =
+                            ByteArray(
+                                256 * 1024
+                            )
+
+                        while (true) {
+                            val read =
+                                input.read(
+                                    buffer
+                                )
+
+                            if (read <= 0) {
+                                break
+                            }
+
+                            digest.update(
+                                buffer,
+                                0,
+                                read
+                            )
+                        }
+                    }
+                    ?: error(
+                        "Unable to read final video"
+                    )
+
+                val sha256 =
+                    digest.digest()
+                        .joinToString(
+                            ""
+                        ) {
+                            "%02x".format(
+                                it
+                            )
+                        }
+
+                val json =
+                    JSONObject().apply {
+                        put(
+                            "schema",
+                            "develop.uganda.report.integrity.v1"
+                        )
+                        put(
+                            "app_version",
+                            "V188"
+                        )
+                        put(
+                            "report_id",
+                            reportIdSnapshot
+                        )
+                        put(
+                            "reporter",
+                            reporterSnapshot
+                        )
+                        put(
+                            "story_id",
+                            storySnapshot
+                        )
+                        put(
+                            "filename",
+                            "$baseSnapshot.mp4"
+                        )
+                        put(
+                            "record_start_utc",
+                            startSnapshot
+                        )
+                        put(
+                            "record_end_utc",
+                            finishedUtc
+                        )
+                        put(
+                            "sha256",
+                            sha256
+                        )
+                        put(
+                            "scene",
+                            sceneSnapshot
+                        )
+                        put(
+                            "look",
+                            lookSnapshot
+                        )
+                        put(
+                            "latitude",
+                            latSnapshot
+                        )
+                        put(
+                            "longitude",
+                            lonSnapshot
+                        )
+                        put(
+                            "altitude_m",
+                            altSnapshot
+                        )
+                        put(
+                            "gps_accuracy_m",
+                            accSnapshot
+                        )
+                        put(
+                            "note",
+                            "SHA-256 identifies this finalized file; it is not a digital signature or proof of authorship."
+                        )
+                    }
+
+                saveIntegrityJson(
+                    "${baseSnapshot}_INTEGRITY.json",
+                    json.toString(
+                        2
+                    )
+                )
+
+                runOnUiThread {
+                    toast(
+                        "Integrity SHA-256 saved"
+                    )
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    toast(
+                        "Integrity record failed"
+                    )
+                }
+            }
+        }.start()
+    }
+
+    private fun saveIntegrityJson(
+        fileName: String,
+        content: String
+    ) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.Q
+        ) {
+            val values =
+                ContentValues().apply {
+                    put(
+                        MediaStore.Downloads.DISPLAY_NAME,
+                        fileName
+                    )
+                    put(
+                        MediaStore.Downloads.MIME_TYPE,
+                        "application/json"
+                    )
+                    put(
+                        MediaStore.Downloads.RELATIVE_PATH,
+                        "Download/develop.uganda/Integrity"
+                    )
+                }
+
+            val uri =
+                contentResolver.insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    values
+                )
+                    ?: error(
+                        "Could not create integrity file"
+                    )
+
+            contentResolver
+                .openOutputStream(
+                    uri
+                )
+                ?.use {
+                    it.write(
+                        content.toByteArray(
+                            Charsets.UTF_8
+                        )
+                    )
+                }
+                ?: error(
+                    "Could not write integrity file"
+                )
+        } else {
+            val dir =
+                File(
+                    getExternalFilesDir(
+                        Environment.DIRECTORY_DOCUMENTS
+                    ),
+                    "develop.uganda/Integrity"
+                )
+
+            dir.mkdirs()
+
+            FileOutputStream(
+                File(
+                    dir,
+                    fileName
+                )
+            ).use {
+                it.write(
+                    content.toByteArray(
+                        Charsets.UTF_8
+                    )
+                )
+            }
         }
     }
 
@@ -3381,6 +4016,8 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                             true
                         )
                     }
+
+                    showReportOperatorControlsTemporarily()
                 }
 
                 is VideoRecordEvent.Status -> {
@@ -3428,6 +4065,12 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         statusView.setTextColor(
                             0xFFFF4138.toInt()
                         )
+                        setReportOperatorControlsHidden(
+                            false
+                        )
+                        uiHandler.removeCallbacks(
+                            autoHideRunnable
+                        )
                         toast("Recording failed")
                     } else {
                         statusView.text = "SAVED"
@@ -3437,6 +4080,24 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         telemetryRecorder.exportSidecar(
                             baseName
                         )
+
+                        if (
+                            integrityEnabled
+                        ) {
+                            createIntegrityRecord(
+                                event.outputResults.outputUri,
+                                Instant.now().toString()
+                            )
+                        }
+
+                        setReportOperatorControlsHidden(
+                            false
+                        )
+
+                        uiHandler.removeCallbacks(
+                            autoHideRunnable
+                        )
+
                         toast(
                             "Saved to Gallery • develop.uganda"
                         )
@@ -4243,6 +4904,17 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         ): Boolean {
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    if (
+                        operatorLocked &&
+                        actionCode != ACTION_RECORD &&
+                        actionCode != ACTION_LOCK
+                    ) {
+                        toast(
+                            "Operator controls locked"
+                        )
+                        return true
+                    }
+
                     v?.isPressed = true
                     v?.alpha = 0.94f
                     return true
@@ -4269,6 +4941,10 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         ACTION_SETTINGS -> showReportDetailedSettings()
                         ACTION_GUIDES -> togglePreviewGuides()
                         ACTION_RESET -> resetReportCameraSettings()
+                        ACTION_AUTO_UI -> toggleReportAutoUi()
+                        ACTION_LOCK -> toggleReportOperatorLock()
+                        ACTION_INTEGRITY -> toggleReportIntegrity()
+                        ACTION_CAPABILITIES -> showCameraCapabilities()
 
                         ACTION_LENS -> {
                             if (recording == null) {
@@ -4377,7 +5053,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
             accentColor
         ).apply {
             text = value
-            textSize = 5.9f
+            textSize = 5.5f
             isAllCaps = false
             setTextColor(Color.WHITE)
             minHeight = dp(34)

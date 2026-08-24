@@ -85,7 +85,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "MOBILE NEWSROOM • V187",
+                "CONTROL ROOM PRO • V188",
                 9f,
                 white,
                 true
@@ -213,7 +213,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "CONTROL ROOM",
+                "CONTROL ROOM PRO",
                 "REPORT • LIVE • EDIT • DESK • PUBLISH"
             )
         )
@@ -227,7 +227,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • safe screen narration • edge-to-edge camera • recorded telemetry kept independent",
+                "FIELD REPORT • safe preview • AUTO UI • control lock • camera capabilities • SHA-256 integrity record",
                 "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -239,7 +239,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • safe screen narration • edge-to-edge camera • separate recorded broadcast graphics",
+                "LIVE STUDIO • 3-2-1 countdown • MARK timestamps • lower-third styles • live control lock",
                 "Blinking LIVE • signal lamps • smaller glowing setting buttons • Reporter ID • lower third • safe recorded graphics • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"

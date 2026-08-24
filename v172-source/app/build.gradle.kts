@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 18700
-        versionName = "187.0-preview-output-separated"
+        versionCode = 18800
+        versionName = "188.0-control-room-pro"
     }
 
     buildTypes {

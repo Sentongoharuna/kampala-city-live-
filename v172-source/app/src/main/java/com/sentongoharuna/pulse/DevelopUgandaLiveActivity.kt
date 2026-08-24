@@ -15,10 +15,12 @@ import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
+import android.os.Environment
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -47,6 +49,8 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
+import java.io.File
+import java.io.FileOutputStream
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
@@ -81,6 +85,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var settingsButton: Button
     private lateinit var identityButton: Button
     private lateinit var resetButton: Button
+    private lateinit var countdownButton: Button
+    private lateinit var markButton: Button
+    private lateinit var styleButton: Button
+    private lateinit var liveLockButton: Button
+    private lateinit var countdownView: TextView
     private lateinit var recordButton: LiveRecordButtonView
 
     private lateinit var timerView: TextView
@@ -110,7 +119,23 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private var profileIndex = 0
     private var halfPreviewMode = false
 
+    private val lowerThirdStyles =
+        arrayOf(
+            "BREAKING",
+            "CLEAN",
+            "URGENT",
+            "MINIMAL"
+        )
+
+    private var lowerThirdStyleIndex = 0
+    private var countdownEnabled = true
+    private var countdownRunning = false
+    private var liveControlsLocked = false
+    private val liveMarkers =
+        mutableListOf<Long>()
+
     private var recordStartMs = 0L
+    private var liveRecordingName = ""
     private var liveBlinkOn = true
 
     private var reporterName = "CITIZEN"
@@ -460,6 +485,36 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             topPanelParams
         )
 
+        countdownView =
+            label(
+                "",
+                72f,
+                white,
+                true
+            ).apply {
+                gravity =
+                    Gravity.CENTER
+
+                visibility =
+                    View.GONE
+
+                setShadowLayer(
+                    18f,
+                    0f,
+                    0f,
+                    red
+                )
+            }
+
+        root.addView(
+            countdownView,
+            FrameLayout.LayoutParams(
+                dp(190),
+                dp(190),
+                Gravity.CENTER
+            )
+        )
+
         val liveDeck =
             LinearLayout(this).apply {
                 orientation =
@@ -770,6 +825,126 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             row4
         )
 
+        val row5 =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                setPadding(
+                    0,
+                    dp(4),
+                    0,
+                    0
+                )
+            }
+
+        countdownButton =
+            liveSettingButton(
+                "COUNTDOWN\n3 SEC",
+                amber
+            ) {
+                if (
+                    !liveControlsLocked
+                ) {
+                    countdownEnabled =
+                        !countdownEnabled
+
+                    countdownButton.text =
+                        "COUNTDOWN\n" +
+                            if (countdownEnabled) {
+                                "3 SEC"
+                            } else {
+                                "OFF"
+                            }
+
+                    countdownButton.isSelected =
+                        countdownEnabled
+                }
+            }.apply {
+                isSelected =
+                    true
+            }
+
+        markButton =
+            liveSettingButton(
+                "MARK\n0",
+                cyan
+            ) {
+                addLiveMarker()
+            }
+
+        styleButton =
+            liveSettingButton(
+                "LOWER STYLE\n${lowerThirdStyles[lowerThirdStyleIndex]}",
+                red
+            ) {
+                if (
+                    !liveControlsLocked &&
+                    recording == null
+                ) {
+                    lowerThirdStyleIndex =
+                        (
+                            lowerThirdStyleIndex +
+                                1
+                            ) %
+                            lowerThirdStyles.size
+
+                    styleButton.text =
+                        "LOWER STYLE\n${lowerThirdStyles[lowerThirdStyleIndex]}"
+                } else if (
+                    recording != null
+                ) {
+                    toast(
+                        "Change lower-third style before recording"
+                    )
+                }
+            }
+
+        liveLockButton =
+            liveSettingButton(
+                "LOCK\nOFF",
+                green
+            ) {
+                liveControlsLocked =
+                    !liveControlsLocked
+
+                liveLockButton.text =
+                    "LOCK\n" +
+                        if (liveControlsLocked) {
+                            "ON"
+                        } else {
+                            "OFF"
+                        }
+
+                liveLockButton.isSelected =
+                    liveControlsLocked
+            }
+
+        listOf(
+            countdownButton,
+            markButton,
+            styleButton,
+            liveLockButton
+        ).forEachIndexed { index, button ->
+            row5.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(39),
+                    1f
+                ).apply {
+                    if (index > 0) {
+                        marginStart =
+                            dp(4)
+                    }
+                }
+            )
+        }
+
+        liveDeck.addView(
+            row5
+        )
+
         val recordArea =
             FrameLayout(this).apply {
                 setPadding(
@@ -785,7 +960,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 this
             ).apply {
                 setOnClickListener {
-                    toggleRecording()
+                    if (
+                        recording != null
+                    ) {
+                        toggleRecording()
+                    } else {
+                        beginLiveRecordSequence()
+                    }
                 }
             }
 
@@ -1031,7 +1212,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val summary =
             buildString {
-                append("LIVE-ONLY SETTINGS\n\n")
+                append("LIVE-ONLY SETTINGS • V188\n\n")
 
                 append("PROFILE: ")
                 append(
@@ -1074,6 +1255,30 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     } else {
                         "BACK"
                     }
+                )
+                append("\n")
+
+                append("COUNTDOWN: ")
+                append(
+                    if (countdownEnabled) {
+                        "3 SEC"
+                    } else {
+                        "OFF"
+                    }
+                )
+                append("\n")
+
+                append("LOWER STYLE: ")
+                append(
+                    lowerThirdStyles[
+                        lowerThirdStyleIndex
+                    ]
+                )
+                append("\n")
+
+                append("MARKERS: ")
+                append(
+                    liveMarkers.size
                 )
                 append("\n")
 
@@ -1615,12 +1820,45 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             finalHeight *
                 0.76f
 
+        val lowerStyle =
+            lowerThirdStyles[
+                lowerThirdStyleIndex
+            ]
+
+        val lowerAccent =
+            when (
+                lowerStyle
+            ) {
+                "CLEAN" ->
+                    cyan
+
+                "URGENT" ->
+                    0xFFFF8A00.toInt()
+
+                "MINIMAL" ->
+                    white
+
+                else ->
+                    red
+            }
+
         val lowerBg =
             Paint(
                 Paint.ANTI_ALIAS_FLAG
             ).apply {
                 color =
-                    0x9A05080A.toInt()
+                    when (
+                        lowerStyle
+                    ) {
+                        "MINIMAL" ->
+                            0x6605080A
+
+                        "CLEAN" ->
+                            0x8805080A.toInt()
+
+                        else ->
+                            0x9A05080A.toInt()
+                    }
 
                 style =
                     Paint.Style.FILL
@@ -1645,7 +1883,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 Paint.ANTI_ALIAS_FLAG
             ).apply {
                 color =
-                    red
+                    lowerAccent
 
                 strokeWidth =
                     5f * u
@@ -1665,7 +1903,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         paint.color =
-            red
+            lowerAccent
 
         paint.textSize =
             12f * u
@@ -1674,9 +1912,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             if (
                 liveOn
             ) {
-                "● LIVE"
+                "● LIVE • $lowerStyle"
             } else {
-                "LIVE STUDIO"
+                "LIVE STUDIO • $lowerStyle"
             },
             safeLeft +
                 (22f * u),
@@ -1879,6 +2117,212 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 }
     }
 
+    private fun beginLiveRecordSequence() {
+        if (
+            countdownRunning
+        ) {
+            return
+        }
+
+        if (
+            !countdownEnabled
+        ) {
+            toggleRecording()
+            return
+        }
+
+        countdownRunning =
+            true
+
+        recordButton.performHapticFeedback(
+            HapticFeedbackConstants.KEYBOARD_TAP
+        )
+
+        runCountdownStep(
+            3
+        )
+    }
+
+    private fun runCountdownStep(
+        value: Int
+    ) {
+        if (
+            value <= 0
+        ) {
+            countdownView.visibility =
+                View.GONE
+
+            countdownRunning =
+                false
+
+            toggleRecording()
+            return
+        }
+
+        countdownView.text =
+            value.toString()
+
+        countdownView.visibility =
+            View.VISIBLE
+
+        countdownView.alpha =
+            1f
+
+        countdownView.animate()
+            .alpha(
+                0.25f
+            )
+            .setDuration(
+                700L
+            )
+            .start()
+
+        uiHandler.postDelayed(
+            {
+                runCountdownStep(
+                    value -
+                        1
+                )
+            },
+            1000L
+        )
+    }
+
+    private fun addLiveMarker() {
+        if (
+            recording == null ||
+            recordStartMs == 0L
+        ) {
+            toast(
+                "Start LIVE REC before adding a marker"
+            )
+            return
+        }
+
+        val elapsed =
+            (
+                SystemClock.elapsedRealtime() -
+                    recordStartMs
+                )
+                .coerceAtLeast(
+                    0L
+                )
+
+        liveMarkers.add(
+            elapsed
+        )
+
+        markButton.text =
+            "MARK\\n${liveMarkers.size}"
+
+        markButton.performHapticFeedback(
+            HapticFeedbackConstants.KEYBOARD_TAP
+        )
+
+        toast(
+            "MARK ${formatMarkerTime(elapsed)}"
+        )
+    }
+
+    private fun formatMarkerTime(
+        elapsedMs: Long
+    ): String {
+        val total =
+            elapsedMs /
+                1000L
+
+        return String.format(
+            Locale.US,
+            "%02d:%02d:%02d",
+            total / 3600L,
+            (total / 60L) % 60L,
+            total % 60L
+        )
+    }
+
+    private fun saveLiveMarkers(
+        recordingName: String
+    ) {
+        if (
+            liveMarkers.isEmpty()
+        ) {
+            return
+        }
+
+        val snapshot =
+            liveMarkers.toList()
+
+        Thread {
+            try {
+                val content =
+                    buildString {
+                        append(
+                            "develop.uganda LIVE MARKERS\\n"
+                        )
+                        append(
+                            "FILE $recordingName.mp4\\n"
+                        )
+                        append(
+                            "PROFILE ${profiles[profileIndex]}\\n"
+                        )
+                        append(
+                            "REPORTER $reporterName\\n"
+                        )
+                        append(
+                            "STORY $storyId\\n\\n"
+                        )
+
+                        snapshot.forEachIndexed {
+                                index,
+                                value ->
+                            append(
+                                "MARK "
+                            )
+                            append(
+                                index +
+                                    1
+                            )
+                            append(
+                                " "
+                            )
+                            append(
+                                formatMarkerTime(
+                                    value
+                                )
+                            )
+                            append(
+                                "\\n"
+                            )
+                        }
+                    }
+
+                val dir =
+                    File(
+                        getExternalFilesDir(
+                            Environment.DIRECTORY_DOCUMENTS
+                        ),
+                        "develop.uganda/LiveMarkers"
+                    )
+
+                dir.mkdirs()
+
+                FileOutputStream(
+                    File(
+                        dir,
+                        "${recordingName}_MARKERS.txt"
+                    )
+                ).use {
+                    it.write(
+                        content.toByteArray(
+                            Charsets.UTF_8
+                        )
+                    )
+                }
+            } catch (_: Exception) {
+            }
+        }.start()
+    }
+
     private fun toggleRecording() {
         if (
             recording != null
@@ -1904,11 +2348,23 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 Date()
             )
 
+        liveRecordingName =
+            "DEVELOP_UGANDA_LIVE_${profiles[profileIndex]}_$stamp"
+
+        liveMarkers.clear()
+
+        if (
+            ::markButton.isInitialized
+        ) {
+            markButton.text =
+                "MARK\n0"
+        }
+
         val values =
             ContentValues().apply {
                 put(
                     MediaStore.Video.Media.DISPLAY_NAME,
-                    "DEVELOP_UGANDA_LIVE_${profiles[profileIndex]}_$stamp.mp4"
+                    "$liveRecordingName.mp4"
                 )
 
                 put(
@@ -2024,6 +2480,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                                 "LIVE REC failed"
                             )
                         } else {
+                            saveLiveMarkers(
+                                liveRecordingName
+                            )
+
                             toast(
                                 "LIVE recording saved"
                             )
@@ -2402,7 +2862,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 value
 
             textSize =
-                7.7f
+                6.9f
 
             isAllCaps =
                 false
@@ -2419,7 +2879,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 )
 
             setOnClickListener {
-                action.invoke()
+                if (
+                    liveControlsLocked &&
+                    this !== liveLockButton &&
+                    this !== markButton &&
+                    this !== recordButton
+                ) {
+                    toast(
+                        "LIVE controls locked"
+                    )
+                } else {
+                    action.invoke()
+                }
             }
         }
     }
