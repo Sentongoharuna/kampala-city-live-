@@ -1,0 +1,141 @@
+name: Build develop.uganda V202 FIX1 Midnight Navy UI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V202 FIX1 source bundle
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V202-FIX1-MIDNIGHT-NAVY-UI-SOURCE.zip
+          test -d v172-source
+          echo "V202 FIX1 source bundle found"
+
+      - name: Install V202 FIX1 source
+        run: |
+          set -e
+          rm -rf /tmp/develop-v202-fix1
+          mkdir -p /tmp/develop-v202-fix1
+          unzip -q DEVELOP-UGANDA-V202-FIX1-MIDNIGHT-NAVY-UI-SOURCE.zip -d /tmp/develop-v202-fix1
+          cp -R /tmp/develop-v202-fix1/app/. v172-source/app/
+
+      - name: Verify exact V202 FIX1 corrections
+        run: |
+          set -e
+          BASE="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          REPORT="$BASE/DevelopUgandaCameraActivity.kt"
+          LIVE="$BASE/DevelopUgandaLiveActivity.kt"
+
+          grep -q '0xC4082236.toInt()' "$REPORT"
+          grep -q '0x80D9DEE8.toInt()' "$REPORT"
+          grep -q 'private val ringPaint' "$LIVE"
+          grep -q '0xFFD9DEE8.toInt()' "$LIVE"
+          ! grep -q '0xFFD9DEE8.toInt() \*' "$LIVE"
+          grep -q 'versionCode = 20201' v172-source/app/build.gradle.kts
+
+          echo "V202 FIX1 exact compiler corrections verified"
+
+      - name: Commit V202 FIX1 source
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaEditorActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V202 FIX1 source already committed"
+          else
+            git commit -m "Fix develop.uganda V202 Midnight Navy UI compile errors"
+            git push
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V202 FIX1 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v202-fix1-build.log
+
+      - name: Print exact compiler error and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          echo "===== IMPORTANT ERROR LINES ====="
+          grep -Ein "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" v202-fix1-build.log | head -1000 || true
+
+          echo "===== FIRST KOTLIN SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          log = Path("v202-fix1-build.log").read_text(encoding="utf-8", errors="ignore")
+          m = re.search(r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)', log)
+          if not m:
+              print("No Kotlin source line found in log.")
+              raise SystemExit(0)
+          filename = m.group(1)
+          line_no = int(m.group(2))
+          matches = list(Path("app/src/main/java").rglob(filename))
+          if not matches:
+              print("Source file not found:", filename)
+              raise SystemExit(0)
+          lines = matches[0].read_text(encoding="utf-8").splitlines()
+          for n in range(max(1, line_no - 22), min(len(lines), line_no + 44) + 1):
+              mark = ">>" if n == line_no else "  "
+              print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Prepare APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V202-FIX1-MIDNIGHT-NAVY-UI.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V202-FIX1-MIDNIGHT-NAVY-UI
+          path: DEVELOP-UGANDA-V202-FIX1-MIDNIGHT-NAVY-UI.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V202-FIX1-BUILD-LOG
+          path: v172-source/v202-fix1-build.log
+          if-no-files-found: warn
+          retention-days: 7
