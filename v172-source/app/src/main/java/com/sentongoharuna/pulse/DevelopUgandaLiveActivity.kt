@@ -227,12 +227,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
         }
 
-    private val red = 0xFFB85F59.toInt()
-    private val green = 0xFF6F9C7C.toInt()
-    private val amber = 0xFFC7A64A.toInt()
-    private val cyan = 0xFF6EA9B5.toInt()
-    private val white = Color.WHITE
-    private val panel = 0x280A0E11.toInt()
+    private val red = 0xFFC76D73.toInt()
+    private val green = 0xFF91B6A0.toInt()
+    private val amber = 0xFFAEBDEB.toInt()
+    private val cyan = 0xFF8FA8E8.toInt()
+    private val white = 0xFFF1F3F8.toInt()
+    private val panel = 0xD9082236.toInt()
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -608,7 +608,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             label(
                 "OUTPUT • LOCAL LIVE CAPTURE • STREAM DESTINATION NOT CONNECTED",
                 9f,
-                0xFFB7C4CA.toInt(),
+                0xFFAEB7C7.toInt(),
                 true
             ).apply {
                 gravity =
@@ -4935,11 +4935,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         density
 
                 color =
-                    Color.rgb(
-                        (
-                            Color.red(
-                                accent
-                            ) *
+                    0xFFD9DEE8.toInt() *
                                 0.78f
                             ).roundToInt(),
                         (
@@ -4998,7 +4994,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.FILL
 
                 color =
-                    accent
+                    0xFFAEBDEB.toInt()
             }
 
         private val glow =
@@ -5013,19 +5009,14 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         density
 
                 color =
-                    accent
+                    0xFFAEBDEB.toInt()
 
                 setShadowLayer(
                     3.0f *
                         density,
                     0f,
                     0f,
-                    Color.argb(
-                        120,
-                        Color.red(accent),
-                        Color.green(accent),
-                        Color.blue(accent)
-                    )
+                    0x66AEBDEB
                 )
             }
 

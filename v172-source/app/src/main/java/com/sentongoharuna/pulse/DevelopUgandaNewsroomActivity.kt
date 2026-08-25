@@ -26,14 +26,14 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
     private lateinit var contentHost: FrameLayout
 
-    private val gold = 0xFFC7A64A.toInt()
-    private val cyan = 0xFF6EA9B5.toInt()
-    private val green = 0xFF6F9C7C.toInt()
-    private val red = 0xFFB85F59.toInt()
-    private val white = Color.WHITE
-    private val ink = 0xFF05090C.toInt()
-    private val card = 0xFF11191E.toInt()
-    private val muted = 0xFFA7B2B6.toInt()
+    private val gold = 0xFFAEBDEB.toInt()
+    private val cyan = 0xFF8FA8E8.toInt()
+    private val green = 0xFF91B6A0.toInt()
+    private val red = 0xFFC76D73.toInt()
+    private val white = 0xFFF1F3F8.toInt()
+    private val ink = 0xFF031829.toInt()
+    private val card = 0xFF092236.toInt()
+    private val muted = 0xFFAEB7C7.toInt()
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -68,7 +68,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
                     dp(8)
                 )
                 setBackgroundColor(
-                    0xFF080E12.toInt()
+                    0xFF061D2E.toInt()
                 )
             }
 
@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "DYNAMIC SIDE HUD PRO • V201",
+                "MIDNIGHT NAVY UI • V202",
                 9f,
                 white,
                 true
@@ -140,7 +140,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
                     dp(9)
                 )
                 setBackgroundColor(
-                    0xFF080E12.toInt()
+                    0xFF061D2E.toInt()
                 )
             }
 
@@ -216,7 +216,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "develop.uganda NEWSROOM PRO",
+                "develop.uganda NEWSROOM",
                 "REPORT • LIVE • EDIT • NEWSROOM"
             )
         )
@@ -776,7 +776,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
             background =
                 rounded(
-                    0xFF0D1418.toInt(),
+                    0xFF082033.toInt(),
                     accent,
                     13
                 )

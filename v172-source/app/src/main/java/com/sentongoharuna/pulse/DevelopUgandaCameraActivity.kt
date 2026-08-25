@@ -1045,11 +1045,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     cornerRadius =
                         dp(10).toFloat()
                     setColor(
-                        0x5A071014
+                        0xC4082236
                     )
                     setStroke(
                         dp(1),
-                        0x607FE8FF
+                        0x80D9DEE8
                     )
                 }
         }
@@ -6414,14 +6414,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
         // softened so the camera deck does not look neon.
         val colors =
             intArrayOf(
-                0xFFD8B85B.toInt(), // muted gold
-                0xFF6D88A4.toInt(), // slate blue
-                0xFF83B995.toInt(), // muted green
-                0xFFA77B92.toInt(), // muted pink
-                0xFF83799A.toInt(), // muted violet
-                0xFF6EA9A4.toInt(), // muted teal
-                0xFFB17E58.toInt(), // muted amber
-                0xFF8B9499.toInt()  // soft silver
+                0xFFD9DEE8.toInt(), // soft white
+                0xFFAEBDEB.toInt(), // lavender
+                0xFF9CAEC5.toInt(), // blue grey
+                0xFFB5BECC.toInt(), // silver
+                0xFFA9A1BF.toInt(), // muted violet
+                0xFF9EB4B7.toInt(), // muted teal
+                0xFFB8B3AA.toInt(), // warm grey
+                0xFFD9DEE8.toInt()  // soft white
             )
 
         return colors[
@@ -7484,7 +7484,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         density
 
                 color =
-                    accent
+                    0xFFD9DEE8.toInt()
             }
 
         private val idleFillPaint =
@@ -7506,18 +7506,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.FILL
 
                 color =
-                    Color.argb(
-                        88,
-                        Color.red(
-                            accent
-                        ),
-                        Color.green(
-                            accent
-                        ),
-                        Color.blue(
-                            accent
-                        )
-                    )
+                    0x4FAEBDEB
             }
 
         private val selectedFillPaint =
@@ -7528,26 +7517,7 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     Paint.Style.FILL
 
                 color =
-                    Color.rgb(
-                        (
-                            Color.red(
-                                accent
-                            ) *
-                                0.78f
-                            ).roundToInt(),
-                        (
-                            Color.green(
-                                accent
-                            ) *
-                                0.78f
-                            ).roundToInt(),
-                        (
-                            Color.blue(
-                                accent
-                            ) *
-                                0.78f
-                            ).roundToInt()
-                    )
+                    0xFFAEBDEB.toInt()
             }
 
         private val glowPaint =
@@ -7562,19 +7532,14 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                         density
 
                 color =
-                    accent
+                    0xFFAEBDEB.toInt()
 
                 setShadowLayer(
                     3.0f *
                         density,
                     0f,
                     0f,
-                    Color.argb(
-                        120,
-                        Color.red(accent),
-                        Color.green(accent),
-                        Color.blue(accent)
-                    )
+                    0x66AEBDEB
                 )
             }
 

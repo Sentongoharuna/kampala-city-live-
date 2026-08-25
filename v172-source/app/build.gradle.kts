@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 20100
-        versionName = "201.0-dynamic-side-hud-pro"
+        versionCode = 20200
+        versionName = "202.0-midnight-navy-ui"
     }
 
     buildTypes {
