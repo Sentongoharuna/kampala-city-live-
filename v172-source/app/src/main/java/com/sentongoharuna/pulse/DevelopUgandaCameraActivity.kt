@@ -1045,11 +1045,11 @@ class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
                     cornerRadius =
                         dp(10).toFloat()
                     setColor(
-                        0xC4082236
+                        0xC4082236.toInt()
                     )
                     setStroke(
                         dp(1),
-                        0x80D9DEE8
+                        0x80D9DEE8.toInt()
                     )
                 }
         }

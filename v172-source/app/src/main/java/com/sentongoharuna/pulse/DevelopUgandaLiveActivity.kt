@@ -4935,22 +4935,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         density
 
                 color =
-                    0xFFD9DEE8.toInt() *
-                                0.78f
-                            ).roundToInt(),
-                        (
-                            Color.green(
-                                accent
-                            ) *
-                                0.78f
-                            ).roundToInt(),
-                        (
-                            Color.blue(
-                                accent
-                            ) *
-                                0.78f
-                            ).roundToInt()
-                    )
+                    0xFFD9DEE8.toInt()
             }
 
         private val idleFill =
