@@ -1,0 +1,311 @@
+name: Build develop.uganda V226 FIX1 Auto Story Package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify successful V225 base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE-PATCH.zip
+          grep -q 'versionCode = 22500' v172-source/app/build.gradle.kts
+          grep -q 'versionName = "225.0-professional-photo-suite"' v172-source/app/build.gradle.kts
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaShotAssistView.kt
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt
+
+      - name: Unpack and syntax-check V226 FIX1 patch
+        run: |
+          set -e
+          rm -rf /tmp/v226fix1
+          mkdir -p /tmp/v226fix1
+          unzip -q DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE-PATCH.zip -d /tmp/v226fix1
+          python3 -m py_compile /tmp/v226fix1/v226_patch.py
+          test -f /tmp/v226fix1/DevelopUgandaStoryPackager.kt
+          test -f /tmp/v226fix1/DevelopUgandaTranscriptEngine.kt
+          test -f /tmp/v226fix1/DevelopUgandaStoryPackagesActivity.kt
+
+      - name: Lock working REPORT LIVE and PHOTO bind engines
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+              "photo": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt"),
+          }
+
+          hashes = {}
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              hashes[name] = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+
+          Path("/tmp/v226fix1-bind-hashes.json").write_text(
+              json.dumps(hashes),
+              encoding="utf-8"
+          )
+          print(hashes)
+          PY
+
+      - name: Apply V226 FIX1 Auto Story Package
+        run: |
+          set -e
+          python3 /tmp/v226fix1/v226_patch.py
+
+      - name: Prove existing camera bind engines unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          before = json.loads(
+              Path("/tmp/v226fix1-bind-hashes.json").read_text(encoding="utf-8")
+          )
+
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+              "photo": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt"),
+          }
+
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              current = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+              if current != before[name]:
+                  raise SystemExit(f"{name} bindCamera engine changed")
+
+          print("PASS: REPORT, LIVE and V225 PHOTO bind engines unchanged.")
+          PY
+
+      - name: Verify V226 package functions and retained experience
+        run: |
+          set -e
+
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          LIVE="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          PHOTO="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt"
+          PACKAGER="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt"
+          TRANSCRIPT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaTranscriptEngine.kt"
+          PACKAGES_UI="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackagesActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+
+          # Existing cameras and V225 photos remain.
+          grep -q 'DevelopUgandaFocusAssistCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaSocialMediaCameraActivity' "$INDEPENDENT"
+          grep -q 'class DevelopUgandaPhotoProCameraActivity' "$PHOTO"
+          grep -q 'class DevelopUgandaVerifiedPhotoCameraActivity' "$PHOTO"
+          grep -q 'SHOT GUARD' "$REPORT"
+          grep -q 'AUTO VIEW' "$REPORT"
+          grep -q 'exportAutomaticSocialMaster' "$REPORT"
+
+          # Automatic package creation after successful REPORT and LIVE Finalize.
+          grep -q 'DevelopUgandaStoryPackager.createVideoPackage' "$REPORT"
+          grep -q 'recordingWarningsSeen' "$REPORT"
+          grep -q 'expectSocialMaster = isSocialMediaCamera()' "$REPORT"
+          grep -q 'DevelopUgandaStoryPackager.createVideoPackage' "$LIVE"
+          grep -q 'sourceKind = "LIVE"' "$LIVE"
+
+          # Social master is attached to the same package, not lost in another workflow.
+          grep -q 'DevelopUgandaStoryPackager.attachSocialMaster' "$REPORT"
+          grep -q 'storyPackageId' "$REPORT"
+          grep -q 'SOCIAL_MASTER.mp4' "$PACKAGER"
+
+          # Package contents are real generated files.
+          grep -q 'ORIGINAL_VIDEO.mp4' "$PACKAGER"
+          grep -q 'THUMBNAIL.jpg' "$PACKAGER"
+          grep -q 'MANIFEST.json' "$PACKAGER"
+          grep -q 'METADATA.json' "$PACKAGER"
+          grep -q 'INTEGRITY.json' "$PACKAGER"
+          grep -q 'CAPTION_DRAFT.txt' "$PACKAGER"
+          grep -q 'SHA-256' "$PACKAGER"
+          grep -q 'copy_match' "$PACKAGER"
+          grep -q 'Download/develop.uganda/Story Packages' "$PACKAGER"
+
+          # Capability-aware prerecorded transcription: on-device only, no fake cloud fallback.
+          grep -q 'EXTRA_AUDIO_SOURCE' "$TRANSCRIPT"
+          grep -q 'EXTRA_AUDIO_SOURCE_SAMPLING_RATE' "$TRANSCRIPT"
+          grep -q 'EXTRA_SEGMENTED_SESSION' "$TRANSCRIPT"
+          grep -q 'isOnDeviceRecognitionAvailable' "$TRANSCRIPT"
+          grep -q 'createOnDeviceSpeechRecognizer' "$TRANSCRIPT"
+          grep -q 'MediaExtractor' "$TRANSCRIPT"
+          grep -q 'MediaCodec' "$TRANSCRIPT"
+          grep -q 'EXTRA_REQUEST_WORD_TIMING' "$TRANSCRIPT"
+          grep -q 'SUBTITLES_DRAFT.srt' "$PACKAGER"
+          grep -q 'REVIEW BEFORE PUBLICATION' "$PACKAGER"
+
+          # Story packages are visible and usable in-app.
+          grep -q 'class DevelopUgandaStoryPackagesActivity' "$PACKAGES_UI"
+          grep -q 'OPEN STORY PACKAGES' "$HOME"
+          grep -q '.DevelopUgandaStoryPackagesActivity' "$MANIFEST"
+          grep -q 'android.speech.RecognitionService' "$MANIFEST"
+
+          # App identity advances while V225 camera identity remains.
+          grep -q 'versionCode = 22601' "$GRADLE"
+          grep -q 'versionName = "226.1-auto-story-package-fix1"' "$GRADLE"
+          grep -q '"V225 • PHOTO PRO"' "$PHOTO"
+
+          echo "PASS: V226 Auto Story Package source verification completed."
+
+      - name: Prove nullable MediaFormat compiler fix
+        run: |
+          set -e
+
+          TRANSCRIPT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaTranscriptEngine.kt"
+
+          grep -q 'var outputFormat: MediaFormat = sourceFormat' "$TRANSCRIPT"
+
+          if grep -q 'var outputFormat = sourceFormat' "$TRANSCRIPT"; then
+            echo "Old nullable outputFormat declaration is still present."
+            exit 1
+          fi
+
+          grep -q 'outputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)' "$TRANSCRIPT"
+          grep -q 'outputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)' "$TRANSCRIPT"
+          grep -q 'outputFormat.containsKey(MediaFormat.KEY_PCM_ENCODING)' "$TRANSCRIPT"
+          grep -q 'outputFormat.getInteger(MediaFormat.KEY_PCM_ENCODING)' "$TRANSCRIPT"
+
+          echo "PASS: MediaFormat is non-null at all four compiler-error call sites."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V226 FIX1 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v226-build.log
+
+      - name: Print exact compiler errors and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v226-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V226 FIX1 IMPORTANT ERRORS ====="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v226-build.log | head -4200 || true
+
+          echo "===== SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v226-build.log").read_text(encoding="utf-8", errors="ignore")
+          for filename, line_text, col in re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )[:40]:
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files:
+                  continue
+              lines = files[0].read_text(encoding="utf-8").splitlines()
+              print("\nFILE:", files[0], "LINE:", line_no)
+              for n in range(
+                  max(1, line_no - 38),
+                  min(len(lines), line_no + 70) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V226 FIX1 only after successful build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaTranscriptEngine.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackagesActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V226 FIX1 already committed"
+          else
+            git commit -m "Fix develop.uganda V226 nullable MediaFormat compiler error"
+            git push
+          fi
+
+      - name: Package V226 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V226 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE.apk
+
+      - name: Upload V226 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE
+          path: DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V226 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE-SOURCE
+          path: DEVELOP-UGANDA-V226-FIX1-AUTO-STORY-PACKAGE-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V226 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V226-FIX1-BUILD-LOG
+          path: v172-source/v226-build.log
+          if-no-files-found: warn
+          retention-days: 7
