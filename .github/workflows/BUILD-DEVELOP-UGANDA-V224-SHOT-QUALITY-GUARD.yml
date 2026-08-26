@@ -1,0 +1,248 @@
+name: Build develop.uganda V224 Shot Quality Guard
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V223 FIX2 base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD-PATCH.zip
+          grep -q 'versionCode = 22302' v172-source/app/build.gradle.kts
+          grep -q 'versionName = "223.2-all-cameras-auto-view-fix2"' v172-source/app/build.gradle.kts
+
+      - name: Unpack and syntax-check V224
+        run: |
+          set -e
+          rm -rf /tmp/v224
+          mkdir -p /tmp/v224
+          unzip -q DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD-PATCH.zip -d /tmp/v224
+          python3 -m py_compile /tmp/v224/v224_patch.py
+
+      - name: Lock working CameraX bind engines
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+          }
+
+          hashes = {}
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              hashes[name] = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+
+          Path("/tmp/v224-bind-hashes.json").write_text(json.dumps(hashes), encoding="utf-8")
+          PY
+
+      - name: Apply V224 Shot Quality Guard
+        run: |
+          set -e
+          python3 /tmp/v224/v224_patch.py
+
+      - name: Prove CameraX bind engines unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          before = json.loads(Path("/tmp/v224-bind-hashes.json").read_text(encoding="utf-8"))
+
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+          }
+
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              current = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+              if current != before[name]:
+                  raise SystemExit(f"{name} CameraX bind engine changed")
+
+          print("PASS: REPORT and LIVE CameraX bind engines are unchanged.")
+          PY
+
+      - name: Verify V224 real features and retained work
+        run: |
+          set -e
+
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          LIVE="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          ASSIST="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaShotAssistView.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          grep -q 'DevelopUgandaFocusAssistCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaAutoDirectorCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaSocialMediaCameraActivity' "$INDEPENDENT"
+
+          grep -q '"TOO DARK"' "$REPORT"
+          grep -q '"MIC CLIPPING"' "$REPORT"
+          grep -q '"SHAKE HIGH"' "$REPORT"
+          grep -q '"HORIZON OFF"' "$REPORT"
+          grep -q '"THERMAL RISK"' "$REPORT"
+          grep -q '"STORAGE LOW"' "$REPORT"
+          grep -q '"GPS WEAK"' "$REPORT"
+          grep -q '"SUBJECT NOT FOCUSED"' "$REPORT"
+
+          grep -q 'isFocusSuccessful' "$REPORT"
+          grep -q 'focusAttempted' "$REPORT"
+          grep -q 'focusSuccessful' "$REPORT"
+
+          grep -q 'runFieldPreflightBeforeRecording' "$REPORT"
+          grep -q 'PREFLIGHT GOOD' "$REPORT"
+          grep -q 'RECOVERED / INCOMPLETE CLIP' "$REPORT"
+          grep -q 'markRecordingJournalStarted' "$REPORT"
+          grep -q 'markRecordingJournalFinished' "$REPORT"
+
+          grep -q 'class DevelopUgandaShotAssistView' "$ASSIST"
+          grep -q 'MODE_PEAK' "$ASSIST"
+          grep -q 'MODE_ZEBRA' "$ASSIST"
+          grep -q 'ASSIST • EDGE PEAK' "$ASSIST"
+          grep -q 'shotAssistView.submitFrame' "$REPORT"
+
+          grep -q 'runLivePreflightBeforeCountdown' "$LIVE"
+          grep -q 'RECOVERED / INCOMPLETE LIVE CLIP' "$LIVE"
+          grep -q 'liveFreeStorageGb' "$LIVE"
+          grep -q 'liveNetworkReady' "$LIVE"
+
+          grep -q 'ImageLabeling.getClient' "$REPORT"
+          grep -q 'exportAutomaticSocialMaster' "$REPORT"
+          grep -q 'SHOT QUALITY GUARD • REAL SIGNALS' "$HOME"
+
+          grep -q 'versionCode = 22400' "$GRADLE"
+          grep -q 'versionName = "224.0-shot-quality-guard"' "$GRADLE"
+
+          echo "PASS: V224 source verification completed."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V224 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v224-build.log
+
+      - name: Print exact compiler errors and context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v224-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V224 IMPORTANT ERRORS ====="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v224-build.log | head -3600 || true
+
+          echo "===== SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v224-build.log").read_text(encoding="utf-8", errors="ignore")
+          for filename, line_text, col in re.findall(r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)', log)[:32]:
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files:
+                  continue
+              lines = files[0].read_text(encoding="utf-8").splitlines()
+              print("\nFILE:", files[0], "LINE:", line_no)
+              for n in range(max(1, line_no - 34), min(len(lines), line_no + 62) + 1):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V224 only after successful build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaShotAssistView.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V224 already committed"
+          else
+            git commit -m "Add develop.uganda V224 Shot Quality Guard"
+            git push
+          fi
+
+      - name: Package V224 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V224 APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD.apk
+
+      - name: Upload V224 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD
+          path: DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V224 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD-SOURCE
+          path: DEVELOP-UGANDA-V224-SHOT-QUALITY-GUARD-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V224 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V224-BUILD-LOG
+          path: v172-source/v224-build.log
+          if-no-files-found: warn
+          retention-days: 7
