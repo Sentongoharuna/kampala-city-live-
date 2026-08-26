@@ -1,0 +1,235 @@
+name: Build develop.uganda V225 Professional Photo Suite
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V224 base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE-PATCH.zip
+          grep -q 'versionCode = 22400' v172-source/app/build.gradle.kts
+          grep -q 'versionName = "224.0-shot-quality-guard"' v172-source/app/build.gradle.kts
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaShotAssistView.kt
+
+      - name: Unpack and syntax-check V225
+        run: |
+          set -e
+          rm -rf /tmp/v225
+          mkdir -p /tmp/v225
+          unzip -q DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE-PATCH.zip -d /tmp/v225
+          python3 -m py_compile /tmp/v225/v225_patch.py
+
+      - name: Lock existing REPORT and LIVE video engines
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+          }
+
+          hashes = {}
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              hashes[name] = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+
+          Path("/tmp/v225-video-hashes.json").write_text(json.dumps(hashes), encoding="utf-8")
+          PY
+
+      - name: Apply V225 Professional Photo Suite
+        run: |
+          set -e
+          python3 /tmp/v225/v225_patch.py
+
+      - name: Prove existing video engines unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          before = json.loads(Path("/tmp/v225-video-hashes.json").read_text(encoding="utf-8"))
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+          }
+
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              current = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+              if current != before[name]:
+                  raise SystemExit(f"{name} video engine changed")
+
+          print("PASS: REPORT/LIVE video engines unchanged.")
+          PY
+
+      - name: Verify V225 photo suite
+        run: |
+          set -e
+
+          PHOTO="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          grep -q 'getImageCaptureCapabilities' "$PHOTO"
+          grep -q 'supportedOutputFormats' "$PHOTO"
+          grep -q 'OUTPUT_FORMAT_JPEG_ULTRA_HDR' "$PHOTO"
+          grep -q 'OUTPUT_FORMAT_RAW' "$PHOTO"
+          grep -q 'OUTPUT_FORMAT_RAW_JPEG' "$PHOTO"
+          grep -q 'setOutputFormat' "$PHOTO"
+          grep -q 'takePicture(' "$PHOTO"
+          grep -q 'image/x-adobe-dng' "$PHOTO"
+          grep -q 'RAW+JPEG' "$PHOTO"
+
+          grep -q 'class DevelopUgandaPhotoProCameraActivity' "$PHOTO"
+          grep -q 'class DevelopUgandaBuildingPhotoCameraActivity' "$PHOTO"
+          grep -q 'class DevelopUgandaPeoplePhotoCameraActivity' "$PHOTO"
+          grep -q 'class DevelopUgandaNightPhotoCameraActivity' "$PHOTO"
+          grep -q 'class DevelopUgandaVerifiedPhotoCameraActivity' "$PHOTO"
+
+          grep -q 'isFocusSuccessful' "$PHOTO"
+          grep -q 'DevelopUgandaShotAssistView' "$PHOTO"
+          grep -q 'SHA-256 detects later file changes' "$PHOTO"
+          grep -q 'gps_accuracy_m' "$PHOTO"
+
+          grep -q '.DevelopUgandaPhotoProCameraActivity' "$MANIFEST"
+          grep -q '.DevelopUgandaVerifiedPhotoCameraActivity' "$MANIFEST"
+          grep -q 'OPEN PHOTO PRO' "$HOME"
+          grep -q 'OPEN BUILDING PHOTO' "$HOME"
+          grep -q 'OPEN PEOPLE PHOTO' "$HOME"
+          grep -q 'OPEN NIGHT PHOTO' "$HOME"
+          grep -q 'OPEN VERIFIED PHOTO' "$HOME"
+
+          grep -q 'versionCode = 22500' "$GRADLE"
+          grep -q 'versionName = "225.0-professional-photo-suite"' "$GRADLE"
+
+          echo "PASS: V225 capability-aware Photo Suite is wired."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V225 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v225-build.log
+
+      - name: Print exact compiler errors and context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v225-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V225 IMPORTANT ERRORS ====="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v225-build.log | head -3800 || true
+
+          echo "===== SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          log = Path("v225-build.log").read_text(encoding="utf-8", errors="ignore")
+          for filename, line_text, col in re.findall(r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)', log)[:34]:
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files:
+                  continue
+              lines = files[0].read_text(encoding="utf-8").splitlines()
+              print("\nFILE:", files[0], "LINE:", line_no)
+              for n in range(max(1, line_no - 36), min(len(lines), line_no + 65) + 1):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V225 only after successful build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V225 already committed"
+          else
+            git commit -m "Add develop.uganda V225 Professional Photo Suite"
+            git push
+          fi
+
+      - name: Package V225 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V225 APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE.apk
+
+      - name: Upload V225 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE
+          path: DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V225 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE-SOURCE
+          path: DEVELOP-UGANDA-V225-PROFESSIONAL-PHOTO-SUITE-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V225 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V225-BUILD-LOG
+          path: v172-source/v225-build.log
+          if-no-files-found: warn
+          retention-days: 7
