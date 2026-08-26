@@ -21,6 +21,7 @@ import android.os.Environment
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.os.StatFs
 import android.provider.MediaStore
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -235,6 +236,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private var liveAudioAmplitude = 0.0
     private var liveAudioPeakAmplitude = 0.0
     private var liveBlinkOn = true
+    private var livePreflightApprovedOnce = false
     private lateinit var liveAutoViewLabeler: ImageLabeler
     private var liveAutoViewBusy = false
     private var liveAutoViewSummary = "AUTO VIEW • analysing scene"
@@ -335,6 +337,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         loadLiveIdentity()
         loadLiveCameraPreferences()
         buildLiveUi()
+        showLiveRecoveryNoticeIfNeeded()
         startLiveAutoViewDescription()
         requestNeededPermissions()
 
@@ -618,7 +621,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V223",
+                "develop.uganda • V224",
                 20f,
                 amber,
                 true
@@ -2443,7 +2446,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        // V223: brand/build and blinking LIVE status use separate lanes.
+        // V224: brand/build and blinking LIVE status use separate lanes.
         // The build capsule never receives the LIVE glow.
         val brandX =
             safeLeft +
@@ -2467,7 +2470,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         val buildText =
-            "V223"
+            "V224"
 
         val brandWidth =
             paint.measureText(
@@ -2837,7 +2840,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V223   |   THERMAL • ${liveThermalStateLabel()}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V224   |   THERMAL • ${liveThermalStateLabel()}",
             safeLeft,
             safeTop +
                 (126f * u),
@@ -2982,7 +2985,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V223",
+            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V224",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -3325,9 +3328,407 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 }
     }
 
+    private data class LivePreflight(
+        val critical: List<String>,
+        val warnings: List<String>,
+        val ready: List<String>
+    )
+
+    private fun liveFreeStorageGb(): Long? {
+        return try {
+            StatFs(
+                Environment.getExternalStorageDirectory().path
+            ).availableBytes /
+                (
+                    1024L *
+                        1024L *
+                        1024L
+                    )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun liveBatteryPct(): Int? {
+        val batteryManager =
+            getSystemService(
+                BATTERY_SERVICE
+            ) as BatteryManager
+
+        return batteryManager.getIntProperty(
+            BatteryManager.BATTERY_PROPERTY_CAPACITY
+        ).takeIf {
+            it >=
+                0
+        }
+    }
+
+    private fun liveNetworkReady(): Boolean {
+        val cm =
+            getSystemService(
+                Context.CONNECTIVITY_SERVICE
+            ) as ConnectivityManager
+
+        val network =
+            cm.activeNetwork
+                ?: return false
+
+        val caps =
+            cm.getNetworkCapabilities(
+                network
+            ) ?: return false
+
+        return caps.hasCapability(
+            NetworkCapabilities.NET_CAPABILITY_INTERNET
+        )
+    }
+
+    private fun buildLivePreflight(): LivePreflight {
+        val critical =
+            mutableListOf<String>()
+
+        val warnings =
+            mutableListOf<String>()
+
+        val ready =
+            mutableListOf<String>()
+
+        if (
+            camera ==
+                null
+        ) {
+            critical.add(
+                "CAMERA NOT READY"
+            )
+        } else {
+            ready.add(
+                "CAM READY"
+            )
+        }
+
+        val storage =
+            liveFreeStorageGb()
+
+        when {
+            storage ==
+                null ->
+                    warnings.add(
+                        "SPACE UNKNOWN"
+                    )
+
+            storage <=
+                1L ->
+                    critical.add(
+                        "STORAGE CRITICAL ${storage}GB"
+                    )
+
+            storage <=
+                4L ->
+                    warnings.add(
+                        "STORAGE LOW ${storage}GB"
+                    )
+
+            else ->
+                ready.add(
+                    "SPACE ${storage}GB"
+                )
+        }
+
+        val battery =
+            liveBatteryPct()
+
+        when {
+            battery ==
+                null ->
+                    warnings.add(
+                        "BATTERY UNKNOWN"
+                    )
+
+            battery <=
+                3 ->
+                    critical.add(
+                        "BATTERY CRITICAL $battery%"
+                    )
+
+            battery <=
+                10 ->
+                    warnings.add(
+                        "BATTERY LOW $battery%"
+                    )
+
+            else ->
+                ready.add(
+                    "BATTERY $battery%"
+                )
+        }
+
+        if (
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q &&
+            liveThermalStatus >=
+                PowerManager.THERMAL_STATUS_CRITICAL
+        ) {
+            critical.add(
+                "THERMAL ${liveThermalStateLabel()}"
+            )
+        } else if (
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q &&
+            liveThermalStatus >=
+                PowerManager.THERMAL_STATUS_SEVERE
+        ) {
+            warnings.add(
+                "THERMAL ${liveThermalStateLabel()}"
+            )
+        } else {
+            ready.add(
+                "THERMAL ${liveThermalStateLabel()}"
+            )
+        }
+
+        val micReady =
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) ==
+                PackageManager.PERMISSION_GRANTED
+
+        if (
+            audioEnabled &&
+            micReady
+        ) {
+            ready.add(
+                "MIC OK"
+            )
+        } else if (
+            audioEnabled
+        ) {
+            warnings.add(
+                "MIC OFF"
+            )
+        } else {
+            ready.add(
+                "AUDIO DISABLED"
+            )
+        }
+
+        if (
+            liveNetworkReady()
+        ) {
+            ready.add(
+                "NET READY"
+            )
+        } else {
+            warnings.add(
+                "NET OFFLINE"
+            )
+        }
+
+        return LivePreflight(
+            critical =
+                critical.distinct(),
+            warnings =
+                warnings.distinct(),
+            ready =
+                ready.distinct()
+        )
+    }
+
+    private fun runLivePreflightBeforeCountdown(): Boolean {
+        if (
+            livePreflightApprovedOnce
+        ) {
+            livePreflightApprovedOnce =
+                false
+            return true
+        }
+
+        val result =
+            buildLivePreflight()
+
+        if (
+            result.critical.isEmpty() &&
+            result.warnings.isEmpty()
+        ) {
+            outputStatus.text =
+                "PREFLIGHT GOOD • " +
+                    result.ready.joinToString(
+                        " • "
+                    )
+            return true
+        }
+
+        if (
+            result.critical.isNotEmpty()
+        ) {
+            AlertDialog.Builder(
+                this
+            )
+                .setTitle(
+                    "LIVE PREFLIGHT • BLOCKED"
+                )
+                .setMessage(
+                    result.critical.joinToString(
+                        "\n"
+                    ) {
+                        "• $it"
+                    } +
+                        "\n\n" +
+                        result.warnings.joinToString(
+                            "\n"
+                        ) {
+                            "• $it"
+                        }
+                )
+                .setPositiveButton(
+                    "OK",
+                    null
+                )
+                .show()
+            return false
+        }
+
+        AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                "LIVE RECORDING PREFLIGHT"
+            )
+            .setMessage(
+                result.warnings.joinToString(
+                    "\n"
+                ) {
+                    "• $it"
+                } +
+                    "\n\nReady: " +
+                    result.ready.joinToString(
+                        " • "
+                    )
+            )
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .setPositiveButton(
+                "START ANYWAY"
+            ) { _, _ ->
+                livePreflightApprovedOnce =
+                    true
+                beginLiveRecordSequence()
+            }
+            .show()
+
+        return false
+    }
+
+    private fun liveRecoveryPrefs() =
+        getSharedPreferences(
+            "develop_uganda_live_recovery",
+            Context.MODE_PRIVATE
+        )
+
+    private fun markLiveJournalStarted() {
+        liveRecoveryPrefs()
+            .edit()
+            .putBoolean(
+                "active",
+                true
+            )
+            .putBoolean(
+                "incomplete",
+                false
+            )
+            .putString(
+                "name",
+                liveRecordingName
+            )
+            .putLong(
+                "started_elapsed",
+                recordStartMs
+            )
+            .apply()
+    }
+
+    private fun markLiveJournalFinished(
+        hadError: Boolean
+    ) {
+        liveRecoveryPrefs()
+            .edit()
+            .putBoolean(
+                "active",
+                false
+            )
+            .putBoolean(
+                "incomplete",
+                hadError
+            )
+            .apply()
+    }
+
+    private fun showLiveRecoveryNoticeIfNeeded() {
+        val prefs =
+            liveRecoveryPrefs()
+
+        if (
+            !prefs.getBoolean(
+                "active",
+                false
+            ) &&
+            !prefs.getBoolean(
+                "incomplete",
+                false
+            )
+        ) {
+            return
+        }
+
+        AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                "RECOVERED / INCOMPLETE LIVE CLIP"
+            )
+            .setMessage(
+                "The previous LIVE recording did not reach a clean completion record.\n\nFILE • " +
+                    (
+                        prefs.getString(
+                            "name",
+                            "--"
+                        ) ?: "--"
+                        ) +
+                    ".mp4\n\nInspect the Gallery file if present. This journal identifies an interrupted session; it does not claim a damaged video was repaired."
+            )
+            .setNegativeButton(
+                "KEEP NOTICE",
+                null
+            )
+            .setPositiveButton(
+                "ACKNOWLEDGE"
+            ) { _, _ ->
+                prefs.edit()
+                    .putBoolean(
+                        "active",
+                        false
+                    )
+                    .putBoolean(
+                        "incomplete",
+                        false
+                    )
+                    .apply()
+            }
+            .show()
+    }
+
     private fun beginLiveRecordSequence() {
         if (
             countdownRunning
+        ) {
+            return
+        }
+
+        if (
+            recording == null &&
+            !runLivePreflightBeforeCountdown()
         ) {
             return
         }
@@ -3557,7 +3958,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V223_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V224_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 
@@ -3633,6 +4034,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         recordStartMs =
                             SystemClock.elapsedRealtime()
 
+                        markLiveJournalStarted()
+
                         recordButton.setRecordingState(
                             true
                         )
@@ -3700,6 +4103,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                         liveAudioPeakAmplitude =
                             0.0
+
+                        markLiveJournalFinished(
+                            event.hasError()
+                        )
 
                         if (
                             event.hasError()

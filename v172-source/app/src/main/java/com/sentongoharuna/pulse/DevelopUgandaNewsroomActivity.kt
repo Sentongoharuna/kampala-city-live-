@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "ALL CAMERAS RETAINED • V223\nAUTO VIEW • CAMERA ID IN SAVED VIDEO",
+                "SHOT QUALITY GUARD • V224\nALL CAMERAS + AUTO VIEW RETAINED",
                 9f,
                 white,
                 true
@@ -258,6 +258,14 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             compactStatus(
                 "AUTO VIEW • ON-DEVICE SCENE DESCRIPTION",
                 "MAIN REPORT + LIVE PREVIEW SHOW A BRIEF ML KIT DESCRIPTION OF THE CURRENT VIEW • SCREEN-ONLY SO A WRONG AI LABEL IS NOT PERMANENTLY BURNED INTO EVIDENCE FOOTAGE",
+                0xFF62D8C9.toInt()
+            )
+        )
+
+        page.addView(
+            compactStatus(
+                "SHOT QUALITY GUARD • REAL SIGNALS",
+                "TOO DARK • MIC CLIPPING • SHAKE HIGH • HORIZON OFF • THERMAL RISK • STORAGE LOW • GPS WEAK • FOCUS NOT CONFIRMED • FIELD PREFLIGHT • RECOVERY JOURNAL • SCREEN-ONLY PEAK/ZEBRA",
                 0xFF62D8C9.toInt()
             )
         )

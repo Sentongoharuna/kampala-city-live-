@@ -146,6 +146,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         const val ACTION_REPORT_PRESET = 20
         const val ACTION_HUD_BACKING = 21
         const val ACTION_AUTO_DIRECTOR = 22
+        const val ACTION_SHOT_ASSIST = 23
     }
 
 
@@ -169,6 +170,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var previewHealthView: TextView
     private lateinit var cameraExperienceBannerView: TextView
     private lateinit var autoViewDescriptionView: TextView
+    private lateinit var shotQualityGuardView: TextView
+    private lateinit var shotAssistView: DevelopUgandaShotAssistView
     private lateinit var focusReticleView: TextView
     private lateinit var horizonGuardView: TextView
     private lateinit var motionGuardView: TextView
@@ -220,6 +223,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var hudBackingButton: Button
     private lateinit var reportPresetButton: Button
     private lateinit var autoDirectorButton: Button
+    private lateinit var assistButton: Button
     private lateinit var reportDisplayRow: LinearLayout
     private lateinit var reportOutputRow: LinearLayout
 
@@ -290,6 +294,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var lastPreviewTapMs = 0L
     private var focusLongPressTriggered = false
     private var focusLockActive = false
+    private var focusAttempted = false
+    private var focusSuccessful: Boolean? = null
+    private var preflightApprovedOnce = false
+    private var shotAssistModeIndex = DevelopUgandaShotAssistView.MODE_OFF
+    private val shotAssistModeLabels = arrayOf("OFF", "PEAK", "ZEBRA", "BOTH")
     private lateinit var autoViewLabeler: ImageLabeler
     private var autoViewBusy = false
     private var autoViewSummary = "AUTO VIEW • analysing scene"
@@ -470,6 +479,37 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
     private val uiHandler = Handler(Looper.getMainLooper())
 
+    private val shotAssistRunnable =
+        object : Runnable {
+            override fun run() {
+                if (
+                    shotAssistModeIndex !=
+                        DevelopUgandaShotAssistView.MODE_OFF &&
+                    ::previewView.isInitialized &&
+                    ::shotAssistView.isInitialized
+                ) {
+                    val bitmap =
+                        try {
+                            previewView.bitmap
+                        } catch (_: Exception) {
+                            null
+                        }
+
+                    if (bitmap != null) {
+                        shotAssistView.submitFrame(
+                            bitmap
+                        )
+                    }
+                }
+
+                uiHandler.postDelayed(
+                    this,
+                    700L
+                )
+            }
+        }
+
+
     private val autoViewRunnable =
         object : Runnable {
             override fun run() {
@@ -630,7 +670,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         enforceImmersiveCameraWindow()
 
         buildUi()
+        showRecordingRecoveryNoticeIfNeeded()
         startAutoViewDescription()
+        startShotAssistLoop()
         requestPermissionsAndStart()
         uiHandler.post(tick)
     }
@@ -709,6 +751,30 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         )
+
+        shotAssistView =
+            DevelopUgandaShotAssistView(
+                this
+            ).apply {
+                setAssistMode(
+                    shotAssistModeIndex
+                )
+
+                isClickable =
+                    false
+
+                isFocusable =
+                    false
+            }
+
+        root.addView(
+            shotAssistView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
 
         focusReticleView =
             TextView(this).apply {
@@ -1155,6 +1221,26 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
         )
 
+        shotQualityGuardView =
+            hud(
+                "SHOT GUARD • READY",
+                7.0f,
+                0xFF91B6A0.toInt(),
+                bold = true
+            ).apply {
+                maxLines =
+                    2
+            }
+
+        previewNarrationPanel.addView(
+            shotQualityGuardView,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(30)
+            )
+        )
+
+
         previewIdentityView =
             hud(
                 "",
@@ -1488,10 +1574,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 0xFF83B995.toInt()
             )
 
+        assistButton =
+            deckButton(
+                "ASSIST ▾\n${shotAssistModeLabels[shotAssistModeIndex]}",
+                0xFF62D8C9.toInt()
+            )
+
+
         listOf(
             autoUiButton,
             lockButton,
-            cleanModeButton
+            cleanModeButton,
+            assistButton
         ).forEachIndexed { index, button ->
             reportAdvancedRow.addView(
                 button,
@@ -1869,6 +1963,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         autoDirectorButton.setOnTouchListener(
             DeckTouchListener(ACTION_AUTO_DIRECTOR)
+        )
+
+        assistButton.setOnTouchListener(
+            DeckTouchListener(ACTION_SHOT_ASSIST)
         )
 
         lensButton.setOnTouchListener(
@@ -3382,7 +3480,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V223"
+                            "V224"
                         )
                         put(
                             "camera_engine",
@@ -3713,6 +3811,708 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "Clean operator mode"
             } else {
                 "Full report controls"
+            }
+        )
+    }
+
+    private data class FieldPreflight(
+        val critical: List<String>,
+        val warnings: List<String>,
+        val ready: List<String>
+    )
+
+    private fun shotQualityWarnings(): List<String> {
+        val warnings =
+            mutableListOf<String>()
+
+        ambientLux?.let {
+            if (
+                it <
+                    25f
+            ) {
+                warnings.add(
+                    "TOO DARK"
+                )
+            }
+        }
+
+        if (
+            recording !=
+                null &&
+            audioPeakAmplitude >=
+                0.90
+        ) {
+            warnings.add(
+                "MIC CLIPPING"
+            )
+        }
+
+        if (
+            cameraShakeScore >
+                22f
+        ) {
+            warnings.add(
+                "SHAKE HIGH"
+            )
+        }
+
+        phoneRollDeg?.let {
+            if (
+                kotlin.math.abs(
+                    it
+                ) >
+                    3.0f
+            ) {
+                warnings.add(
+                    "HORIZON OFF"
+                )
+            }
+        }
+
+        if (
+            isThermalSevereOrWorse()
+        ) {
+            warnings.add(
+                "THERMAL RISK"
+            )
+        }
+
+        freeStorageGb()?.let {
+            if (
+                it <=
+                    4L
+            ) {
+                warnings.add(
+                    "STORAGE LOW"
+                )
+            }
+        }
+
+        val gpsAge =
+            if (
+                lastGpsUpdateMs >
+                    0L
+            ) {
+                System.currentTimeMillis() -
+                    lastGpsUpdateMs
+            } else {
+                Long.MAX_VALUE
+            }
+
+        if (
+            accuracy ==
+                null ||
+            (
+                accuracy ?: 999f
+                ) >
+                50f ||
+            gpsAge >
+                10_000L
+        ) {
+            warnings.add(
+                "GPS WEAK"
+            )
+        }
+
+        if (
+            focusAttempted &&
+            focusSuccessful ==
+                false
+        ) {
+            warnings.add(
+                "SUBJECT NOT FOCUSED"
+            )
+        }
+
+        return warnings.distinct()
+    }
+
+    private fun updateShotQualityGuard() {
+        if (
+            !::shotQualityGuardView.isInitialized
+        ) {
+            return
+        }
+
+        val warnings =
+            shotQualityWarnings()
+
+        shotQualityGuardView.text =
+            if (
+                warnings.isEmpty()
+            ) {
+                "SHOT GUARD • READY"
+            } else {
+                "SHOT GUARD • " +
+                    warnings.joinToString(
+                        " • "
+                    )
+            }
+
+        shotQualityGuardView.setTextColor(
+            if (
+                warnings.isEmpty()
+            ) {
+                0xFF91B6A0.toInt()
+            } else if (
+                warnings.any {
+                    it ==
+                        "MIC CLIPPING" ||
+                    it ==
+                        "THERMAL RISK"
+                }
+            ) {
+                0xFFC76D73.toInt()
+            } else {
+                0xFFD0B06F.toInt()
+            }
+        )
+    }
+
+    private fun fieldPreflight(): FieldPreflight {
+        val critical =
+            mutableListOf<String>()
+
+        val warnings =
+            mutableListOf<String>()
+
+        val ready =
+            mutableListOf<String>()
+
+        if (
+            camera ==
+                null
+        ) {
+            critical.add(
+                "CAMERA NOT READY"
+            )
+        } else {
+            ready.add(
+                "CAM READY"
+            )
+        }
+
+        val storage =
+            freeStorageGb()
+
+        when {
+            storage ==
+                null ->
+                    warnings.add(
+                        "SPACE UNKNOWN"
+                    )
+
+            storage <=
+                1L ->
+                    critical.add(
+                        "STORAGE CRITICAL ${storage}GB"
+                    )
+
+            storage <=
+                4L ->
+                    warnings.add(
+                        "STORAGE LOW ${storage}GB"
+                    )
+
+            else ->
+                ready.add(
+                    "SPACE ${storage}GB"
+                )
+        }
+
+        val battery =
+            batteryPct()
+
+        when {
+            battery ==
+                null ->
+                    warnings.add(
+                        "BATTERY UNKNOWN"
+                    )
+
+            battery <=
+                3 ->
+                    critical.add(
+                        "BATTERY CRITICAL $battery%"
+                    )
+
+            battery <=
+                10 ->
+                    warnings.add(
+                        "BATTERY LOW $battery%"
+                    )
+
+            else ->
+                ready.add(
+                    "BATTERY $battery%"
+                )
+        }
+
+        if (
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q &&
+            thermalStatus >=
+                PowerManager.THERMAL_STATUS_CRITICAL
+        ) {
+            critical.add(
+                "THERMAL ${thermalStateLabel()}"
+            )
+        } else if (
+            isThermalSevereOrWorse()
+        ) {
+            warnings.add(
+                "THERMAL ${thermalStateLabel()}"
+            )
+        } else {
+            ready.add(
+                "THERMAL ${thermalStateLabel()}"
+            )
+        }
+
+        val micReady =
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) ==
+                PackageManager.PERMISSION_GRANTED
+
+        if (
+            micReady
+        ) {
+            ready.add(
+                "MIC OK"
+            )
+        } else {
+            warnings.add(
+                "MIC OFF"
+            )
+        }
+
+        val gpsAge =
+            if (
+                lastGpsUpdateMs >
+                    0L
+            ) {
+                System.currentTimeMillis() -
+                    lastGpsUpdateMs
+            } else {
+                Long.MAX_VALUE
+            }
+
+        if (
+            accuracy !=
+                null &&
+            (
+                accuracy ?: 999f
+                ) <=
+                50f &&
+            gpsAge <=
+                10_000L
+        ) {
+            ready.add(
+                "GPS FIX"
+            )
+        } else {
+            warnings.add(
+                "GPS WEAK"
+            )
+        }
+
+        if (
+            isSocialMediaCamera()
+        ) {
+            if (
+                automaticSocialExportActive
+            ) {
+                warnings.add(
+                    "SOCIAL EXPORT BUSY"
+                )
+            } else {
+                ready.add(
+                    "SOCIAL MASTER READY"
+                )
+            }
+        }
+
+        shotQualityWarnings()
+            .filterNot {
+                it in
+                    setOf(
+                        "STORAGE LOW",
+                        "GPS WEAK",
+                        "THERMAL RISK"
+                    )
+            }
+            .forEach {
+                if (
+                    it !in
+                        warnings
+                ) {
+                    warnings.add(
+                        it
+                    )
+                }
+            }
+
+        return FieldPreflight(
+            critical =
+                critical.distinct(),
+            warnings =
+                warnings.distinct(),
+            ready =
+                ready.distinct()
+        )
+    }
+
+    private fun runFieldPreflightBeforeRecording(): Boolean {
+        if (
+            preflightApprovedOnce
+        ) {
+            preflightApprovedOnce =
+                false
+            return true
+        }
+
+        val result =
+            fieldPreflight()
+
+        val readyText =
+            result.ready.joinToString(
+                " • "
+            )
+
+        if (
+            result.critical.isEmpty() &&
+            result.warnings.isEmpty()
+        ) {
+            if (
+                ::shotQualityGuardView.isInitialized
+            ) {
+                shotQualityGuardView.text =
+                    "PREFLIGHT GOOD • $readyText"
+                shotQualityGuardView.setTextColor(
+                    0xFF91B6A0.toInt()
+                )
+            }
+
+            return true
+        }
+
+        if (
+            result.critical.isNotEmpty()
+        ) {
+            AlertDialog.Builder(
+                this
+            )
+                .setTitle(
+                    "RECORDING PREFLIGHT • BLOCKED"
+                )
+                .setMessage(
+                    buildString {
+                        append(
+                            "Critical condition:\n"
+                        )
+
+                        result.critical.forEach {
+                            append(
+                                "• $it\n"
+                            )
+                        }
+
+                        if (
+                            result.warnings.isNotEmpty()
+                        ) {
+                            append(
+                                "\nWarnings:\n"
+                            )
+
+                            result.warnings.forEach {
+                                append(
+                                    "• $it\n"
+                                )
+                            }
+                        }
+
+                        append(
+                            "\nReady: $readyText"
+                        )
+                    }
+                )
+                .setPositiveButton(
+                    "OK",
+                    null
+                )
+                .show()
+
+            return false
+        }
+
+        AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                "FIELD RECORDING PREFLIGHT"
+            )
+            .setMessage(
+                buildString {
+                    append(
+                        "Warnings:\n"
+                    )
+
+                    result.warnings.forEach {
+                        append(
+                            "• $it\n"
+                        )
+                    }
+
+                    append(
+                        "\nReady: $readyText"
+                    )
+                }
+            )
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .setPositiveButton(
+                "RECORD ANYWAY"
+            ) { _, _ ->
+                preflightApprovedOnce =
+                    true
+                toggleRecording()
+            }
+            .show()
+
+        return false
+    }
+
+    private fun recordingJournalPrefs() =
+        getSharedPreferences(
+            "develop_uganda_recording_recovery",
+            Context.MODE_PRIVATE
+        )
+
+    private fun markRecordingJournalStarted() {
+        recordingJournalPrefs()
+            .edit()
+            .putBoolean(
+                "active",
+                true
+            )
+            .putBoolean(
+                "incomplete",
+                false
+            )
+            .putString(
+                "base_name",
+                baseName
+            )
+            .putString(
+                "report_id",
+                reportId
+            )
+            .putString(
+                "camera",
+                cameraExperienceShortLabel()
+            )
+            .putString(
+                "started_utc",
+                recordStartUtc
+            )
+            .apply()
+    }
+
+    private fun markRecordingJournalFinished(
+        hadError: Boolean
+    ) {
+        recordingJournalPrefs()
+            .edit()
+            .putBoolean(
+                "active",
+                false
+            )
+            .putBoolean(
+                "incomplete",
+                hadError
+            )
+            .putString(
+                "last_result",
+                if (
+                    hadError
+                ) {
+                    "INCOMPLETE"
+                } else {
+                    "FINALIZED"
+                }
+            )
+            .apply()
+    }
+
+    private fun showRecordingRecoveryNoticeIfNeeded() {
+        val prefs =
+            recordingJournalPrefs()
+
+        val active =
+            prefs.getBoolean(
+                "active",
+                false
+            )
+
+        val incomplete =
+            prefs.getBoolean(
+                "incomplete",
+                false
+            )
+
+        if (
+            !active &&
+            !incomplete
+        ) {
+            return
+        }
+
+        val name =
+            prefs.getString(
+                "base_name",
+                "--"
+            ) ?: "--"
+
+        val cameraName =
+            prefs.getString(
+                "camera",
+                "--"
+            ) ?: "--"
+
+        val started =
+            prefs.getString(
+                "started_utc",
+                "--"
+            ) ?: "--"
+
+        val itemFound =
+            try {
+                contentResolver.query(
+                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    arrayOf(
+                        MediaStore.Video.Media._ID
+                    ),
+                    "${MediaStore.Video.Media.DISPLAY_NAME} LIKE ?",
+                    arrayOf(
+                        "$name%"
+                    ),
+                    "${MediaStore.Video.Media.DATE_ADDED} DESC"
+                )?.use {
+                    it.moveToFirst()
+                } ?: false
+            } catch (_: Exception) {
+                false
+            }
+
+        AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                "RECOVERED / INCOMPLETE CLIP"
+            )
+            .setMessage(
+                buildString {
+                    append(
+                        "The previous recording session did not reach a clean completion record.\n\n"
+                    )
+                    append(
+                        "CAMERA • $cameraName\n"
+                    )
+                    append(
+                        "START • $started\n"
+                    )
+                    append(
+                        "FILE • $name.mp4\n\n"
+                    )
+                    append(
+                        if (
+                            itemFound
+                        ) {
+                            "A Gallery item with this name exists. Inspect/play it before relying on it. develop.uganda does not claim a damaged MP4 was repaired."
+                        } else {
+                            "No matching Gallery item was confirmed. The recovery journal preserves the recording identity so the loss is not silent."
+                        }
+                    )
+                }
+            )
+            .setNegativeButton(
+                "KEEP NOTICE",
+                null
+            )
+            .setPositiveButton(
+                "ACKNOWLEDGE"
+            ) { _, _ ->
+                prefs.edit()
+                    .putBoolean(
+                        "active",
+                        false
+                    )
+                    .putBoolean(
+                        "incomplete",
+                        false
+                    )
+                    .apply()
+            }
+            .show()
+    }
+
+    private fun startShotAssistLoop() {
+        uiHandler.removeCallbacks(
+            shotAssistRunnable
+        )
+
+        uiHandler.postDelayed(
+            shotAssistRunnable,
+            900L
+        )
+    }
+
+    private fun cycleShotAssist() {
+        shotAssistModeIndex =
+            (
+                shotAssistModeIndex +
+                    1
+                ) %
+                shotAssistModeLabels.size
+
+        if (
+            ::shotAssistView.isInitialized
+        ) {
+            shotAssistView.setAssistMode(
+                shotAssistModeIndex
+            )
+        }
+
+        if (
+            ::assistButton.isInitialized
+        ) {
+            assistButton.text =
+                "ASSIST ▾\n${shotAssistModeLabels[shotAssistModeIndex]}"
+
+            assistButton.isSelected =
+                shotAssistModeIndex !=
+                    DevelopUgandaShotAssistView.MODE_OFF
+        }
+
+        toast(
+            when (
+                shotAssistModeIndex
+            ) {
+                DevelopUgandaShotAssistView.MODE_PEAK ->
+                    "Edge peaking ON • screen only"
+
+                DevelopUgandaShotAssistView.MODE_ZEBRA ->
+                    "Exposure zebra ON • screen only"
+
+                DevelopUgandaShotAssistView.MODE_BOTH ->
+                    "Peak + zebra ON • screen only"
+
+                else ->
+                    "Shot assist OFF"
             }
         )
     }
@@ -4361,10 +5161,46 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     .disableAutoCancel()
                     .build()
 
-            cam.cameraControl
-                .startFocusAndMetering(
-                    action
+
+            val focusFuture =
+                cam.cameraControl
+                    .startFocusAndMetering(
+                        action
+                    )
+
+            focusAttempted =
+                true
+
+            focusSuccessful =
+                null
+
+            focusFuture.addListener(
+                {
+                    focusSuccessful =
+                        try {
+                            focusFuture.get()
+                                .isFocusSuccessful
+                        } catch (_: Exception) {
+                            false
+                        }
+
+                    runOnUiThread {
+                        updateShotQualityGuard()
+
+                        if (
+                            focusSuccessful ==
+                                false
+                        ) {
+                            toast(
+                                "Subject focus not confirmed"
+                            )
+                        }
+                    }
+                },
+                ContextCompat.getMainExecutor(
+                    this
                 )
+            )
 
             focusLockActive =
                 true
@@ -5436,7 +6272,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawStrongRecordedText(
             c,
-            "${sceneTag()} • V223",
+            "${sceneTag()} • V224",
             safeLeft +
                 brandWidth +
                 (11f * u),
@@ -5497,7 +6333,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawFitText(
             c,
-            "$recState   •   TC ${tc()}   •   V223   •   THERM ${thermalStateLabel()}",
+            "$recState   •   TC ${tc()}   •   V224   •   THERM ${thermalStateLabel()}",
             safeLeft,
             y,
             maxWidth,
@@ -7392,10 +8228,16 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             return
         }
 
+        if (
+            !runFieldPreflightBeforeRecording()
+        ) {
+            return
+        }
+
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V223_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V224_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -7454,6 +8296,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         Instant.ofEpochMilli(
                             recStarted
                         ).toString()
+                    markRecordingJournalStarted()
                     distanceTravelledM = 0f
                     audioAmplitude = 0.0
                     audioPeakAmplitude = 0.0
@@ -7525,6 +8368,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             false
                         )
                     }
+
+                    markRecordingJournalFinished(
+                        hadError
+                    )
 
                     if (hadError) {
                         statusView.text = "ERROR"
@@ -7723,6 +8570,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         updateLightAdvisor()
         updateAudioGuard()
         updateThermalGuard()
+        updateShotQualityGuard()
 
         timecodeView.text =
             "TC ${tc()}"
@@ -9367,10 +10215,48 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     )
                     .build()
 
-            cam.cameraControl
-                .startFocusAndMetering(action)
 
-            toast("Focus")
+            val focusFuture =
+                cam.cameraControl
+                    .startFocusAndMetering(
+                        action
+                    )
+
+            focusAttempted =
+                true
+
+            focusSuccessful =
+                null
+
+            focusFuture.addListener(
+                {
+                    focusSuccessful =
+                        try {
+                            focusFuture.get()
+                                .isFocusSuccessful
+                        } catch (_: Exception) {
+                            false
+                        }
+
+                    runOnUiThread {
+                        updateShotQualityGuard()
+
+                        toast(
+                            if (
+                                focusSuccessful ==
+                                    true
+                            ) {
+                                "Focus confirmed"
+                            } else {
+                                "Subject focus not confirmed"
+                            }
+                        )
+                    }
+                },
+                ContextCompat.getMainExecutor(
+                    this
+                )
+            )
         } catch (_: Exception) {
         }
     }
@@ -9494,6 +10380,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                         ACTION_AUTO_DIRECTOR ->
                             toggleAutoDirector()
+
+                        ACTION_SHOT_ASSIST ->
+                            cycleShotAssist()
 
                         ACTION_LENS ->
                             showReportLensDropdown(

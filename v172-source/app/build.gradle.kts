@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 22302
-        versionName = "223.2-all-cameras-auto-view-fix2"
+        versionCode = 22400
+        versionName = "224.0-shot-quality-guard"
     }
 
     buildTypes {
