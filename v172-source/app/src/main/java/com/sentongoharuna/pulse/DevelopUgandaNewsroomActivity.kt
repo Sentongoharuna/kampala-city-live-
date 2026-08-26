@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "SHOT QUALITY GUARD • V224\nALL CAMERAS + AUTO VIEW RETAINED",
+                "PROFESSIONAL PHOTO SUITE • V225\nVIDEO CAMERAS + V224 GUARD RETAINED",
                 9f,
                 white,
                 true
@@ -564,6 +564,90 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             quickLaunch
+        )
+
+        page.addView(
+            sectionTitle(
+                "PROFESSIONAL PHOTO CAMERAS • V225"
+            )
+        )
+
+        page.addView(
+            compactStatus(
+                "CAPABILITY-AWARE STILL PHOTOGRAPHY",
+                "ONLY FORMATS THE SELECTED LENS REPORTS AS SUPPORTED ARE SHOWN • JPEG • ULTRA HDR JPEG_R • RAW DNG • RAW+JPEG • EDGE PEAK / ZEBRA REMAIN SCREEN-ONLY",
+                0xFFD0B06F.toInt()
+            )
+        )
+
+        page.addView(
+            launchCard(
+                "V225 • PHOTO PRO",
+                "General professional still photography",
+                "Maximum-quality CameraX ImageCapture • tap focus • capability-aware JPEG / Ultra HDR / RAW DNG / RAW+JPEG selector • level guide • edge peak / zebra operator assist",
+                0xFFD0B06F.toInt(),
+                "OPEN PHOTO PRO"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaPhotoProCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V225 • BUILDING PHOTO",
+                "Architecture • rooms • property • straight lines",
+                "Level guide emphasized • Ultra HDR preferred only when this lens reports support • otherwise JPEG fallback • maximum-quality capture • RAW options remain selectable when supported",
+                green,
+                "OPEN BUILDING PHOTO"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaBuildingPhotoCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V225 • PEOPLE PHOTO",
+                "People • portraits • interview stills",
+                "Tap-to-focus with CameraX focus confirmation • maximum-quality JPEG default • RAW/HDR choices appear only if the device supports them • peaking optional",
+                gold,
+                "OPEN PEOPLE PHOTO"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaPeoplePhotoCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V225 • NIGHT PHOTO",
+                "Night • dark rooms • low-light stills",
+                "CameraX MAXIMIZE_QUALITY • flash OFF by default • no fake Nightography claim • device-supported RAW/HDR formats remain selectable • zebra/peaking available",
+                0xFF8A86B8.toInt(),
+                "OPEN NIGHT PHOTO"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaNightPhotoCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V225 • VERIFIED PHOTO",
+                "Inspections • site records • evidence-style stills",
+                "JPEG maximum quality • filename identifies VERIFIED PHOTO • metadata JSON includes capture time/GPS/camera • SHA-256 integrity sidecar detects later file changes without claiming authorship",
+                0xFF73B7D9.toInt(),
+                "OPEN VERIFIED PHOTO"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaVerifiedPhotoCameraActivity::class.java
+                )
+            }
         )
 
         page.addView(

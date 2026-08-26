@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 22400
-        versionName = "224.0-shot-quality-guard"
+        versionCode = 22500
+        versionName = "225.0-professional-photo-suite"
     }
 
     buildTypes {

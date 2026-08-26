@@ -87,6 +87,31 @@
             android:exported="false"/>
 
         <activity
+            android:name=".DevelopUgandaPhotoProCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaBuildingPhotoCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaPeoplePhotoCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaNightPhotoCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaVerifiedPhotoCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".DevelopUgandaCameraActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
