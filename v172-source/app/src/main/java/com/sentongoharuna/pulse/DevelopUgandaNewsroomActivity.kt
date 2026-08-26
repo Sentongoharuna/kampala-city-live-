@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "MIDNIGHT NAVY UI • V202",
+                "INDEPENDENT CAMERA SUITE • V216",
                 9f,
                 white,
                 true
@@ -255,9 +255,185 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             compactStatus(
-                "SOCIAL CAMERA ENGINE",
-                "SIDE HUD REPORT OVERLAY • DYNAMIC MOVING DATA • GLOWING LIVE FEED SIGNAL • HIGH BITRATE SOCIAL VIDEO",
+                "CREATOR CAMERA ENGINE",
+                "V205→V215 NOW OPEN AS SEPARATE CAMERAS • V204 ENGINE RETAINED • EACH CAMERA HAS ITS OWN STATE/DEFAULTS/UI EMPHASIS/RECORDED IDENTITY • V216",
                 cyan
+            )
+        )
+
+        page.addView(
+            sectionTitle(
+                "INDEPENDENT PRO CAMERAS"
+            )
+        )
+
+        page.addView(
+            compactStatus(
+                "V216 CAMERA ARCHITECTURE",
+                "NO DROPDOWN TO OPEN THESE CAMERAS • EVERY CARD BELOW OPENS ITS OWN ANDROID CAMERA ACTIVITY • EACH CAMERA REMEMBERS ITS OWN SETTINGS",
+                green
+            )
+        )
+
+        page.addView(
+            launchCard(
+                "V205 • FOCUS ASSIST CAMERA",
+                "Dedicated subject-focus camera",
+                "Tap subject for AF • long-press persistent AF lock • INTERVIEW + SOCIAL FHD default • focus reticle emphasized • all shared recording/telemetry tools remain",
+                gold,
+                "OPEN V205 FOCUS CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaFocusAssistCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V206 • METERING LOCK CAMERA",
+                "Dedicated AF + AE + AWB metering camera",
+                "Long-press metering region • visible reticle • NATURAL default • independent saved settings • exact camera identity burned into V216 output",
+                0xFFD0B06F.toInt(),
+                "OPEN V206 METER CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaMeteringLockCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V207 • HORIZON CAMERA",
+                "Dedicated level-composition camera",
+                "Rotation-vector horizon guide emphasized • LEVEL LOCK / LEVEL NEAR / ADJUST • OUTDOOR default • other modules retained but visually secondary",
+                green,
+                "OPEN V207 HORIZON CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaHorizonCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V208 • STEADYSHOT CAMERA",
+                "Dedicated handheld-motion camera",
+                "ACTION STAB default • real STEADY / MOVING / SHAKE guidance emphasized • DOCUMENTARY default • device stabilization remains real CameraX capability",
+                0xFF71B9A7.toInt(),
+                "OPEN V208 STEADYSHOT CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaSteadyShotCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V209 • NIGHT INTELLIGENCE CAMERA",
+                "Dedicated low-light reporting camera",
+                "LOW LIGHT + NIGHT defaults • real Android lux sensor emphasized • dark/dim/normal/bright guidance • 30fps advice preserved",
+                0xFF8A86B8.toInt(),
+                "OPEN V209 NIGHT CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaNightIntelligenceCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V210 • ALL-PRO FIELD CAMERA",
+                "Full cumulative professional field camera",
+                "All V204→V215 tools visible together • Social Master capture engine • focus/meter/horizon/motion/lux/audio/thermal/verified-state controls • REPORTER default",
+                cyan,
+                "OPEN V210 ALL-PRO CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaAllProCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V211 • AUDIO GUARD CAMERA",
+                "Dedicated interview/audio-monitoring camera",
+                "CameraX microphone amplitude + peak emphasized • LOW / GOOD / HOT / CLIP RISK • INTERVIEW default • audio track is still recorded normally",
+                green,
+                "OPEN V211 AUDIO CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaAudioGuardCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V212 • VERIFIED EVIDENCE CAMERA",
+                "Dedicated verification/evidence camera",
+                "Live CameraX + GPS + sensor + audio state emphasized • NEWS default • V216 filename and SHA-256 integrity metadata identify this exact camera",
+                0xFF73B7D9.toInt(),
+                "OPEN V212 VERIFIED CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaVerifiedCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V213 • THERMAL SAFE CAMERA",
+                "Dedicated heat-aware long-recording camera",
+                "Android PowerManager thermal state emphasized • severe+ safe fallback retained • SOCIAL FHD default • thermal state recorded in output",
+                red,
+                "OPEN V213 THERMAL CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaThermalSafeCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V214 • MODE SIGNATURE CAMERA",
+                "Dedicated mode/look camera",
+                "SOCIAL HDR + WARM first-run defaults • subtle look-matched preview • mode accent/purpose • exact quality/scene/look recorded",
+                0xFFA793D8.toInt(),
+                "OPEN V214 SIGNATURE CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaModeSignatureCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            launchCard(
+                "V215 • SMART AUTO DIRECTOR CAMERA",
+                "Dedicated automatic field camera",
+                "AUTO DIRECTOR enabled on first launch • real lux + shake + thermal choose actual Social FHD / Social 60 / Action Stab / Low Light • never changes mid-recording",
+                0xFF73B7D9.toInt(),
+                "OPEN V215 AUTO CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaAutoDirectorCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            compactStatus(
+                "NOTHING DROPPED",
+                "V204 CAPTURE ENGINE + V205→V215 FUNCTIONAL MODULES REMAIN IN THE SHARED CORE • V216 MAKES THEM DIRECT-LAUNCH INDEPENDENT CAMERAS",
+                gold
             )
         )
 
@@ -352,7 +528,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • bigger side-positioned dynamic telemetry • static rows removed • clearer moving data • presets",
+                "FIELD REPORT • V216 INDEPENDENT CAMERA SUITE • V205→V215 DIRECT HOME LAUNCHERS • SEPARATE CAMERA ACTIVITIES + PREFERENCES • NOTHING DROPPED • telemetry",
                 "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -364,7 +540,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • glowing blinking LIVE FEED REC signal burned into saved video • 1080p/high-bitrate tune • VIDEO FX",
+                "LIVE STUDIO • SOCIAL 30/60 • SOCIAL HDR • UHD 30/60 • ACTION 30/60 • low-light profile • LIVE graphics",
                 "Signals • reporter identity • output setup • broadcast profiles • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"
@@ -1215,6 +1391,17 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             Intent.createChooser(
                 send,
                 "Publish / share story"
+            )
+        )
+    }
+
+    private fun openIndependentCamera(
+        cameraClass: Class<*>
+    ) {
+        startActivity(
+            Intent(
+                this,
+                cameraClass
             )
         )
     }

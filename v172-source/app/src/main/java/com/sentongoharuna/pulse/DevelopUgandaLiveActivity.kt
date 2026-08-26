@@ -14,10 +14,12 @@ import android.graphics.drawable.GradientDrawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Environment
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.view.Gravity
@@ -36,6 +38,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraEffect
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.DynamicRange
 import androidx.camera.core.Preview
 import androidx.camera.core.SessionConfig
 import androidx.camera.effects.Frame
@@ -63,6 +67,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
+    private lateinit var livePreviewToneView: View
 
     private lateinit var liveBadge: TextView
     private lateinit var liveTitle: TextView
@@ -172,7 +177,26 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private var graphicsEnabled = true
 
     private var quality = Quality.FHD
-    private var qualityLabel = "FHD"
+    private var qualityLabel = "SOCIAL 30"
+
+    private val liveQualityProfiles =
+        arrayOf(
+            "SOCIAL 30",
+            "SOCIAL 60",
+            "UHD 30",
+            "UHD 60",
+            "HDR UHD",
+            "SOCIAL HDR",
+            "ACTION STAB",
+            "ACTION 60",
+            "LOW LIGHT",
+            "HD FAST"
+        )
+
+    private var liveQualityIndex = 0
+    private var liveActiveFpsLabel = "AUTO FPS"
+    private var liveActiveStabilizationLabel = "STAB AUTO"
+    private var liveActiveDynamicRangeLabel = "SDR"
 
     private val profiles =
         arrayOf(
@@ -204,7 +228,25 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private var recordStartMs = 0L
     private var liveRecordingName = ""
     private var liveAudioAmplitude = 0.0
+    private var liveAudioPeakAmplitude = 0.0
     private var liveBlinkOn = true
+
+    private lateinit var livePowerManager: PowerManager
+    @Volatile private var liveThermalStatus =
+        PowerManager.THERMAL_STATUS_NONE
+    private var liveThermalListenerRegistered =
+        false
+
+    private val liveThermalStatusListener =
+        PowerManager.OnThermalStatusChangedListener {
+                status ->
+            liveThermalStatus =
+                status
+
+            runOnUiThread {
+                updateSignals()
+            }
+        }
 
     private var reporterName = "CITIZEN"
     private var storyId = "--"
@@ -245,6 +287,31 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
 
+        livePowerManager =
+            getSystemService(
+                Context.POWER_SERVICE
+            ) as PowerManager
+
+        if (
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+        ) {
+            liveThermalStatus =
+                livePowerManager.currentThermalStatus
+
+            try {
+                livePowerManager.addThermalStatusListener(
+                    liveThermalStatusListener
+                )
+
+                liveThermalListenerRegistered =
+                    true
+            } catch (_: Exception) {
+                liveThermalListenerRegistered =
+                    false
+            }
+        }
+
         loadLiveIdentity()
         loadLiveCameraPreferences()
         buildLiveUi()
@@ -262,6 +329,22 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         recording?.stop()
         recording = null
+
+        if (
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q &&
+            liveThermalListenerRegistered
+        ) {
+            try {
+                livePowerManager.removeThermalStatusListener(
+                    liveThermalStatusListener
+                )
+            } catch (_: Exception) {
+            }
+
+            liveThermalListenerRegistered =
+                false
+        }
 
         super.onDestroy()
     }
@@ -327,11 +410,32 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     PreviewView.ImplementationMode.COMPATIBLE
 
                 scaleType =
-                    PreviewView.ScaleType.FILL_CENTER
+                    PreviewView.ScaleType.FIT_CENTER
             }
 
         root.addView(
             previewView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        livePreviewToneView =
+            View(this).apply {
+                isClickable =
+                    false
+
+                isFocusable =
+                    false
+
+                setBackgroundColor(
+                    Color.TRANSPARENT
+                )
+            }
+
+        root.addView(
+            livePreviewToneView,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -377,7 +481,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda",
+                "develop.uganda • V216",
                 20f,
                 amber,
                 true
@@ -404,7 +508,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveSubTitle =
             label(
-                "LIVE STUDIO • ${profiles[profileIndex]} • READY",
+                "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY",
                 10f,
                 white,
                 true
@@ -644,7 +748,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         qualityButton =
             liveSettingButton(
-                "QUALITY ▾\nFHD",
+                "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}",
                 cyan
             ) {
                 showLiveQualityDropdown(
@@ -1464,7 +1568,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 )
                 append("\n")
 
-                append("SOCIAL CAMERA: FHD PREFERRED • 20Mbps @ FHD • DEVICE AE/AF/AWB\n")
+                append("CREATOR ENGINE: ${liveQualityProfiles[liveQualityIndex]} • $liveActiveFpsLabel • $liveActiveStabilizationLabel • $liveActiveDynamicRangeLabel • 9:16 SOCIAL SAFE\n")
 
                 append("PRESET: ")
                 append(
@@ -1598,6 +1702,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     }
 
     private fun bindCamera() {
+        applyLiveThermalSafeProfileIfNeeded()
+
         val future =
             ProcessCameraProvider.getInstance(
                 this
@@ -1610,6 +1716,37 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 provider.unbindAll()
 
+                val selector =
+                    if (useFront) {
+                        CameraSelector.DEFAULT_FRONT_CAMERA
+                    } else {
+                        CameraSelector.DEFAULT_BACK_CAMERA
+                    }
+
+                val selectedCameraInfo =
+                    try {
+                        provider.getCameraInfo(
+                            selector
+                        )
+                    } catch (_: Exception) {
+                        null
+                    }
+
+                liveActiveFpsLabel =
+                    if (
+                        liveQualityProfiles[
+                            liveQualityIndex
+                        ] == "LOW LIGHT"
+                    ) {
+                        "AUTO LOW-LIGHT FPS"
+                    } else {
+                        "AUTO FPS"
+                    }
+                liveActiveStabilizationLabel =
+                    "STAB OFF"
+                liveActiveDynamicRangeLabel =
+                    "SDR"
+
                 val preview =
                     Preview.Builder()
                         .build()
@@ -1619,33 +1756,121 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             )
                         }
 
+                var selectedDynamicRange =
+                    DynamicRange.SDR
+                var enableVideoStabilization =
+                    false
+                var selectedQuality =
+                    liveSelectedQuality()
+
+                if (selectedCameraInfo != null) {
+                    try {
+                        val capabilities =
+                            Recorder.getVideoCapabilities(
+                                selectedCameraInfo
+                            )
+
+                        if (
+                            liveWantsHdr() &&
+                            capabilities.supportedDynamicRanges.contains(
+                                DynamicRange.HLG_10_BIT
+                            )
+                        ) {
+                            val hdrQualities =
+                                capabilities.getSupportedQualities(
+                                    DynamicRange.HLG_10_BIT
+                                )
+
+                            selectedQuality =
+                                when {
+                                    hdrQualities.contains(
+                                        Quality.UHD
+                                    ) -> Quality.UHD
+                                    hdrQualities.contains(
+                                        Quality.FHD
+                                    ) -> Quality.FHD
+                                    hdrQualities.contains(
+                                        Quality.HD
+                                    ) -> Quality.HD
+                                    else -> selectedQuality
+                                }
+
+                            if (hdrQualities.isNotEmpty()) {
+                                selectedDynamicRange =
+                                    DynamicRange.HLG_10_BIT
+                                liveActiveDynamicRangeLabel =
+                                    "HLG10 HDR"
+                            } else {
+                                liveActiveDynamicRangeLabel =
+                                    "SDR HDR-FALLBACK"
+                            }
+                        } else if (liveWantsHdr()) {
+                            liveActiveDynamicRangeLabel =
+                                "SDR HDR-FALLBACK"
+                        }
+
+                        enableVideoStabilization =
+                            liveWantsStabilization() &&
+                                capabilities.isStabilizationSupported
+
+                        liveActiveStabilizationLabel =
+                            if (enableVideoStabilization) {
+                                "STAB ON"
+                            } else if (liveWantsStabilization()) {
+                                "STAB UNSUPPORTED"
+                            } else {
+                                "STAB OFF"
+                            }
+                    } catch (_: Exception) {
+                        liveActiveDynamicRangeLabel =
+                            if (liveWantsHdr()) {
+                                "SDR HDR-FALLBACK"
+                            } else {
+                                "SDR"
+                            }
+                        liveActiveStabilizationLabel =
+                            "STAB AUTO"
+                    }
+                }
+
                 val recorder =
                     Recorder.Builder()
                         .setQualitySelector(
                             QualitySelector.from(
-                                quality
+                                selectedQuality
                             )
                         )
+                        .setAspectRatio(
+                            AspectRatio.RATIO_16_9
+                        )
                         .setTargetVideoEncodingBitRate(
-                            if (
-                                quality ==
-                                Quality.FHD
-                            ) {
-                                20_000_000
-                            } else {
-                                10_000_000
-                            }
+                            liveTargetBitrate()
                         )
                         .build()
 
-                videoCapture =
-                    VideoCapture.withOutput(
+                val videoBuilder =
+                    VideoCapture.Builder(
                         recorder
                     )
 
-                // V187: burn-in graphics target the saved VIDEO only.
-                // Preview narration is native screen UI, so it cannot be
-                // clipped by CameraX preview crop/scale transforms.
+                if (
+                    selectedDynamicRange !=
+                    DynamicRange.SDR
+                ) {
+                    videoBuilder.setDynamicRange(
+                        selectedDynamicRange
+                    )
+                }
+
+                if (enableVideoStabilization) {
+                    videoBuilder.setVideoStabilizationEnabled(
+                        true
+                    )
+                }
+
+                videoCapture =
+                    videoBuilder.build()
+
                 overlayEffect =
                     OverlayEffect(
                         CameraEffect.VIDEO_CAPTURE,
@@ -1656,10 +1881,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     ) { throwable ->
                         toast(
                             "LIVE graphics warning: " +
-                                (
-                                    throwable.message
-                                        ?: "unknown"
-                                    )
+                                (throwable.message ?: "unknown")
                         )
                     }.also { effect ->
                         effect.setOnDrawListener { frame ->
@@ -1670,7 +1892,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         }
                     }
 
-                val session =
+                var session =
                     SessionConfig.Builder(
                         preview,
                         videoCapture!!
@@ -1680,12 +1902,68 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         )
                         .build()
 
-                val selector =
-                    if (useFront) {
-                        CameraSelector.DEFAULT_FRONT_CAMERA
+                if (selectedCameraInfo != null) {
+                    val requestedFps =
+                        liveRequestedFps()
+
+                    if (requestedFps > 0) {
+                        try {
+                            val supportedRanges =
+                                selectedCameraInfo
+                                    .getSupportedFrameRateRanges(
+                                        session
+                                    )
+
+                            val exactRange =
+                                supportedRanges.firstOrNull {
+                                    it.lower == requestedFps &&
+                                        it.upper == requestedFps
+                                }
+
+                            val compatibleRange =
+                                exactRange
+                                    ?: supportedRanges
+                                        .filter {
+                                            it.lower <= requestedFps &&
+                                                it.upper >= requestedFps
+                                        }
+                                        .minByOrNull {
+                                            it.upper - it.lower
+                                        }
+
+                            if (compatibleRange != null) {
+                                session =
+                                    SessionConfig.Builder(
+                                        preview,
+                                        videoCapture!!
+                                    )
+                                        .addEffect(
+                                            overlayEffect!!
+                                        )
+                                        .setFrameRateRange(
+                                            compatibleRange
+                                        )
+                                        .build()
+
+                                liveActiveFpsLabel =
+                                    if (exactRange != null) {
+                                        "${requestedFps} FPS"
+                                    } else {
+                                        "${compatibleRange.lower}-${compatibleRange.upper} FPS FALLBACK"
+                                    }
+                            } else {
+                                liveActiveFpsLabel =
+                                    "AUTO FPS FALLBACK"
+                            }
+                        } catch (_: Exception) {
+                            liveActiveFpsLabel =
+                                "AUTO FPS"
+                        }
                     } else {
-                        CameraSelector.DEFAULT_BACK_CAMERA
+                        liveActiveFpsLabel =
+                            "AUTO LOW-LIGHT FPS"
                     }
+                }
 
                 camera =
                     provider.bindToLifecycle(
@@ -1694,9 +1972,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         session
                     )
 
-                // V200 social camera tuning: keep CameraX/device automatic
-                // exposure, autofocus and white balance, while ensuring
-                // compensation starts at a neutral supported value.
                 camera
                     ?.cameraInfo
                     ?.exposureState
@@ -1715,9 +1990,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         }
                     }
 
+                quality =
+                    selectedQuality
+                qualityLabel =
+                    liveQualityProfiles[
+                        liveQualityIndex
+                    ]
+
                 camLamp.setTextColor(
                     green
                 )
+
+                updateTimer()
             },
             ContextCompat.getMainExecutor(
                 this
@@ -2207,7 +2491,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawStrongLiveText(
             canvas,
-            "develop.uganda",
+            "develop.uganda • V215",
             safeLeft +
                 (23f * u),
             safeTop,
@@ -2318,7 +2602,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   FORMAT • $qualityLabel",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V215   |   THERMAL • ${liveThermalStateLabel()}",
             safeLeft,
             safeTop +
                 (77f * u),
@@ -2463,7 +2747,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda",
+            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V215",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -2650,6 +2934,88 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
     }
 
+    private fun liveSelectedQuality(): Quality {
+        return when (
+            liveQualityProfiles[
+                liveQualityIndex
+            ]
+        ) {
+            "UHD 30",
+            "UHD 60",
+            "HDR UHD" -> Quality.UHD
+            "SOCIAL HDR" -> Quality.FHD
+            "HD FAST" -> Quality.HD
+            else -> Quality.FHD
+        }
+    }
+
+    private fun liveTargetBitrate(): Int {
+        return when (
+            liveQualityProfiles[
+                liveQualityIndex
+            ]
+        ) {
+            "SOCIAL 30" -> 24_000_000
+            "SOCIAL 60" -> 42_000_000
+            "UHD 30" -> 64_000_000
+            "UHD 60" -> 90_000_000
+            "HDR UHD" -> 72_000_000
+            "SOCIAL HDR" -> 34_000_000
+            "ACTION STAB" -> 30_000_000
+            "ACTION 60" -> 48_000_000
+            "LOW LIGHT" -> 28_000_000
+            "HD FAST" -> 12_000_000
+            else -> 24_000_000
+        }
+    }
+
+    private fun liveRequestedFps(): Int {
+        return when (
+            liveQualityProfiles[
+                liveQualityIndex
+            ]
+        ) {
+            "SOCIAL 60",
+            "UHD 60",
+            "ACTION 60" -> 60
+            "LOW LIGHT" -> 0
+            else -> 30
+        }
+    }
+
+    private fun liveWantsHdr(): Boolean {
+        return liveQualityProfiles[
+            liveQualityIndex
+        ] in
+            setOf(
+                "HDR UHD",
+                "SOCIAL HDR"
+            )
+    }
+
+    private fun liveWantsStabilization(): Boolean {
+        return when (
+            liveQualityProfiles[
+                liveQualityIndex
+            ]
+        ) {
+            "SOCIAL 30",
+            "ACTION STAB",
+            "ACTION 60",
+            "LOW LIGHT" -> true
+            else -> false
+        }
+    }
+
+    private fun syncLiveQualityState() {
+        quality =
+            liveSelectedQuality()
+        qualityLabel =
+            liveQualityProfiles[
+                liveQualityIndex
+            ]
+    }
+
     private fun cycleProfile() {
         if (
             recording != null
@@ -2671,39 +3037,27 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             "PROFILE ▾\n${profiles[profileIndex]}"
 
         liveSubTitle.text =
-            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+            "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
     }
 
     private fun cycleQuality() {
-        if (
-            recording != null
-        ) {
+        if (recording != null) {
             toast(
                 "Stop LIVE REC before changing quality"
             )
             return
         }
 
-        if (
-            quality ==
-            Quality.FHD
-        ) {
-            quality =
-                Quality.HD
+        liveQualityIndex =
+            (liveQualityIndex + 1) %
+                liveQualityProfiles.size
 
-            qualityLabel =
-                "HD"
-        } else {
-            quality =
-                Quality.FHD
-
-            qualityLabel =
-                "FHD"
-        }
+        syncLiveQualityState()
 
         qualityButton.text =
-            "QUALITY ▾\n$qualityLabel"
+            "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}"
 
+        saveLiveCameraPreferences()
         bindCamera()
     }
 
@@ -2968,7 +3322,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V216_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 
@@ -3070,6 +3424,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                                     1.0
                                 )
 
+                        liveAudioPeakAmplitude =
+                            maxOf(
+                                liveAudioPeakAmplitude *
+                                    0.985,
+                                liveAudioAmplitude
+                            )
+
                         if (
                             audioEnabled &&
                             liveAudioAmplitude >
@@ -3090,7 +3451,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         )
 
                         liveSubTitle.text =
-                            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+                            "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
 
                         recLamp.setTextColor(
                             0xFF657078.toInt()
@@ -3100,6 +3461,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             0L
 
                         liveAudioAmplitude =
+                            0.0
+
+                        liveAudioPeakAmplitude =
                             0.0
 
                         if (
@@ -3318,7 +3682,266 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun livePreviewToneColor(): Int {
+        return when (
+            liveEffectLabels[
+                liveEffectIndex
+            ]
+        ) {
+            "WARM" ->
+                0x10FF8A3D.toInt()
+
+            "COOL" ->
+                0x10007AFF.toInt()
+
+            "TEAL" ->
+                0x1000A7A0.toInt()
+
+            "GOLD" ->
+                0x10D6A83A.toInt()
+
+            "SOFT" ->
+                0x0CF0D8D0.toInt()
+
+            "NIGHT" ->
+                0x12173363.toInt()
+
+            "NATURAL" ->
+                0x0600A070.toInt()
+
+            else ->
+                Color.TRANSPARENT
+        }
+    }
+
+    private fun liveModeAccentColor(): Int {
+        return when (
+            liveQualityProfiles[
+                liveQualityIndex
+            ]
+        ) {
+            "SOCIAL 30" ->
+                0xFF8FA8E8.toInt()
+
+            "SOCIAL 60" ->
+                0xFF73B7D9.toInt()
+
+            "SOCIAL HDR" ->
+                0xFFA793D8.toInt()
+
+            "UHD 30" ->
+                0xFFAEBDEB.toInt()
+
+            "UHD 60" ->
+                0xFF7FB8CA.toInt()
+
+            "HDR UHD" ->
+                0xFFD0B06F.toInt()
+
+            "ACTION STAB" ->
+                0xFF91B6A0.toInt()
+
+            "ACTION 60" ->
+                0xFF71B9A7.toInt()
+
+            "LOW LIGHT" ->
+                0xFF8A86B8.toInt()
+
+            "HD FAST" ->
+                0xFFAEB7C7.toInt()
+
+            else ->
+                cyan
+        }
+    }
+
+    private fun updateLiveModePreviewTuning() {
+        if (
+            ::livePreviewToneView.isInitialized
+        ) {
+            livePreviewToneView.setBackgroundColor(
+                livePreviewToneColor()
+            )
+        }
+
+        if (
+            ::liveSubTitle.isInitialized
+        ) {
+            liveSubTitle.setTextColor(
+                liveModeAccentColor()
+            )
+
+            liveSubTitle.text =
+                "LIVE STUDIO • ${profiles[profileIndex]} • ${liveQualityProfiles[liveQualityIndex]} • LOOK ${liveEffectLabels[liveEffectIndex]} • MANUAL LIVE • V216"
+        }
+    }
+
+    private fun liveThermalStateLabel(): String {
+        if (
+            Build.VERSION.SDK_INT <
+                Build.VERSION_CODES.Q
+        ) {
+            return "UNAVAILABLE"
+        }
+
+        return when (
+            liveThermalStatus
+        ) {
+            PowerManager.THERMAL_STATUS_NONE ->
+                "NORMAL"
+
+            PowerManager.THERMAL_STATUS_LIGHT ->
+                "LIGHT"
+
+            PowerManager.THERMAL_STATUS_MODERATE ->
+                "MODERATE"
+
+            PowerManager.THERMAL_STATUS_SEVERE ->
+                "SEVERE"
+
+            PowerManager.THERMAL_STATUS_CRITICAL ->
+                "CRITICAL"
+
+            PowerManager.THERMAL_STATUS_EMERGENCY ->
+                "EMERGENCY"
+
+            PowerManager.THERMAL_STATUS_SHUTDOWN ->
+                "SHUTDOWN"
+
+            else ->
+                "UNKNOWN"
+        }
+    }
+
+    private fun applyLiveThermalSafeProfileIfNeeded() {
+        if (
+            Build.VERSION.SDK_INT <
+                Build.VERSION_CODES.Q ||
+            liveThermalStatus <
+                PowerManager.THERMAL_STATUS_SEVERE ||
+            recording !=
+                null
+        ) {
+            return
+        }
+
+        val current =
+            liveQualityProfiles[
+                liveQualityIndex
+            ]
+
+        val highDemand =
+            current in
+                setOf(
+                    "UHD 30",
+                    "UHD 60",
+                    "HDR UHD",
+                    "SOCIAL HDR",
+                    "ACTION 60"
+                )
+
+        if (!highDemand) {
+            return
+        }
+
+        val safeIndex =
+            liveQualityProfiles.indexOf(
+                "SOCIAL 30"
+            )
+
+        if (
+            safeIndex >=
+                0 &&
+            safeIndex !=
+                liveQualityIndex
+        ) {
+            liveQualityIndex =
+                safeIndex
+
+            syncLiveQualityState()
+
+            if (
+                ::qualityButton.isInitialized
+            ) {
+                qualityButton.text =
+                    "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}"
+            }
+
+            toast(
+                "THERMAL ${liveThermalStateLabel()} • LIVE switched to SOCIAL 30"
+            )
+        }
+    }
+
+    private fun liveVerifiedStateText(): String {
+        return buildString {
+            append("V216 VERIFIED")
+            append(" • ")
+            append(
+                liveQualityProfiles[
+                    liveQualityIndex
+                ]
+            )
+            append(" • LOOK ")
+            append(
+                liveEffectLabels[
+                    liveEffectIndex
+                ]
+            )
+            append(" • ")
+            append(liveActiveFpsLabel)
+            append(" • ")
+            append(liveActiveStabilizationLabel)
+            append(" • ")
+            append(liveActiveDynamicRangeLabel)
+            append(" • AUDIO ")
+            append(liveAudioGuardLabel())
+            append(" • THERMAL ")
+            append(
+                liveThermalStateLabel()
+            )
+        }
+    }
+
+    private fun liveAudioGuardLabel(): String {
+        if (!audioEnabled) {
+            return "OFF"
+        }
+
+        if (
+            recording ==
+                null
+        ) {
+            return "READY"
+        }
+
+        val level =
+            liveAudioAmplitude.coerceIn(
+                0.0,
+                1.0
+            )
+
+        return when {
+            level <
+                0.015 ->
+                    "LOW"
+
+            level <
+                0.70 ->
+                    "GOOD"
+
+            level <
+                0.90 ->
+                    "HOT"
+
+            else ->
+                "CLIP RISK"
+        }
+    }
+
     private fun updateSignals() {
+        updateLiveModePreviewTuning()
+
         netLamp.setTextColor(
             if (
                 isNetworkConnected()
@@ -3454,7 +4077,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 }
 
             livePreviewTech.text =
-                "TC ${liveTimecode()} • $qualityLabel • MIC ${audioPercent}% • NET ${
+                "${liveVerifiedStateText()} • TC ${liveTimecode()} • AUDIO ${audioPercent}% • NET ${
                     if (netReady) {
                         "READY"
                     } else {
@@ -3809,7 +4432,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 "PROFILE ▾\n${profiles[profileIndex]}"
 
             liveSubTitle.text =
-                "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+                "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
 
             saveLiveCameraPreferences()
         }
@@ -3827,30 +4450,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         showLivePillDropdown(
             anchor,
-            "QUALITY",
-            arrayOf(
-                "FHD",
-                "HD"
-            ),
-            if (quality == Quality.FHD) 0 else 1
+            "CREATOR QUALITY",
+            liveQualityProfiles,
+            liveQualityIndex
         ) { picked ->
-            quality =
-                if (picked == 0) {
-                    Quality.FHD
-                } else {
-                    Quality.HD
-                }
+            liveQualityIndex =
+                picked
 
-            qualityLabel =
-                if (picked == 0) {
-                    "FHD"
-                } else {
-                    "HD"
-                }
+            syncLiveQualityState()
 
             qualityButton.text =
-                "QUALITY ▾\n$qualityLabel"
+                "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}"
 
+            saveLiveCameraPreferences()
             bindCamera()
         }
     }
@@ -4082,6 +4694,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 Context.MODE_PRIVATE
             )
 
+        liveQualityIndex =
+            prefs.getInt(
+                "live_quality_index",
+                liveQualityIndex
+            )
+                .coerceIn(
+                    0,
+                    liveQualityProfiles.lastIndex
+                )
+
+        syncLiveQualityState()
+
         profileIndex =
             prefs.getInt(
                 "profile_index",
@@ -4177,6 +4801,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             Context.MODE_PRIVATE
         )
             .edit()
+            .putInt(
+                "live_quality_index",
+                liveQualityIndex
+            )
             .putInt(
                 "profile_index",
                 profileIndex
@@ -4701,7 +5329,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             countdownEnabled
 
         liveSubTitle.text =
-            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
+            "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
 
         saveLiveCameraPreferences()
 

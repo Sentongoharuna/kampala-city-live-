@@ -27,6 +27,61 @@
             android:exported="false"/>
 
         <activity
+            android:name=".DevelopUgandaFocusAssistCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaMeteringLockCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaHorizonCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaSteadyShotCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaNightIntelligenceCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaAllProCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaAudioGuardCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaVerifiedCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaThermalSafeCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaModeSignatureCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaAutoDirectorCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".DevelopUgandaCameraActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
