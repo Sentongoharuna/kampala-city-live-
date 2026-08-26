@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 21701
-        versionName = "217.1-full-frame-hud-pro-fix1"
+        versionCode = 21900
+        versionName = "219.0-live-badge-separation-pro"
     }
 
     buildTypes {

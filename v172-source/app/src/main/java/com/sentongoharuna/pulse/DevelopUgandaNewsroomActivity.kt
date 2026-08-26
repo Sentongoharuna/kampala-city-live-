@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "FULL FRAME HUD PRO • V217",
+                "LIVE BADGE SAFE LAYOUT • V219\nEDITOR • V218",
                 9f,
                 white,
                 true
@@ -248,7 +248,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             compactStatus(
                 "SAVED VIDEO VISIBILITY",
-                "SHORT TELEMETRY RAIL • WIDER READABLE COLUMN • SOFT PANEL • CLEAR CAMERA/MODE ROWS • FULL-OPACITY COLOURS",
+                "SHORT TELEMETRY RAIL • WIDER READABLE COLUMN • LIVE BUILD TAG AND BLINKING REC BADGE USE SEPARATE SAFE LANES",
                 green
             )
         )
@@ -558,8 +558,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "EDIT DESK",
-                "Fast social cut",
-                "Open clip • preview • trim • mute export • save • share",
+                "Reliable phone video editor",
+                "GALLERY picker • FILES fallback • LAST CLIP • visible preview errors • SET IN/OUT • keyframe-safe trim • mute • save • share",
                 cyan,
                 "OPEN EDIT DESK"
             ) {
@@ -620,7 +620,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             compactStatus(
                 "EDITOR",
-                "LOSSLESS MP4 TRIM + SHARE",
+                "V218 • GALLERY / FILES / LAST CLIP • PREVIEW CUT • KEYFRAME-SAFE MP4 REMUX • MUTE • SHARE",
                 cyan
             )
         )

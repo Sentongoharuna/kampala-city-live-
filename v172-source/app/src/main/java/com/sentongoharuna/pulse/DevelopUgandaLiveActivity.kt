@@ -481,7 +481,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V217",
+                "develop.uganda • V219",
                 20f,
                 amber,
                 true
@@ -2284,204 +2284,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        val livePaint =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    red
-
-                alpha =
-                    if (
-                        liveOn &&
-                        !blink
-                    ) {
-                        90
-                    } else {
-                        255
-                    }
-
-                style =
-                    Paint.Style.FILL
-            }
-
-        canvas.drawCircle(
+        // V219: brand/build and blinking LIVE status use separate lanes.
+        // The build capsule never receives the LIVE glow.
+        val brandX =
             safeLeft +
-                (9f * u),
-            safeTop -
-                (6f * u),
-            6f * u,
-            livePaint
-        )
-
-        if (
-            liveOn
-        ) {
-            val badgeAlpha =
-                if (
-                    blink
-                ) {
-                    245
-                } else {
-                    110
-                }
-
-            val badgeLeft =
-                safeRight -
-                    (178f * u)
-
-            val badgeTop =
-                safeTop -
-                    (28f * u)
-
-            val badgeRight =
-                safeRight
-
-            val badgeBottom =
-                safeTop +
-                    (10f * u)
-
-            val badgeGlow =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        Color.argb(
-                            if (blink) 95 else 38,
-                            255,
-                            59,
-                            50
-                        )
-
-                    style =
-                        Paint.Style.FILL
-                }
-
-            canvas.drawRoundRect(
-                badgeLeft -
-                    (6f * u),
-                badgeTop -
-                    (6f * u),
-                badgeRight +
-                    (2f * u),
-                badgeBottom +
-                    (6f * u),
-                14f * u,
-                14f * u,
-                badgeGlow
-            )
-
-            val badgeBackground =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        Color.argb(
-                            badgeAlpha,
-                            184,
-                            48,
-                            44
-                        )
-
-                    style =
-                        Paint.Style.FILL
-                }
-
-            canvas.drawRoundRect(
-                badgeLeft,
-                badgeTop,
-                badgeRight,
-                badgeBottom,
-                12f * u,
-                12f * u,
-                badgeBackground
-            )
-
-            val signalDot =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        Color.argb(
-                            if (blink) 255 else 145,
-                            255,
-                            255,
-                            255
-                        )
-
-                    style =
-                        Paint.Style.FILL
-                }
-
-            canvas.drawCircle(
-                badgeLeft +
-                    (15f * u),
-                safeTop -
-                    (8f * u),
-                5.2f * u,
-                signalDot
-            )
-
-            val pulseRing =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        Color.argb(
-                            if (blink) 235 else 110,
-                            255,
-                            255,
-                            255
-                        )
-
-                    style =
-                        Paint.Style.STROKE
-
-                    strokeWidth =
-                        1.6f * u
-                }
-
-            canvas.drawCircle(
-                badgeLeft +
-                    (15f * u),
-                safeTop -
-                    (8f * u),
-                if (blink) 9.5f * u else 7.2f * u,
-                pulseRing
-            )
-
-            val badgeText =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        Color.argb(
-                            if (blink) 255 else 168,
-                            255,
-                            255,
-                            255
-                        )
-
-                    textSize =
-                        14.8f *
-                            u
-
-                    typeface =
-                        Typeface.create(
-                            Typeface.MONOSPACE,
-                            Typeface.BOLD
-                        )
-                }
-
-            canvas.drawText(
-                "LIVE FEED  REC",
-                badgeLeft +
-                    (28f * u),
-                safeTop -
-                    (2f * u),
-                badgeText
-            )
-        }
+                (23f * u)
 
         paint.textSize =
             38f * u
@@ -2489,53 +2296,322 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         paint.color =
             amber
 
+        val brandText =
+            "develop.uganda"
+
         drawStrongLiveText(
             canvas,
-            "develop.uganda • V215",
-            safeLeft +
-                (23f * u),
+            brandText,
+            brandX,
             safeTop,
             paint
         )
 
-        paint.textSize =
-            17.5f * u
+        val buildText =
+            "V219"
 
-        paint.color =
-            if (
-                liveOn
-            ) {
-                red
-            } else {
-                white
+        val brandWidth =
+            paint.measureText(
+                brandText
+            )
+
+        val buildLeft =
+            brandX +
+                brandWidth +
+                (13f * u)
+
+        val buildTop =
+            safeTop -
+                (25f * u)
+
+        val buildRight =
+            buildLeft +
+                (72f * u)
+
+        val buildBottom =
+            safeTop +
+                (4f * u)
+
+        val buildPlate =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    0xD9163B5A.toInt()
+
+                style =
+                    Paint.Style.FILL
             }
 
-        paint.alpha =
-            if (
-                liveOn &&
-                !blink
-            ) {
-                125
-            } else {
-                255
+        val buildStroke =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    cyan
+
+                style =
+                    Paint.Style.STROKE
+
+                strokeWidth =
+                    1.4f * u
+            }
+
+        canvas.drawRoundRect(
+            buildLeft,
+            buildTop,
+            buildRight,
+            buildBottom,
+            8f * u,
+            8f * u,
+            buildPlate
+        )
+
+        canvas.drawRoundRect(
+            buildLeft,
+            buildTop,
+            buildRight,
+            buildBottom,
+            8f * u,
+            8f * u,
+            buildStroke
+        )
+
+        val buildPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    white
+
+                textSize =
+                    12.4f * u
+
+                typeface =
+                    Typeface.create(
+                        Typeface.MONOSPACE,
+                        Typeface.BOLD
+                    )
             }
 
         canvas.drawText(
-            if (
-                liveOn
-            ) {
-                "ON AIR"
-            } else {
-                "READY"
-            },
-            safeRight -
-                (121f * u),
-            safeTop,
-            paint
+            buildText,
+            buildLeft +
+                (14f * u),
+            safeTop -
+                (6f * u),
+            buildPaint
         )
 
-        paint.alpha =
-            255
+        val badgeLeft =
+            safeRight -
+                (160f * u)
+
+        val badgeTop =
+            safeTop +
+                (17f * u)
+
+        val badgeRight =
+            safeRight
+
+        val badgeBottom =
+            safeTop +
+                (51f * u)
+
+        val badgeGlow =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    Color.argb(
+                        if (
+                            liveOn &&
+                            blink
+                        ) {
+                            95
+                        } else if (liveOn) {
+                            34
+                        } else {
+                            18
+                        },
+                        255,
+                        59,
+                        50
+                    )
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        canvas.drawRoundRect(
+            badgeLeft -
+                (5f * u),
+            badgeTop -
+                (5f * u),
+            badgeRight +
+                (2f * u),
+            badgeBottom +
+                (5f * u),
+            13f * u,
+            13f * u,
+            badgeGlow
+        )
+
+        val badgeBackground =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    Color.argb(
+                        if (
+                            liveOn &&
+                            blink
+                        ) {
+                            245
+                        } else if (liveOn) {
+                            145
+                        } else {
+                            105
+                        },
+                        184,
+                        48,
+                        44
+                    )
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        canvas.drawRoundRect(
+            badgeLeft,
+            badgeTop,
+            badgeRight,
+            badgeBottom,
+            11f * u,
+            11f * u,
+            badgeBackground
+        )
+
+        val badgeCenterY =
+            (
+                badgeTop +
+                    badgeBottom
+                ) /
+                2f
+
+        val signalDot =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    Color.argb(
+                        if (
+                            liveOn &&
+                            blink
+                        ) {
+                            255
+                        } else {
+                            160
+                        },
+                        255,
+                        255,
+                        255
+                    )
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        canvas.drawCircle(
+            badgeLeft +
+                (15f * u),
+            badgeCenterY,
+            5.1f * u,
+            signalDot
+        )
+
+        val pulseRing =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    Color.argb(
+                        if (
+                            liveOn &&
+                            blink
+                        ) {
+                            230
+                        } else {
+                            92
+                        },
+                        255,
+                        255,
+                        255
+                    )
+
+                style =
+                    Paint.Style.STROKE
+
+                strokeWidth =
+                    1.5f * u
+            }
+
+        canvas.drawCircle(
+            badgeLeft +
+                (15f * u),
+            badgeCenterY,
+            if (
+                liveOn &&
+                blink
+            ) {
+                9.2f * u
+            } else {
+                7.0f * u
+            },
+            pulseRing
+        )
+
+        val badgeText =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    Color.argb(
+                        if (
+                            liveOn &&
+                            blink
+                        ) {
+                            255
+                        } else {
+                            188
+                        },
+                        255,
+                        255,
+                        255
+                    )
+
+                textSize =
+                    14.2f * u
+
+                typeface =
+                    Typeface.create(
+                        Typeface.MONOSPACE,
+                        Typeface.BOLD
+                    )
+            }
+
+        canvas.drawText(
+            if (liveOn) {
+                "LIVE  •  REC"
+            } else {
+                "LIVE  •  READY"
+            },
+            badgeLeft +
+                (29f * u),
+            badgeCenterY +
+                (5f * u),
+            badgeText
+        )
 
         val rule =
             Paint(
@@ -2545,16 +2621,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     0xB0FF3B32.toInt()
 
                 strokeWidth =
-                    1.6f * u
+                    1.5f * u
             }
 
         canvas.drawLine(
             safeLeft,
             safeTop +
-                (13f * u),
+                (63f * u),
             safeRight,
             safeTop +
-                (14.0f * u),
+                (63f * u),
             rule
         )
 
@@ -2569,7 +2645,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             "LIVE PROFILE • ${profiles[profileIndex]}   |   REPORTER • $reporterName",
             safeLeft,
             safeTop +
-                (38f * u),
+                (84f * u),
             safeRight -
                 safeLeft,
             paint,
@@ -2587,7 +2663,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             "STORY • $storyId   |   ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
             safeLeft,
             safeTop +
-                (57f * u),
+                (104f * u),
             safeRight -
                 safeLeft,
             paint,
@@ -2602,10 +2678,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V215   |   THERMAL • ${liveThermalStateLabel()}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V219   |   THERMAL • ${liveThermalStateLabel()}",
             safeLeft,
             safeTop +
-                (77f * u),
+                (126f * u),
             safeRight -
                 safeLeft,
             paint,
@@ -2747,7 +2823,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V215",
+            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V219",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -3322,7 +3398,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V217_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V219_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 
