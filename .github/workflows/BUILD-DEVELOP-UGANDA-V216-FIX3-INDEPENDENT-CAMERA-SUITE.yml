@@ -1,0 +1,634 @@
+name: Build develop.uganda V216 FIX3 Independent Camera Suite
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify existing V216 package
+        run: |
+          set -e
+          test -d v172-source/app
+          test -f DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE-PATCH.zip
+          echo "Using existing V216 patch ZIP from repository root"
+
+      - name: Unpack V216 and repair V204 + V211 patch defects
+        run: |
+          set -e
+          rm -rf /tmp/v216fix1
+          mkdir -p /tmp/v216fix1
+          unzip -q DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE-PATCH.zip -d /tmp/v216fix1
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("/tmp/v216fix1/v204_patch.py")
+          text = p.read_text(encoding="utf-8")
+
+          old_anchor = (
+              '            "HDR UHD" ->\n'
+              '                Quality.UHD\n\n'
+              '            "HD FAST" ->\n'
+          )
+          corrected_anchor = (
+              '            "HDR UHD" -> Quality.UHD\n'
+              '            "HD FAST" -> Quality.HD\n'
+          )
+
+          old_replacement = (
+              '            "HDR UHD" ->\n'
+              '                Quality.UHD\n\n'
+              '            "SOCIAL HDR" ->\n'
+              '                Quality.FHD\n\n'
+              '            "HD FAST" ->\n'
+          )
+          corrected_replacement = (
+              '            "HDR UHD" -> Quality.UHD\n'
+              '            "SOCIAL HDR" -> Quality.FHD\n'
+              '            "HD FAST" -> Quality.HD\n'
+          )
+
+          if old_anchor not in text:
+              raise SystemExit(
+                  "FIX1 could not find old V204 LIVE selected-quality anchor"
+              )
+
+          if old_replacement not in text:
+              raise SystemExit(
+                  "FIX1 could not find old V204 LIVE replacement block"
+              )
+
+          text = text.replace(
+              old_anchor,
+              corrected_anchor,
+              1
+          )
+          text = text.replace(
+              old_replacement,
+              corrected_replacement,
+              1
+          )
+          p.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print(
+              "FIX2 repaired V204 LIVE selected-quality compatibility anchor"
+          )
+
+          # V211 had one Python str.replace() call whose 3rd argument was
+          # accidentally a text label instead of the integer replacement count.
+          # That caused:
+          # TypeError: 'str' object cannot be interpreted as an integer
+          v211 = Path("/tmp/v216fix1/v211_patch.py")
+          v211_text = v211.read_text(encoding="utf-8")
+
+          bad_v211 = (
+              '    "HOME append V211 module",\n'
+              ')\n'
+          )
+          good_v211 = (
+              '    1,\n'
+              ')\n'
+          )
+
+          if bad_v211 not in v211_text:
+              raise SystemExit(
+                  "FIX2 could not find the known V211 replace-count defect"
+              )
+
+          v211_text = v211_text.replace(
+              bad_v211,
+              good_v211,
+              1
+          )
+          v211.write_text(
+              v211_text,
+              encoding="utf-8"
+          )
+
+          print(
+              "FIX2 repaired V211 Home module str.replace count"
+          )
+          PY
+
+          # Syntax-check every cumulative patch.
+          for f in /tmp/v216fix1/v*.py; do
+            python3 -m py_compile "$f"
+          done
+
+          # Extra audit: no Python str.replace() call is allowed to use
+          # a string as its third argument (the V211 defect class).
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+
+          problems = []
+
+          for p in sorted(Path("/tmp/v216fix1").glob("v*_patch.py")):
+              tree = ast.parse(
+                  p.read_text(encoding="utf-8")
+              )
+
+              for node in ast.walk(tree):
+                  if (
+                      isinstance(node, ast.Call)
+                      and isinstance(node.func, ast.Attribute)
+                      and node.func.attr == "replace"
+                      and len(node.args) >= 3
+                  ):
+                      third = node.args[2]
+                      if (
+                          isinstance(third, ast.Constant)
+                          and isinstance(third.value, str)
+                      ):
+                          problems.append(
+                              f"{p.name}:{node.lineno}"
+                          )
+
+          if problems:
+              raise SystemExit(
+                  "Invalid str.replace third argument remains: "
+                  + ", ".join(problems)
+              )
+
+          print(
+              "FIX2 patch API audit passed"
+          )
+          PY
+
+      - name: Apply V203 through V216 with stage reporting
+        run: |
+          set -e
+
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+
+          run_patch () {
+            VERSION="$1"
+            FILE="$2"
+            echo "===== APPLYING ${VERSION} ====="
+            python3 "/tmp/v216fix1/${FILE}"
+            echo "===== ${VERSION} APPLIED ====="
+          }
+
+          if ! grep -q 'activeVideoFpsLabel' "$REPORT"; then
+            run_patch V203 v203_patch.py
+          else
+            echo "V203 already present"
+          fi
+
+          if ! grep -q '"ACTION 60"' "$REPORT"; then
+            run_patch V204-FIX1 v204_patch.py
+          else
+            echo "V204 already present"
+          fi
+
+          if ! grep -q 'focusLockRunnable' "$REPORT"; then
+            run_patch V205 v205_patch.py
+          else
+            echo "V205 already present"
+          fi
+
+          if ! grep -q 'focusReticleView' "$REPORT"; then
+            run_patch V206 v206_patch.py
+          else
+            echo "V206 already present"
+          fi
+
+          if ! grep -q 'horizonGuardView' "$REPORT"; then
+            run_patch V207 v207_patch.py
+          else
+            echo "V207 already present"
+          fi
+
+          if ! grep -q 'motionGuardView' "$REPORT"; then
+            run_patch V208 v208_patch.py
+          else
+            echo "V208 already present"
+          fi
+
+          if ! grep -q 'ambientLightSensor' "$REPORT"; then
+            run_patch V209 v209_patch.py
+          else
+            echo "V209 already present"
+          fi
+
+          if ! grep -q 'CAMERA MODULES ▾  •  ALL PRO ACTIVE' "$HOME"; then
+            run_patch V210 v210_patch.py
+          else
+            echo "V210 already present"
+          fi
+
+          if ! grep -q 'audioGuardView' "$REPORT"; then
+            run_patch V211 v211_patch.py
+          else
+            echo "V211 already present"
+          fi
+
+          if ! grep -q 'verifiedCameraStateText' "$REPORT"; then
+            run_patch V212 v212_patch.py
+          else
+            echo "V212 already present"
+          fi
+
+          if ! grep -q 'thermalGuardView' "$REPORT"; then
+            run_patch V213 v213_patch.py
+          else
+            echo "V213 already present"
+          fi
+
+          if ! grep -q 'previewModeToneView' "$REPORT"; then
+            run_patch V214 v214_patch.py
+          else
+            echo "V214 already present"
+          fi
+
+          if ! grep -q 'autoDirectorSuggestedMode' "$REPORT"; then
+            run_patch V215 v215_patch.py
+          else
+            echo "V215 already present"
+          fi
+
+          if ! test -f "$INDEPENDENT"; then
+            run_patch V216 v216_patch.py
+          else
+            echo "V216 independent cameras already present"
+          fi
+
+      - name: Repair V216 FIX3 LIVE Kotlin compiler errors
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          live_path = Path(
+              "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          )
+
+          text = live_path.read_text(
+              encoding="utf-8"
+          )
+
+          # FIX3-A:
+          # V213 thermal code uses Build.VERSION / Build.VERSION_CODES,
+          # but the cumulative LIVE source did not import android.os.Build.
+          if "import android.os.Build\n" not in text:
+              anchor = "import android.os.Bundle\n"
+
+              if anchor not in text:
+                  raise SystemExit(
+                      "FIX3 could not find android.os.Bundle import anchor"
+                  )
+
+              text = text.replace(
+                  anchor,
+                  "import android.os.Build\n" + anchor,
+                  1
+              )
+
+          # FIX3-B:
+          # Two LIVE quality labels were written with a literal line break
+          # inside a normal Kotlin quoted string. Kotlin requires the line
+          # break to be escaped as \n.
+          bad = (
+              '"QUALITY ▾\n'
+              '${liveQualityProfiles[liveQualityIndex]}"'
+          )
+
+          good = (
+              '"QUALITY ▾\\n'
+              '${liveQualityProfiles[liveQualityIndex]}"'
+          )
+
+          bad_count = text.count(
+              bad
+          )
+
+          if bad_count != 2:
+              raise SystemExit(
+                  "FIX3 expected exactly 2 malformed LIVE quality strings; "
+                  f"found {bad_count}"
+              )
+
+          text = text.replace(
+              bad,
+              good
+          )
+
+          # Verify the exact currently visible compiler problems are repaired.
+          if "import android.os.Build\n" not in text:
+              raise SystemExit(
+                  "FIX3 failed to add android.os.Build import"
+              )
+
+          if bad in text:
+              raise SystemExit(
+                  "FIX3 malformed LIVE quality string still present"
+              )
+
+          if text.count(good) < 2:
+              raise SystemExit(
+                  "FIX3 escaped LIVE quality strings were not written twice"
+              )
+
+          live_path.write_text(
+              text,
+              encoding="utf-8"
+          )
+
+          print(
+              "FIX3 repaired android.os.Build import and both LIVE QUALITY strings"
+          )
+          PY
+
+      - name: Set V216 FIX3 application version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path("v172-source/app/build.gradle.kts")
+          text = p.read_text(encoding="utf-8")
+
+          text = re.sub(
+              r"versionCode\s*=\s*\d+",
+              "versionCode = 21603",
+              text,
+              count=1
+          )
+          text = re.sub(
+              r'versionName\s*=\s*"[^"]+"',
+              'versionName = "216.3-independent-camera-suite-fix3"',
+              text,
+              count=1
+          )
+
+          p.write_text(
+              text,
+              encoding="utf-8"
+          )
+          print("V216 FIX3 version set")
+          PY
+
+      - name: Verify independent camera architecture before compilation
+        run: |
+          set -e
+
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          test -f "$INDEPENDENT"
+
+          grep -q 'getSupportedFrameRateRanges' "$REPORT"
+          grep -q 'setVideoStabilizationEnabled' "$REPORT"
+          grep -q 'disableAutoCancel' "$REPORT"
+          grep -q 'FocusMeteringAction.FLAG_AE' "$REPORT"
+          grep -q 'FocusMeteringAction.FLAG_AWB' "$REPORT"
+          grep -q 'cameraShakeScore' "$REPORT"
+          grep -q 'Sensor.TYPE_LIGHT' "$REPORT"
+          grep -q 'audioStats.audioAmplitude' "$REPORT"
+          grep -q 'PowerManager.OnThermalStatusChangedListener' "$REPORT"
+          grep -q 'previewModeToneView' "$REPORT"
+          grep -q 'autoDirectorSuggestedMode' "$REPORT"
+
+          for cls in \
+            DevelopUgandaFocusAssistCameraActivity \
+            DevelopUgandaMeteringLockCameraActivity \
+            DevelopUgandaHorizonCameraActivity \
+            DevelopUgandaSteadyShotCameraActivity \
+            DevelopUgandaNightIntelligenceCameraActivity \
+            DevelopUgandaAllProCameraActivity \
+            DevelopUgandaAudioGuardCameraActivity \
+            DevelopUgandaVerifiedCameraActivity \
+            DevelopUgandaThermalSafeCameraActivity \
+            DevelopUgandaModeSignatureCameraActivity \
+            DevelopUgandaAutoDirectorCameraActivity
+          do
+            grep -q "class $cls" "$INDEPENDENT"
+            grep -q "android:name=\".$cls\"" "$MANIFEST"
+            grep -q "$cls::class.java" "$HOME"
+          done
+
+          grep -q 'INDEPENDENT PRO CAMERAS' "$HOME"
+          grep -q 'reportCameraPrefsName' "$REPORT"
+          grep -q 'camera_experience_id' "$REPORT"
+          grep -q 'DEVELOP_UGANDA_V216_${cameraExperienceId}' "$REPORT"
+
+          grep -q 'versionCode = 21603' "$GRADLE"
+          grep -q 'versionName = "216.3-independent-camera-suite-fix3"' "$GRADLE"
+
+          # FIX3 exact LIVE compiler repair checks.
+          grep -q '^import android.os.Build$' "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path(
+              "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          )
+          t = p.read_text(encoding="utf-8")
+
+          bad = (
+              '"QUALITY ▾\n'
+              '${liveQualityProfiles[liveQualityIndex]}"'
+          )
+          good = (
+              '"QUALITY ▾\\n'
+              '${liveQualityProfiles[liveQualityIndex]}"'
+          )
+
+          if bad in t:
+              raise SystemExit(
+                  "Malformed literal-newline QUALITY string remains"
+              )
+
+          if t.count(good) < 2:
+              raise SystemExit(
+                  "Escaped QUALITY string not present twice"
+              )
+
+          print(
+              "FIX3 LIVE compiler-source checks passed"
+          )
+          PY
+
+          echo "V216 FIX3 source verification passed"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V216 FIX3 APK before committing source
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v216-fix3-build.log
+
+      - name: Print exact Kotlin compiler errors and context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          echo "===== V216 FIX3 IMPORTANT ERRORS ====="
+
+          if [ ! -f v216-fix3-build.log ]; then
+            echo "Gradle did not start. Failure occurred in an earlier patch/verification stage."
+            exit 0
+          fi
+
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v216-fix3-build.log \
+            | head -2400 \
+            || true
+
+          echo "===== SOURCE CONTEXT ====="
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path(
+              "v216-fix3-build.log"
+          ).read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          hits = re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )[:18]
+
+          for filename, line_text, col in hits:
+              line_no = int(line_text)
+              files = list(
+                  Path(
+                      "app/src/main/java"
+                  ).rglob(
+                      filename
+                  )
+              )
+
+              if not files:
+                  continue
+
+              lines = files[0].read_text(
+                  encoding="utf-8"
+              ).splitlines()
+
+              print(
+                  "\nFILE:",
+                  files[0],
+                  "LINE:",
+                  line_no
+              )
+
+              for n in range(
+                  max(
+                      1,
+                      line_no - 28
+                  ),
+                  min(
+                      len(lines),
+                      line_no + 48
+                  ) + 1
+              ):
+                  mark = (
+                      ">>"
+                      if n == line_no
+                      else "  "
+                  )
+                  print(
+                      f"{mark} {n:4}: {lines[n-1]}"
+                  )
+          PY
+
+      - name: Commit V216 FIX3 source only after successful build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V216 FIX3 source already committed"
+          else
+            git commit -m "Build develop.uganda V216 FIX3 Independent Camera Suite"
+            git push
+          fi
+
+      - name: Package successful V216 FIX3 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V216-FIX3-INDEPENDENT-CAMERA-SUITE-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V216 FIX3 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V216-FIX3-INDEPENDENT-CAMERA-SUITE.apk
+
+      - name: Upload V216 FIX3 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V216-FIX3-INDEPENDENT-CAMERA-SUITE
+          path: DEVELOP-UGANDA-V216-FIX3-INDEPENDENT-CAMERA-SUITE.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload successful V216 FIX3 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V216-FIX3-INDEPENDENT-CAMERA-SUITE-SOURCE
+          path: DEVELOP-UGANDA-V216-FIX3-INDEPENDENT-CAMERA-SUITE-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if V216 FIX3 fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V216-FIX3-BUILD-LOG
+          path: v172-source/v216-fix3-build.log
+          if-no-files-found: warn
+          retention-days: 7
