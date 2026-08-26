@@ -1,0 +1,338 @@
+name: Build develop.uganda V221 Social Upload Master
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V221 package and supported base
+        run: |
+          set -e
+
+          test -f DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER-PATCH.zip
+
+          CODE=$(grep -oE 'versionCode = [0-9]+' v172-source/app/build.gradle.kts | awk '{print $3}')
+
+          if [ "$CODE" != "21900" ] && [ "$CODE" != "22000" ]; then
+            echo "V221 expects current V219 or V220 base. Found versionCode=$CODE"
+            exit 1
+          fi
+
+      - name: Unpack and syntax-check cumulative V221 package
+        run: |
+          set -e
+
+          rm -rf /tmp/v221
+          mkdir -p /tmp/v221
+
+          unzip -q DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER-PATCH.zip -d /tmp/v221
+
+          python3 -m py_compile /tmp/v221/v220_patch.py
+          python3 -m py_compile /tmp/v221/v221_patch.py
+
+          test -f /tmp/v221/DevelopUgandaEditorActivity.kt
+          test -f /tmp/v221/DevelopUgandaEditorActivityV221.kt
+
+      - name: Retain V220 Shot Finder and Media3 editor foundation
+        run: |
+          set -e
+
+          CODE=$(grep -oE 'versionCode = [0-9]+' v172-source/app/build.gradle.kts | awk '{print $3}')
+
+          if [ "$CODE" = "21900" ]; then
+            echo "Applying V220 first so Shot Finder and Media3 editor are retained."
+            python3 /tmp/v221/v220_patch.py
+          else
+            echo "V220 already present."
+          fi
+
+      - name: Lock working CameraX bind engines after V220
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          files = {
+              "report": Path(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+              ),
+              "live": Path(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+              ),
+          }
+
+          hashes = {}
+
+          for name, path in files.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index(
+                  "    private fun ",
+                  start + len("    private fun bindCamera() {")
+              )
+
+              hashes[name] = hashlib.sha256(
+                  text[start:end].encode("utf-8")
+              ).hexdigest()
+
+          Path("/tmp/v221-bind-hashes.json").write_text(
+              json.dumps(hashes),
+              encoding="utf-8"
+          )
+
+          print(hashes)
+          PY
+
+      - name: Apply V221 Social Upload Master
+        run: |
+          set -e
+          python3 /tmp/v221/v221_patch.py
+
+      - name: Prove camera capture engines were not changed
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          before = json.loads(
+              Path("/tmp/v221-bind-hashes.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          files = {
+              "report": Path(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+              ),
+              "live": Path(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+              ),
+          }
+
+          for name, path in files.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index(
+                  "    private fun ",
+                  start + len("    private fun bindCamera() {")
+              )
+
+              current = hashlib.sha256(
+                  text[start:end].encode("utf-8")
+              ).hexdigest()
+
+              if current != before[name]:
+                  raise SystemExit(
+                      f"{name} CameraX bind/capture engine changed"
+                  )
+
+          print(
+              "PASS: REPORT and LIVE CameraX bind/capture engines are unchanged."
+          )
+          PY
+
+      - name: Verify real V221 social export implementation
+        run: |
+          set -e
+
+          EDITOR="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaEditorActivity.kt"
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          # V220 editor foundation remains.
+          grep -q 'androidx.media3.exoplayer.ExoPlayer' "$EDITOR"
+          grep -q 'androidx.media3.transformer.Transformer' "$EDITOR"
+          grep -q 'showRecentDevelopUgandaClips' "$EDITOR"
+
+          # V221 social export is real Media3 transcoding.
+          grep -q '"TIKTOK MASTER"' "$EDITOR"
+          grep -q '"REELS MASTER"' "$EDITOR"
+          grep -q '"SHARE SOCIAL"' "$EDITOR"
+          grep -q 'exportSocialMaster' "$EDITOR"
+          grep -q 'Presentation.createForWidthAndHeight' "$EDITOR"
+          grep -q '1080,' "$EDITOR"
+          grep -q '1920,' "$EDITOR"
+          grep -q 'setFrameRate' "$EDITOR"
+          grep -q '30' "$EDITOR"
+          grep -q 'DefaultEncoderFactory.Builder' "$EDITOR"
+          grep -q 'VideoEncoderSettings.Builder' "$EDITOR"
+          grep -q 'setBitrate' "$EDITOR"
+          grep -q '16_000_000' "$EDITOR"
+          grep -q '14_000_000' "$EDITOR"
+          grep -q 'setiFrameIntervalSeconds' "$EDITOR"
+          grep -q '2f' "$EDITOR"
+          grep -q 'MimeTypes.VIDEO_H264' "$EDITOR"
+          grep -q 'MimeTypes.AUDIO_AAC' "$EDITOR"
+          grep -q 'HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL' "$EDITOR"
+          grep -q 'Movies/develop.uganda/Social' "$EDITOR"
+          grep -q 'DEVELOP_UGANDA_V221_' "$EDITOR"
+
+          # Shot Finder still exists.
+          grep -q 'cameraExperienceBestFor' "$REPORT"
+          grep -q 'V205 • PEOPLE FOCUS' "$REPORT"
+          grep -q 'V215 • SMART AUTO' "$REPORT"
+          grep -q 'SHOT FINDER • PICK THE CAMERA BY WHAT YOU ARE FILMING' "$HOME"
+
+          # Current app version.
+          grep -q 'versionCode = 22100' "$GRADLE"
+          grep -q 'versionName = "221.0-social-upload-master"' "$GRADLE"
+
+          echo "PASS: V221 Social Upload Master is wired and previous camera modes remain."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V221 APK before committing source
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v221-build.log
+
+      - name: Print exact compiler errors and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v221-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V221 IMPORTANT ERRORS ====="
+
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v221-build.log \
+            | head -2800 \
+            || true
+
+          echo "===== SOURCE CONTEXT ====="
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v221-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          for filename, line_text, col in re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )[:24]:
+              line_no = int(line_text)
+              files = list(
+                  Path("app/src/main/java").rglob(filename)
+              )
+
+              if not files:
+                  continue
+
+              lines = files[0].read_text(
+                  encoding="utf-8"
+              ).splitlines()
+
+              print(
+                  "\nFILE:",
+                  files[0],
+                  "LINE:",
+                  line_no
+              )
+
+              for n in range(
+                  max(1, line_no - 30),
+                  min(len(lines), line_no + 52) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V221 only after successful build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaEditorActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V221 already committed"
+          else
+            git commit -m "Add develop.uganda V221 Social Upload Master"
+            git push
+          fi
+
+      - name: Package V221 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V221 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER.apk
+
+      - name: Upload V221 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER
+          path: DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V221 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER-SOURCE
+          path: DEVELOP-UGANDA-V221-SOCIAL-UPLOAD-MASTER-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V221 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V221-BUILD-LOG
+          path: v172-source/v221-build.log
+          if-no-files-found: warn
+          retention-days: 7
