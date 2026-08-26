@@ -1,0 +1,213 @@
+name: Build develop.uganda V219 Live Badge Separation Pro
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V219 package and supported base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO-PATCH.zip
+          CODE=$(grep -oE 'versionCode = [0-9]+' v172-source/app/build.gradle.kts | awk '{print $3}')
+          if [ "$CODE" != "21701" ] && [ "$CODE" != "21800" ]; then
+            echo "V219 expects V217 FIX1 or V218. Found versionCode=$CODE"
+            exit 1
+          fi
+
+      - name: Lock camera capture engine
+        run: |
+          set -e
+
+          sha256sum \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt \
+            > /tmp/v219-camera-before.sha256
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          p = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt")
+          t = p.read_text(encoding="utf-8")
+          start = t.index("    private fun bindCamera() {")
+          end = t.index("    private fun drawLiveVideoEffect(", start)
+          digest = hashlib.sha256(t[start:end].encode("utf-8")).hexdigest()
+          Path("/tmp/v219-live-bind.sha256").write_text(digest, encoding="utf-8")
+          print("LIVE bindCamera SHA-256:", digest)
+          PY
+
+      - name: Unpack cumulative patch
+        run: |
+          set -e
+          rm -rf /tmp/v219
+          mkdir -p /tmp/v219
+          unzip -q DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO-PATCH.zip -d /tmp/v219
+          python3 -m py_compile /tmp/v219/v218_patch.py
+          python3 -m py_compile /tmp/v219/v219_patch.py
+
+      - name: Retain V218 editor
+        run: |
+          set -e
+          CODE=$(grep -oE 'versionCode = [0-9]+' v172-source/app/build.gradle.kts | awk '{print $3}')
+          if [ "$CODE" = "21701" ]; then
+            echo "Applying V218 first so editor improvements are not dropped."
+            python3 /tmp/v219/v218_patch.py
+          else
+            echo "V218 already present."
+          fi
+
+      - name: Apply V219
+        run: |
+          set -e
+          python3 /tmp/v219/v219_patch.py
+
+      - name: Prove camera engine is unchanged
+        run: |
+          set -e
+          sha256sum -c /tmp/v219-camera-before.sha256
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          p = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt")
+          t = p.read_text(encoding="utf-8")
+          start = t.index("    private fun bindCamera() {")
+          end = t.index("    private fun drawLiveVideoEffect(", start)
+          current = hashlib.sha256(t[start:end].encode("utf-8")).hexdigest()
+          before = Path("/tmp/v219-live-bind.sha256").read_text(encoding="utf-8").strip()
+
+          if current != before:
+            raise SystemExit("LIVE bind/capture engine changed unexpectedly")
+
+          print("PASS: LIVE bind/capture engine unchanged.")
+          PY
+
+      - name: Verify V219 safe layout
+        run: |
+          set -e
+          LIVE="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          EDITOR="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaEditorActivity.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          grep -q 'val buildText =' "$LIVE"
+          grep -q '"V219"' "$LIVE"
+          grep -q 'val badgeTop =' "$LIVE"
+          grep -q '"LIVE  •  REC"' "$LIVE"
+          grep -q 'badgeGlow' "$LIVE"
+          grep -q 'buildPlate' "$LIVE"
+
+          ! grep -q 'MANUAL LIVE   |   V215' "$LIVE"
+          ! grep -q 'develop.uganda • V215' "$LIVE"
+
+          grep -q 'EDITOR V218' "$EDITOR"
+          grep -q 'PickVisualMedia.VideoOnly' "$EDITOR"
+
+          grep -q 'versionCode = 21900' "$GRADLE"
+          grep -q 'versionName = "219.0-live-badge-separation-pro"' "$GRADLE"
+
+          echo "PASS: BUILD tag and blinking LIVE badge are separated."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V219 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v219-build.log
+
+      - name: Print compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v219-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v219-build.log \
+            | head -2400 \
+            || true
+
+      - name: Commit only after successful build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaEditorActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V219 already committed"
+          else
+            git commit -m "Add develop.uganda V219 Live Badge Separation Pro"
+            git push
+          fi
+
+      - name: Package source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO-SOURCE.zip app
+          cd ..
+
+      - name: Prepare APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO
+          path: DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO-SOURCE
+          path: DEVELOP-UGANDA-V219-LIVE-BADGE-SEPARATION-PRO-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V219-BUILD-LOG
+          path: v172-source/v219-build.log
+          if-no-files-found: warn
+          retention-days: 7
