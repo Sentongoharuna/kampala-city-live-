@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "LIVE BADGE SAFE LAYOUT • V219\nEDITOR • V218",
+                "SOCIAL UPLOAD MASTER • V221\nSHOT FINDER + MEDIA3 EDITOR",
                 9f,
                 white,
                 true
@@ -269,6 +269,14 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             compactStatus(
+                "SHOT FINDER • PICK THE CAMERA BY WHAT YOU ARE FILMING",
+                "PEOPLE → V205   •   BACKLIGHT → V206   •   BUILDINGS → V207   •   WALK/ACTION → V208   •   NIGHT → V209   •   EVERYDAY → V210   •   INTERVIEW AUDIO → V211   •   VERIFIED → V212   •   LONG RECORD → V213   •   CINEMATIC → V214   •   UNSURE → V215",
+                cyan
+            )
+        )
+
+        page.addView(
+            compactStatus(
                 "V217 FULL FRAME CAMERA",
                 "EVERY CAMERA STILL OPENS DIRECTLY • CAMERA PREVIEW NOW FILLS THE SCREEN BEHIND CONTROLS • RECORDING FORCES FULL FRAME • SAVED HUD IS WIDER AND CLEANER",
                 green
@@ -277,8 +285,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V205 • FOCUS ASSIST CAMERA",
-                "Dedicated subject-focus camera",
+                "V205 • PEOPLE / PORTRAIT FOCUS",
+                "People, portraits and interviews",
                 "Tap subject for AF • long-press persistent AF lock • INTERVIEW + SOCIAL FHD default • focus reticle emphasized • all shared recording/telemetry tools remain",
                 gold,
                 "OPEN V205 FOCUS CAMERA"
@@ -291,8 +299,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V206 • METERING LOCK CAMERA",
-                "Dedicated AF + AE + AWB metering camera",
+                "V206 • SUBJECT METERING",
+                "Backlit faces, windows and mixed light",
                 "Long-press metering region • visible reticle • NATURAL default • independent saved settings • exact camera identity burned into V216 output",
                 0xFFD0B06F.toInt(),
                 "OPEN V206 METER CAMERA"
@@ -305,8 +313,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V207 • HORIZON CAMERA",
-                "Dedicated level-composition camera",
+                "V207 • BUILDINGS / LEVEL",
+                "Architecture, rooms and straight horizons",
                 "Rotation-vector horizon guide emphasized • LEVEL LOCK / LEVEL NEAR / ADJUST • OUTDOOR default • other modules retained but visually secondary",
                 green,
                 "OPEN V207 HORIZON CAMERA"
@@ -319,8 +327,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V208 • STEADYSHOT CAMERA",
-                "Dedicated handheld-motion camera",
+                "V208 • WALK / ACTION STEADY",
+                "Walking, vehicles and moving subjects",
                 "ACTION STAB default • real STEADY / MOVING / SHAKE guidance emphasized • DOCUMENTARY default • device stabilization remains real CameraX capability",
                 0xFF71B9A7.toInt(),
                 "OPEN V208 STEADYSHOT CAMERA"
@@ -333,8 +341,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V209 • NIGHT INTELLIGENCE CAMERA",
-                "Dedicated low-light reporting camera",
+                "V209 • NIGHT / LOW LIGHT",
+                "Night streets and dark interiors",
                 "LOW LIGHT + NIGHT defaults • real Android lux sensor emphasized • dark/dim/normal/bright guidance • 30fps advice preserved",
                 0xFF8A86B8.toInt(),
                 "OPEN V209 NIGHT CAMERA"
@@ -347,8 +355,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V210 • ALL-PRO FIELD CAMERA",
-                "Full cumulative professional field camera",
+                "V210 • EVERYDAY PRO",
+                "Best general-purpose professional camera",
                 "All V204→V215 tools visible together • Social Master capture engine • focus/meter/horizon/motion/lux/audio/thermal/verified-state controls • REPORTER default",
                 cyan,
                 "OPEN V210 ALL-PRO CAMERA"
@@ -361,8 +369,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V211 • AUDIO GUARD CAMERA",
-                "Dedicated interview/audio-monitoring camera",
+                "V211 • INTERVIEW / AUDIO",
+                "Speech, interviews and events",
                 "CameraX microphone amplitude + peak emphasized • LOW / GOOD / HOT / CLIP RISK • INTERVIEW default • audio track is still recorded normally",
                 green,
                 "OPEN V211 AUDIO CAMERA"
@@ -375,8 +383,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V212 • VERIFIED EVIDENCE CAMERA",
-                "Dedicated verification/evidence camera",
+                "V212 • VERIFIED REPORT",
+                "Site reports, incidents and evidence capture",
                 "Live CameraX + GPS + sensor + audio state emphasized • NEWS default • V216 filename and SHA-256 integrity metadata identify this exact camera",
                 0xFF73B7D9.toInt(),
                 "OPEN V212 VERIFIED CAMERA"
@@ -389,8 +397,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V213 • THERMAL SAFE CAMERA",
-                "Dedicated heat-aware long-recording camera",
+                "V213 • LONG RECORD / HEAT SAFE",
+                "Long takes and hot conditions",
                 "Android PowerManager thermal state emphasized • severe+ safe fallback retained • SOCIAL FHD default • thermal state recorded in output",
                 red,
                 "OPEN V213 THERMAL CAMERA"
@@ -403,8 +411,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V214 • MODE SIGNATURE CAMERA",
-                "Dedicated mode/look camera",
+                "V214 • CINEMATIC LOOKS",
+                "Cinematic people, travel and creative shots",
                 "SOCIAL HDR + WARM first-run defaults • subtle look-matched preview • mode accent/purpose • exact quality/scene/look recorded",
                 0xFFA793D8.toInt(),
                 "OPEN V214 SIGNATURE CAMERA"
@@ -417,8 +425,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V215 • SMART AUTO DIRECTOR CAMERA",
-                "Dedicated automatic field camera",
+                "V215 • SMART AUTO",
+                "Fast shooting when you do not want to choose settings",
                 "AUTO DIRECTOR enabled on first launch • real lux + shake + thermal choose actual Social FHD / Social 60 / Action Stab / Low Light • never changes mid-recording",
                 0xFF73B7D9.toInt(),
                 "OPEN V215 AUTO CAMERA"
@@ -557,9 +565,9 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "EDIT DESK",
-                "Reliable phone video editor",
-                "GALLERY picker • FILES fallback • LAST CLIP • visible preview errors • SET IN/OUT • keyframe-safe trim • mute • save • share",
+                "EDIT + SOCIAL MASTER",
+                "Edit normally, then create TikTok or Reels upload masters without touching the original",
+                "GALLERY • FILES • RECENT • LAST CLIP • Media3 preview/edit • TIKTOK MASTER 16 Mbps • REELS MASTER 14 Mbps • original preserved",
                 cyan,
                 "OPEN EDIT DESK"
             ) {

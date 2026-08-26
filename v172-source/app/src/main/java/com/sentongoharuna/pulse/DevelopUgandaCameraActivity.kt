@@ -2747,11 +2747,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V217"
+                            "V221"
                         )
                         put(
                             "camera_engine",
-                            "V217 FIX1 FULL FRAME HUD PRO"
+                            "V217 FULL FRAME HUD + V221 SHOT FINDER"
                         )
                         put(
                             "camera_modules",
@@ -4801,7 +4801,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawStrongRecordedText(
             c,
-            "${sceneTag()} • V217",
+            "${sceneTag()} • V221",
             safeLeft +
                 brandWidth +
                 (11f * u),
@@ -4862,7 +4862,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawFitText(
             c,
-            "$recState   •   TC ${tc()}   •   V217   •   THERM ${thermalStateLabel()}",
+            "$recState   •   TC ${tc()}   •   V221   •   THERM ${thermalStateLabel()}",
             safeLeft,
             y,
             maxWidth,
@@ -6760,7 +6760,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V217_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V221_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -7325,29 +7325,29 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private fun cameraExperienceDisplayName(): String {
         return when (cameraExperienceId) {
             "V205_FOCUS" ->
-                "V205 • FOCUS ASSIST CAMERA"
+                "V205 • PEOPLE FOCUS"
             "V206_METER" ->
-                "V206 • METERING LOCK CAMERA"
+                "V206 • SUBJECT METERING"
             "V207_HORIZON" ->
-                "V207 • HORIZON CAMERA"
+                "V207 • BUILDINGS & LEVEL"
             "V208_STEADY" ->
-                "V208 • STEADYSHOT CAMERA"
+                "V208 • WALK & ACTION STEADY"
             "V209_NIGHT" ->
-                "V209 • NIGHT INTELLIGENCE CAMERA"
+                "V209 • NIGHT & LOW LIGHT"
             "V210_ALL_PRO" ->
-                "V210 • ALL-PRO FIELD CAMERA"
+                "V210 • EVERYDAY PRO"
             "V211_AUDIO" ->
-                "V211 • AUDIO GUARD CAMERA"
+                "V211 • INTERVIEW AUDIO"
             "V212_VERIFIED" ->
-                "V212 • VERIFIED EVIDENCE CAMERA"
+                "V212 • VERIFIED REPORT"
             "V213_THERMAL" ->
-                "V213 • THERMAL SAFE CAMERA"
+                "V213 • LONG RECORD SAFE"
             "V214_SIGNATURE" ->
-                "V214 • MODE SIGNATURE CAMERA"
+                "V214 • CINEMATIC LOOKS"
             "V215_AUTO" ->
-                "V215 • SMART AUTO DIRECTOR CAMERA"
+                "V215 • SMART AUTO"
             else ->
-                "V210 • ALL-PRO FIELD CAMERA"
+                "V210 • EVERYDAY PRO"
         }
     }
 
@@ -7361,29 +7361,59 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private fun cameraExperienceInstruction(): String {
         return when (cameraExperienceId) {
             "V205_FOCUS" ->
-                "TAP SUBJECT TO FOCUS • HOLD TO LOCK AF"
+                "PEOPLE • PORTRAITS • INTERVIEWS • TAP AF • HOLD AF LOCK"
             "V206_METER" ->
-                "HOLD SUBJECT FOR AF + AE + AWB METER LOCK"
+                "BACKLIGHT • WINDOWS • FACES • HOLD AF+AE+AWB METERING"
             "V207_HORIZON" ->
-                "KEEP HORIZON GUIDE GREEN • LEVEL LOCK"
+                "BUILDINGS • ROOMS • HORIZONS • KEEP LEVEL GUIDE GREEN"
             "V208_STEADY" ->
-                "WATCH STEADY / MOVING / SHAKE • ACTION STAB DEFAULT"
+                "WALKING • VEHICLES • ACTION • STABILIZATION WHEN SUPPORTED"
             "V209_NIGHT" ->
-                "REAL LUX SENSOR • LOW LIGHT DEFAULT • 30FPS ADVICE"
+                "NIGHT • DARK INDOOR • LUX-DRIVEN LOW-LIGHT PROFILE"
             "V210_ALL_PRO" ->
-                "ALL PRO TOOLS V204→V215 AVAILABLE TOGETHER"
+                "EVERYDAY • NEWS • TRAVEL • ALL PRO TOOLS TOGETHER"
             "V211_AUDIO" ->
-                "MIC LEVEL • PEAK • LOW / GOOD / HOT / CLIP RISK"
+                "INTERVIEW • SPEECH • EVENTS • WATCH MIC GOOD/HOT/CLIP RISK"
             "V212_VERIFIED" ->
-                "LIVE CAMERAX + SENSOR + AUDIO STATE • VERIFIED OUTPUT"
+                "EVIDENCE • SITE REPORTS • INCIDENTS • TELEMETRY + INTEGRITY"
             "V213_THERMAL" ->
-                "REAL ANDROID THERMAL STATE • SAFE FALLBACK AT SEVERE+"
+                "LONG RECORDINGS • HOT CONDITIONS • THERMAL SAFE FALLBACK"
             "V214_SIGNATURE" ->
-                "MODE-SPECIFIC PREVIEW TONE • EXACT MODE/LOOK RECORDED"
+                "CINEMATIC • PEOPLE • TRAVEL • HDR/WARM WITH DEVICE FALLBACK"
             "V215_AUTO" ->
-                "AUTO DIRECTOR • REAL LUX + MOTION + THERMAL PROFILE SELECTION"
+                "QUICK SHOOTING • AUTO CHOOSES LOW-LIGHT/ACTION/60/BALANCED"
             else ->
                 "ALL PRO CAMERA TOOLS"
+        }
+    }
+
+
+    private fun cameraExperienceBestFor(): String {
+        return when (cameraExperienceId) {
+            "V205_FOCUS" ->
+                "PEOPLE / PORTRAITS / INTERVIEWS"
+            "V206_METER" ->
+                "BACKLIT FACES / WINDOWS / MIXED LIGHT"
+            "V207_HORIZON" ->
+                "BUILDINGS / ROOMS / LANDSCAPES"
+            "V208_STEADY" ->
+                "WALKING / VEHICLES / ACTION"
+            "V209_NIGHT" ->
+                "NIGHT / DARK INDOOR / STREETS"
+            "V210_ALL_PRO" ->
+                "EVERYDAY / NEWS / TRAVEL"
+            "V211_AUDIO" ->
+                "INTERVIEWS / SPEECH / EVENTS"
+            "V212_VERIFIED" ->
+                "SITE REPORTS / INCIDENTS / EVIDENCE"
+            "V213_THERMAL" ->
+                "LONG RECORDINGS / HOT CONDITIONS"
+            "V214_SIGNATURE" ->
+                "CINEMATIC / PEOPLE / TRAVEL"
+            "V215_AUTO" ->
+                "QUICK SHOOTING / WHEN UNSURE"
+            else ->
+                "EVERYDAY PROFESSIONAL CAPTURE"
         }
     }
 
@@ -7507,7 +7537,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private fun applyIndependentCameraExperienceUi() {
         if (::cameraExperienceBannerView.isInitialized) {
             cameraExperienceBannerView.text =
-                "${cameraExperienceDisplayName()}\n${cameraExperienceInstruction()}"
+                "${cameraExperienceDisplayName()}\nBEST FOR • ${cameraExperienceBestFor()}\n${cameraExperienceInstruction()}"
             cameraExperienceBannerView.setTextColor(
                 cameraExperienceAccentColor()
             )
@@ -7905,7 +7935,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
 
             previewTagView.text =
-                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • V214"
+                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • V221"
         }
     }
 

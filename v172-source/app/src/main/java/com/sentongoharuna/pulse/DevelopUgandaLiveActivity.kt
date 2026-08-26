@@ -481,7 +481,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V219",
+                "develop.uganda • V221",
                 20f,
                 amber,
                 true
@@ -2284,7 +2284,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        // V219: brand/build and blinking LIVE status use separate lanes.
+        // V221: brand/build and blinking LIVE status use separate lanes.
         // The build capsule never receives the LIVE glow.
         val brandX =
             safeLeft +
@@ -2308,7 +2308,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         val buildText =
-            "V219"
+            "V221"
 
         val brandWidth =
             paint.measureText(
@@ -2678,7 +2678,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V219   |   THERMAL • ${liveThermalStateLabel()}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V221   |   THERMAL • ${liveThermalStateLabel()}",
             safeLeft,
             safeTop +
                 (126f * u),
@@ -2823,7 +2823,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V219",
+            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V221",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -3398,7 +3398,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V219_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V221_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 

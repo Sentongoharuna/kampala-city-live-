@@ -6,11 +6,6 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.media.MediaCodec
-import android.media.MediaExtractor
-import android.media.MediaFormat
-import android.media.MediaMetadataRetriever
-import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -19,22 +14,45 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.MediaController
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.VideoView
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import java.nio.ByteBuffer
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.effect.Presentation
+import androidx.media3.transformer.AudioEncoderSettings
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultEncoderFactory
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.Effects
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
+import androidx.media3.transformer.VideoEncoderSettings
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import java.io.File
+import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
+@OptIn(UnstableApi::class)
 class DevelopUgandaEditorActivity : AppCompatActivity() {
-    private lateinit var videoView: VideoView
+
+    private lateinit var playerView: PlayerView
     private lateinit var statusView: TextView
     private lateinit var sourceView: TextView
     private lateinit var startSeek: SeekBar
@@ -43,19 +61,30 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
     private lateinit var endLabel: TextView
     private lateinit var previewCutButton: Button
 
+    private var player: ExoPlayer? = null
+    private var transformer: Transformer? = null
+
     private var sourceUri: Uri? = null
     private var exportedUri: Uri? = null
+    private var socialMasterUri: Uri? = null
+    private var socialMasterLabel: String = ""
     private var durationMs = 0L
-    private var prepared = false
     private var previewingCut = false
+    private var firstFrameRendered = false
 
     private val galleryPicker =
-        registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null) loadVideo(uri, "GALLERY")
+        registerForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) { uri ->
+            if (uri != null) {
+                loadVideo(uri, "GALLERY")
+            }
         }
 
     private val filePicker =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
             if (uri != null) {
                 try {
                     contentResolver.takePersistableUriPermission(
@@ -70,7 +99,12 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        window.statusBarColor = 0xFF031829.toInt()
+        window.navigationBarColor = 0xFF031829.toInt()
+
         buildUi()
+        buildPlayer()
 
         val directUri =
             intent.getStringExtra("develop_uganda_edit_uri")
@@ -81,181 +115,562 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
             loadVideo(directUri, "RECENT CLIP")
         } else {
             statusView.text =
-                "Choose GALLERY, FILES or LAST CLIP • selected video will appear here"
+                "Choose a clip • edit it or create a TikTok / Reels master • V221"
         }
     }
 
+    override fun onDestroy() {
+        transformer?.cancel()
+        transformer = null
+
+        playerView.player = null
+        player?.release()
+        player = null
+
+        super.onDestroy()
+    }
+
     private fun buildUi() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(10), dp(12), dp(12))
-            setBackgroundColor(0xFF031829.toInt())
+        val root =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(0xFF031829.toInt())
+            }
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars =
+                insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                )
+
+            view.setPadding(
+                dp(12),
+                bars.top + dp(8),
+                dp(12),
+                bars.bottom + dp(8)
+            )
+
+            insets
         }
 
-        root.addView(label("develop.uganda  EDITOR V218", 21f, 0xFFAEBDEB.toInt(), true))
         root.addView(
             label(
-                "EDITOR PICKUP PRO • CAMERA CORE V217 UNCHANGED",
-                9.5f,
-                0xFF91B6A0.toInt(),
+                "develop.uganda  EDITOR V221",
+                21f,
+                0xFFAEBDEB.toInt(),
                 true
             )
         )
 
-        val pickRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
+        root.addView(
+            label(
+                "MEDIA3 EDITOR + SOCIAL UPLOAD MASTER • ORIGINAL STAYS UNTOUCHED",
+                9.5f,
+                0xFF91B6A0.toInt(),
+                true
+            ).apply {
+                setPadding(0, dp(2), 0, dp(7))
+            }
+        )
 
-        pickRow.addView(action("GALLERY", 0xFF73B7D9.toInt()) {
-            galleryPicker.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
-            )
-        }, weight())
+        val pickerRow =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
 
-        pickRow.addView(action("FILES", 0xFFA793D8.toInt()) {
-            filePicker.launch(arrayOf("video/*"))
-        }, weight())
+        pickerRow.addView(
+            action("GALLERY", 0xFF73B7D9.toInt()) {
+                galleryPicker.launch("video/*")
+            },
+            weight()
+        )
 
-        pickRow.addView(action("LAST CLIP", 0xFF91B6A0.toInt()) {
-            loadLatestDevelopUgandaClip()
-        }, weight())
+        pickerRow.addView(
+            action("FILES", 0xFFA793D8.toInt()) {
+                filePicker.launch(arrayOf("video/*"))
+            },
+            weight()
+        )
 
-        root.addView(pickRow, LinearLayout.LayoutParams(-1, dp(48)))
-
-        sourceView = label("NO CLIP LOADED", 9.5f, 0xFFAEB7C7.toInt(), true)
-        sourceView.setPadding(0, dp(5), 0, dp(5))
-        root.addView(sourceView)
-
-        videoView = VideoView(this).apply {
-            setBackgroundColor(Color.BLACK)
-            val controller = MediaController(this@DevelopUgandaEditorActivity)
-            controller.setAnchorView(this)
-            setMediaController(controller)
-        }
+        pickerRow.addView(
+            action("RECENT", 0xFF91B6A0.toInt()) {
+                showRecentDevelopUgandaClips()
+            },
+            weight()
+        )
 
         root.addView(
-            videoView,
-            LinearLayout.LayoutParams(-1, 0, 1f).apply {
+            pickerRow,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(48)
+            )
+        )
+
+        val secondPickerRow =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+
+        secondPickerRow.addView(
+            action("LAST CLIP", 0xFF91B6A0.toInt()) {
+                loadLatestDevelopUgandaClip()
+            },
+            weight()
+        )
+
+        secondPickerRow.addView(
+            action("PLAY / PAUSE", 0xFF73B7D9.toInt()) {
+                toggleSourcePlayback()
+            },
+            weight()
+        )
+
+        secondPickerRow.addView(
+            action("RELOAD", 0xFFAEB7C7.toInt()) {
+                sourceUri?.let {
+                    loadVideo(it, "RELOAD")
+                } ?: toast("Choose a video first")
+            },
+            weight()
+        )
+
+        root.addView(
+            secondPickerRow,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(46)
+            )
+        )
+
+        sourceView =
+            label(
+                "NO CLIP LOADED",
+                9.5f,
+                0xFFAEB7C7.toInt(),
+                true
+            ).apply {
+                maxLines = 2
+                setPadding(0, dp(5), 0, dp(5))
+            }
+
+        root.addView(sourceView)
+
+        playerView =
+            PlayerView(this).apply {
+                setBackgroundColor(Color.BLACK)
+                useController = true
+                controllerAutoShow = true
+                controllerShowTimeoutMs = 0
+                resizeMode =
+                    AspectRatioFrameLayout.RESIZE_MODE_FIT
+            }
+
+        root.addView(
+            playerView,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ).apply {
                 topMargin = dp(4)
                 bottomMargin = dp(4)
             }
         )
 
-        statusView = label(
-            "Choose a clip • preview • set IN/OUT • save cut",
-            9.5f,
-            0xFFB7C3C9.toInt(),
-            false
-        )
+        statusView =
+            label(
+                "Editor ready",
+                9.5f,
+                0xFFB7C3C9.toInt(),
+                false
+            ).apply {
+                maxLines = 3
+                setPadding(0, dp(5), 0, dp(5))
+            }
+
         root.addView(statusView)
 
-        startLabel = label("IN 00:00", 10f, 0xFF73B7D9.toInt(), true)
+        startLabel =
+            label(
+                "IN 00:00",
+                10f,
+                0xFF73B7D9.toInt(),
+                true
+            )
         root.addView(startLabel)
-        startSeek = SeekBar(this).apply { max = 1000; progress = 0 }
+
+        startSeek =
+            SeekBar(this).apply {
+                max = 1000
+                progress = 0
+            }
         root.addView(startSeek)
 
-        endLabel = label("OUT 00:00", 10f, 0xFF91B6A0.toInt(), true)
+        endLabel =
+            label(
+                "OUT 00:00",
+                10f,
+                0xFF91B6A0.toInt(),
+                true
+            )
         root.addView(endLabel)
-        endSeek = SeekBar(this).apply { max = 1000; progress = 1000 }
+
+        endSeek =
+            SeekBar(this).apply {
+                max = 1000
+                progress = 1000
+            }
         root.addView(endSeek)
 
-        startSeek.setOnSeekBarChangeListener(seekListener { p ->
-            if (p >= endSeek.progress) {
-                startSeek.progress = (endSeek.progress - 1).coerceAtLeast(0)
+        startSeek.setOnSeekBarChangeListener(
+            seekListener { progress ->
+                if (progress >= endSeek.progress) {
+                    startSeek.progress =
+                        (endSeek.progress - 1).coerceAtLeast(0)
+                }
+                updateTrimLabels()
+                seekPreview(currentStartMs())
             }
-            updateTrimLabels()
-            seekPreview(currentStartMs())
-        })
+        )
 
-        endSeek.setOnSeekBarChangeListener(seekListener { p ->
-            if (p <= startSeek.progress) {
-                endSeek.progress = (startSeek.progress + 1).coerceAtMost(1000)
+        endSeek.setOnSeekBarChangeListener(
+            seekListener { progress ->
+                if (progress <= startSeek.progress) {
+                    endSeek.progress =
+                        (startSeek.progress + 1).coerceAtMost(1000)
+                }
+                updateTrimLabels()
+                seekPreview(currentEndMs())
             }
-            updateTrimLabels()
-            seekPreview(currentEndMs())
-        })
+        )
 
-        val markRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        markRow.addView(action("SET IN", 0xFF73B7D9.toInt()) { markIn() }, weight())
-        markRow.addView(action("SET OUT", 0xFF91B6A0.toInt()) { markOut() }, weight())
-        markRow.addView(action("RESET", 0xFFAEB7C7.toInt()) { resetCut() }, weight())
-        root.addView(markRow, LinearLayout.LayoutParams(-1, dp(46)))
+        val markRow =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
 
-        val editRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        markRow.addView(
+            action("SET IN", 0xFF73B7D9.toInt()) {
+                markIn()
+            },
+            weight()
+        )
 
-        previewCutButton = action("PREVIEW CUT", 0xFFAEBDEB.toInt()) { previewCut() }
+        markRow.addView(
+            action("SET OUT", 0xFF91B6A0.toInt()) {
+                markOut()
+            },
+            weight()
+        )
+
+        markRow.addView(
+            action("RESET CUT", 0xFFAEB7C7.toInt()) {
+                resetCut()
+            },
+            weight()
+        )
+
+        root.addView(
+            markRow,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(46)
+            )
+        )
+
+        val editRow =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+
+        previewCutButton =
+            action(
+                "PREVIEW CUT",
+                0xFFAEBDEB.toInt()
+            ) {
+                previewCut()
+            }
+
         editRow.addView(previewCutButton, weight())
 
-        editRow.addView(action("SAVE CUT", 0xFF91B6A0.toInt()) {
-            exportCut(includeAudio = true)
-        }, weight())
+        editRow.addView(
+            action("SAVE CUT", 0xFF91B6A0.toInt()) {
+                exportWithMedia3(includeAudio = true)
+            },
+            weight()
+        )
 
-        editRow.addView(action("MUTE + SAVE", 0xFFD0B06F.toInt()) {
-            exportCut(includeAudio = false)
-        }, weight())
+        editRow.addView(
+            action("MUTE + SAVE", 0xFFD0B06F.toInt()) {
+                exportWithMedia3(includeAudio = false)
+            },
+            weight()
+        )
 
-        root.addView(editRow, LinearLayout.LayoutParams(-1, dp(50)))
+        root.addView(
+            editRow,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(50)
+            )
+        )
 
-        val outputRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        outputRow.addView(action("PLAY SAVED", 0xFF73B7D9.toInt()) { playSaved() }, weight())
-        outputRow.addView(action("SHARE", 0xFFC76D73.toInt()) { shareBestAvailable() }, weight())
-        outputRow.addView(action("LOAD SAVED", 0xFFA793D8.toInt()) {
-            val uri = exportedUri
-            if (uri == null) toast("Save a cut first") else loadVideo(uri, "SAVED EDIT")
-        }, weight())
+        val outputRow =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
 
-        root.addView(outputRow, LinearLayout.LayoutParams(-1, dp(46)))
+        outputRow.addView(
+            action("PLAY SAVED", 0xFF73B7D9.toInt()) {
+                playSaved()
+            },
+            weight()
+        )
+
+        outputRow.addView(
+            action("SHARE", 0xFFC76D73.toInt()) {
+                shareBestAvailable()
+            },
+            weight()
+        )
+
+        outputRow.addView(
+            action("LOAD SAVED", 0xFFA793D8.toInt()) {
+                val uri = exportedUri
+                if (uri == null) {
+                    toast("Save a cut first")
+                } else {
+                    loadVideo(
+                        uri,
+                        "SAVED EDIT",
+                        keepExport = true
+                    )
+                }
+            },
+            weight()
+        )
+
+        root.addView(
+            outputRow,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(46)
+            )
+        )
+
+        root.addView(
+            label(
+                "SOCIAL UPLOAD MASTER • 1080×1920 • H.264 • AAC • 30 FPS MAX • 2s KEYFRAMES",
+                8.5f,
+                0xFF91B6A0.toInt(),
+                true
+            ).apply {
+                setPadding(
+                    0,
+                    dp(7),
+                    0,
+                    dp(3)
+                )
+            }
+        )
+
+        val socialRow =
+            LinearLayout(this).apply {
+                orientation =
+                    LinearLayout.HORIZONTAL
+            }
+
+        socialRow.addView(
+            action(
+                "TIKTOK MASTER",
+                0xFF73B7D9.toInt()
+            ) {
+                exportSocialMaster(
+                    platform =
+                        "TIKTOK",
+                    bitrate =
+                        16_000_000
+                )
+            },
+            weight()
+        )
+
+        socialRow.addView(
+            action(
+                "REELS MASTER",
+                0xFFA793D8.toInt()
+            ) {
+                exportSocialMaster(
+                    platform =
+                        "REELS",
+                    bitrate =
+                        14_000_000
+                )
+            },
+            weight()
+        )
+
+        socialRow.addView(
+            action(
+                "SHARE SOCIAL",
+                0xFFC76D73.toInt()
+            ) {
+                shareSocialMaster()
+            },
+            weight()
+        )
+
+        root.addView(
+            socialRow,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(48)
+            )
+        )
+
         setContentView(root)
     }
 
-    private fun loadVideo(uri: Uri, source: String) {
-        stopCutPreview()
-        sourceUri = uri
-        exportedUri = null
-        prepared = false
-        durationMs = 0L
-        startSeek.progress = 0
-        endSeek.progress = 1000
-        sourceView.text = "LOADING • $source • ${displayName(uri)}"
-        statusView.text = "Opening video…"
+    private fun buildPlayer() {
+        player =
+            ExoPlayer.Builder(this)
+                .build()
+                .also { exo ->
+                    playerView.player = exo
 
-        videoView.setOnPreparedListener { player ->
-            prepared = true
-            durationMs = player.duration.toLong().coerceAtLeast(0L)
-            if (durationMs <= 0L) durationMs = metadataDuration(uri)
-            updateTrimLabels()
-            sourceView.text = "READY • $source • ${displayName(uri)}"
-            val details = videoDetails(uri)
-            statusView.text =
-                "READY • ${formatTime(durationMs)}" +
-                    (if (details.isNotBlank()) " • $details" else "") +
-                    " • set IN/OUT then SAVE CUT"
-            try { videoView.seekTo(1) } catch (_: Exception) {}
-        }
+                    exo.addListener(
+                        object : Player.Listener {
+                            override fun onPlaybackStateChanged(
+                                playbackState: Int
+                            ) {
+                                if (
+                                    playbackState ==
+                                    Player.STATE_READY
+                                ) {
+                                    val d = exo.duration
 
-        videoView.setOnErrorListener { _, what, extra ->
-            prepared = false
-            statusView.text =
-                "Preview failed • code $what/$extra • try FILES or another clip"
-            toast("Video preview failed")
-            true
-        }
+                                    durationMs =
+                                        if (
+                                            d != C.TIME_UNSET &&
+                                            d > 0L
+                                        ) {
+                                            d
+                                        } else {
+                                            0L
+                                        }
 
-        try {
-            videoView.setVideoURI(uri)
-            videoView.requestFocus()
-        } catch (e: Exception) {
-            prepared = false
-            statusView.text = "Open failed • ${e.message ?: "unsupported video"}"
-            toast("Could not open video")
-        }
+                                    updateTrimLabels()
+
+                                    statusView.text =
+                                        "READY • ${formatTime(durationMs)} • tap PLAY or set IN/OUT"
+                                }
+                            }
+
+                            override fun onRenderedFirstFrame() {
+                                firstFrameRendered = true
+
+                                statusView.text =
+                                    "VIDEO VISIBLE • READY • ${formatTime(durationMs)} • set IN/OUT"
+                            }
+
+                            override fun onPlayerError(
+                                error: PlaybackException
+                            ) {
+                                statusView.text =
+                                    "PLAYER ERROR • ${error.errorCodeName} • try FILES or another clip"
+
+                                toast("Could not play this video")
+                            }
+                        }
+                    )
+                }
     }
 
-    private fun loadLatestDevelopUgandaClip() {
-        statusView.text = "Looking for latest develop.uganda clip…"
+    private fun loadVideo(
+        uri: Uri,
+        source: String,
+        keepExport: Boolean = false
+    ) {
+        stopCutPreview()
 
-        val collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        sourceUri = uri
+
+        if (!keepExport) {
+            exportedUri = null
+        }
+
+        durationMs = 0L
+        firstFrameRendered = false
+        startSeek.progress = 0
+        endSeek.progress = 1000
+
+        sourceView.text =
+            "LOADING • $source • ${displayName(uri)}"
+
+        statusView.text =
+            "Opening with Media3…"
+
+        val exo = player ?: return
+
+        exo.stop()
+        exo.clearMediaItems()
+        exo.setMediaItem(
+            MediaItem.fromUri(uri)
+        )
+        exo.prepare()
+        exo.playWhenReady = false
+
+        sourceView.text =
+            "READY • $source • ${displayName(uri)}"
+
+        playerView.showController()
+
+        playerView.postDelayed(
+            {
+                if (
+                    !firstFrameRendered &&
+                    sourceUri == uri
+                ) {
+                    statusView.text =
+                        "READY • tap PLAY • if picture stays black use FILES or RECENT"
+                }
+            },
+            1200L
+        )
+    }
+
+    private fun toggleSourcePlayback() {
+        val exo = player
+
+        if (
+            sourceUri == null ||
+            exo == null
+        ) {
+            toast("Choose a video first")
+            return
+        }
+
+        if (exo.isPlaying) {
+            exo.pause()
+        } else {
+            exo.play()
+        }
+
+        playerView.showController()
+    }
+
+    private fun showRecentDevelopUgandaClips() {
+        val collection =
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+
+        val names =
+            mutableListOf<String>()
+
+        val uris =
+            mutableListOf<Uri>()
 
         try {
             contentResolver.query(
@@ -269,41 +684,132 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                 arrayOf("DEVELOP_UGANDA_%"),
                 "${MediaStore.Video.Media.DATE_ADDED} DESC"
             )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val id =
-                        cursor.getLong(
-                            cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+                val idIndex =
+                    cursor.getColumnIndexOrThrow(
+                        MediaStore.Video.Media._ID
+                    )
+
+                val nameIndex =
+                    cursor.getColumnIndexOrThrow(
+                        MediaStore.Video.Media.DISPLAY_NAME
+                    )
+
+                while (
+                    cursor.moveToNext() &&
+                    names.size < 12
+                ) {
+                    names.add(
+                        cursor.getString(nameIndex)
+                    )
+
+                    uris.add(
+                        ContentUris.withAppendedId(
+                            collection,
+                            cursor.getLong(idIndex)
                         )
+                    )
+                }
+            }
+        } catch (_: Exception) {
+        }
+
+        if (names.isEmpty()) {
+            toast(
+                "No accessible develop.uganda clips • use GALLERY"
+            )
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "RECENT develop.uganda VIDEOS"
+            )
+            .setItems(
+                names.toTypedArray()
+            ) { _, which ->
+                loadVideo(
+                    uris[which],
+                    "RECENT"
+                )
+            }
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .show()
+    }
+
+    private fun loadLatestDevelopUgandaClip() {
+        val collection =
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+
+        try {
+            contentResolver.query(
+                collection,
+                arrayOf(
+                    MediaStore.Video.Media._ID
+                ),
+                "${MediaStore.Video.Media.DISPLAY_NAME} LIKE ?",
+                arrayOf("DEVELOP_UGANDA_%"),
+                "${MediaStore.Video.Media.DATE_ADDED} DESC"
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
                     loadVideo(
-                        ContentUris.withAppendedId(collection, id),
+                        ContentUris.withAppendedId(
+                            collection,
+                            cursor.getLong(0)
+                        ),
                         "LAST CLIP"
                     )
                     return
                 }
             }
-            statusView.text =
-                "No accessible develop.uganda clip found • use GALLERY"
+
+            toast(
+                "No accessible develop.uganda clip • use GALLERY"
+            )
         } catch (_: Exception) {
-            statusView.text =
-                "Automatic clip lookup blocked by Android • use GALLERY or FILES"
+            toast(
+                "Use GALLERY or FILES to choose the video"
+            )
         }
     }
 
     private fun markIn() {
-        if (!requirePrepared()) return
+        val exo = player ?: return
+
+        if (!readyForEdit()) {
+            return
+        }
+
         startSeek.progress =
-            positionToProgress(videoView.currentPosition.toLong())
-                .coerceAtMost(endSeek.progress - 1)
+            positionToProgress(
+                exo.currentPosition
+            )
+                .coerceAtMost(
+                    endSeek.progress - 1
+                )
                 .coerceAtLeast(0)
+
         updateTrimLabels()
     }
 
     private fun markOut() {
-        if (!requirePrepared()) return
+        val exo = player ?: return
+
+        if (!readyForEdit()) {
+            return
+        }
+
         endSeek.progress =
-            positionToProgress(videoView.currentPosition.toLong())
-                .coerceAtLeast(startSeek.progress + 1)
+            positionToProgress(
+                exo.currentPosition
+            )
+                .coerceAtLeast(
+                    startSeek.progress + 1
+                )
                 .coerceAtMost(1000)
+
         updateTrimLabels()
     }
 
@@ -313,300 +819,649 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
         endSeek.progress = 1000
         updateTrimLabels()
         seekPreview(0L)
-        statusView.text = "Cut reset • full clip selected"
+        statusView.text =
+            "CUT RESET • full clip selected"
     }
 
     private fun previewCut() {
-        if (!requirePrepared()) return
+        val exo = player ?: return
+
+        if (!readyForEdit()) {
+            return
+        }
 
         if (previewingCut) {
             stopCutPreview()
-            videoView.pause()
-            statusView.text = "Cut preview stopped"
+            exo.pause()
+            statusView.text =
+                "Cut preview stopped"
             return
         }
 
         val startMs = currentStartMs()
         val endMs = currentEndMs()
+
         if (endMs <= startMs) {
             toast("Choose a valid cut")
             return
         }
 
         previewingCut = true
-        previewCutButton.text = "STOP PREVIEW"
-        videoView.seekTo(startMs.toInt())
-        videoView.start()
+        previewCutButton.text =
+            "STOP PREVIEW"
+
+        exo.seekTo(startMs)
+        exo.play()
+
         statusView.text =
-            "Previewing cut • ${formatTime(startMs)} → ${formatTime(endMs)}"
+            "PREVIEW CUT • ${formatTime(startMs)} → ${formatTime(endMs)}"
 
-        val guard = object : Runnable {
-            override fun run() {
-                if (!previewingCut) return
+        val guard =
+            object : Runnable {
+                override fun run() {
+                    if (!previewingCut) {
+                        return
+                    }
 
-                if (
-                    !videoView.isPlaying ||
-                    videoView.currentPosition.toLong() >= endMs
-                ) {
-                    videoView.pause()
-                    videoView.seekTo(startMs.toInt())
-                    stopCutPreview()
-                    statusView.text = "Cut preview finished • ready to save"
-                    return
+                    if (
+                        !exo.isPlaying ||
+                        exo.currentPosition >= endMs
+                    ) {
+                        exo.pause()
+                        exo.seekTo(startMs)
+                        stopCutPreview()
+
+                        statusView.text =
+                            "CUT PREVIEW FINISHED • ready to save"
+                        return
+                    }
+
+                    playerView.postDelayed(
+                        this,
+                        60L
+                    )
                 }
-
-                videoView.postDelayed(this, 60L)
             }
-        }
 
-        videoView.postDelayed(guard, 60L)
+        playerView.postDelayed(
+            guard,
+            60L
+        )
     }
 
     private fun stopCutPreview() {
         previewingCut = false
+
         if (::previewCutButton.isInitialized) {
-            previewCutButton.text = "PREVIEW CUT"
+            previewCutButton.text =
+                "PREVIEW CUT"
         }
     }
 
-    private fun seekPreview(positionMs: Long) {
-        if (!prepared) return
-        try {
-            videoView.seekTo(
-                positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L)).toInt()
-            )
-        } catch (_: Exception) {
-        }
-    }
+    private fun seekPreview(
+        positionMs: Long
+    ) {
+        val exo = player ?: return
 
-    private fun exportCut(includeAudio: Boolean) {
-        val input = sourceUri ?: run {
-            toast("Choose a video first")
+        if (durationMs <= 0L) {
             return
         }
 
-        if (!requirePrepared()) return
+        exo.seekTo(
+            positionMs.coerceIn(
+                0L,
+                durationMs
+            )
+        )
+    }
 
-        val requestedStartUs = currentStartMs() * 1000L
-        val requestedEndUs = currentEndMs() * 1000L
+    private fun exportWithMedia3(
+        includeAudio: Boolean
+    ) {
+        val input =
+            sourceUri ?: run {
+                toast("Choose a video first")
+                return
+            }
 
-        if (requestedEndUs <= requestedStartUs) {
+        if (!readyForEdit()) {
+            return
+        }
+
+        val startMs = currentStartMs()
+        val endMs = currentEndMs()
+
+        if (endMs <= startMs) {
             toast("Choose a longer cut")
             return
         }
 
-        stopCutPreview()
+        transformer?.cancel()
+
+        val exportDir =
+            File(
+                cacheDir,
+                "v220_media3_exports"
+            ).apply {
+                mkdirs()
+            }
+
+        val temp =
+            File(
+                exportDir,
+                "export_${System.currentTimeMillis()}.mp4"
+            )
+
+        if (temp.exists()) {
+            temp.delete()
+        }
+
+        val clipped =
+            MediaItem.Builder()
+                .setUri(input)
+                .setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(startMs)
+                        .setEndPositionMs(endMs)
+                        .build()
+                )
+                .build()
+
+        val edited =
+            EditedMediaItem.Builder(clipped)
+                .setRemoveAudio(!includeAudio)
+                .build()
 
         statusView.text =
-            if (includeAudio) "Saving playable cut…" else "Saving muted cut…"
+            if (includeAudio) {
+                "MEDIA3 EXPORT • cutting video…"
+            } else {
+                "MEDIA3 EXPORT • cutting + removing audio…"
+            }
 
-        Thread {
-            var output: Uri? = null
+        val listener =
+            object : Transformer.Listener {
+                override fun onCompleted(
+                    composition: Composition,
+                    result: ExportResult
+                ) {
+                    transformer = null
 
-            try {
-                output = createOutputVideo(muted = !includeAudio)
+                    Thread {
+                        try {
+                            val uri =
+                                publishTempVideo(
+                                    temp,
+                                    muted = !includeAudio
+                                )
 
-                remuxTrim(
-                    input,
-                    output,
-                    requestedStartUs,
-                    requestedEndUs,
-                    includeAudio
-                )
+                            temp.delete()
+                            exportedUri = uri
 
-                finalizeOutput(output)
-                exportedUri = output
+                            runOnUiThread {
+                                statusView.text =
+                                    "SAVED • Media3 MP4 • PLAY SAVED / LOAD SAVED / SHARE"
 
-                runOnUiThread {
-                    statusView.text =
-                        "SAVED • tap PLAY SAVED, LOAD SAVED or SHARE"
-                    toast("Edited video saved")
+                                toast(
+                                    "Edited video saved"
+                                )
+                            }
+                        } catch (e: Exception) {
+                            runOnUiThread {
+                                statusView.text =
+                                    "PUBLISH FAILED • ${e.message ?: "unknown error"}"
+
+                                toast(
+                                    "Could not publish edited video"
+                                )
+                            }
+                        }
+                    }.start()
                 }
-            } catch (e: Exception) {
-                if (output != null) {
-                    try {
-                        contentResolver.delete(output, null, null)
-                    } catch (_: Exception) {
-                    }
-                }
 
-                runOnUiThread {
+                override fun onError(
+                    composition: Composition,
+                    result: ExportResult,
+                    exception: ExportException
+                ) {
+                    transformer = null
+                    temp.delete()
+
                     statusView.text =
-                        "Edit failed • ${e.message ?: "unknown error"}"
+                        "MEDIA3 EXPORT FAILED • ${exception.errorCodeName}"
+
                     toast("Edit failed")
                 }
             }
-        }.start()
+
+        transformer =
+            Transformer.Builder(this)
+                .addListener(listener)
+                .build()
+                .also {
+                    it.start(
+                        edited,
+                        temp.absolutePath
+                    )
+                }
     }
 
-    private fun remuxTrim(
-        input: Uri,
-        output: Uri,
-        requestedStartUs: Long,
-        requestedEndUs: Long,
-        includeAudio: Boolean
+
+    private fun exportSocialMaster(
+        platform: String,
+        bitrate: Int
     ) {
-        val safeStartUs = safeVideoStartUs(input, requestedStartUs)
+        val input =
+            sourceUri ?: run {
+                toast(
+                    "Choose a video first"
+                )
+                return
+            }
 
-        val extractor = MediaExtractor()
-        extractor.setDataSource(this, input, null)
+        if (
+            !readyForEdit()
+        ) {
+            return
+        }
 
-        val pfd =
-            contentResolver.openFileDescriptor(output, "rw")
-                ?: error("Could not open output file")
+        val startMs =
+            currentStartMs()
 
-        val muxer =
-            MediaMuxer(
-                pfd.fileDescriptor,
-                MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+        val endMs =
+            currentEndMs()
+
+        if (
+            endMs <=
+                startMs
+        ) {
+            toast(
+                "Choose a longer cut"
+            )
+            return
+        }
+
+        transformer?.cancel()
+
+        val exportDir =
+            File(
+                cacheDir,
+                "v221_social_exports"
+            ).apply {
+                mkdirs()
+            }
+
+        val temp =
+            File(
+                exportDir,
+                "social_${platform.lowercase(Locale.US)}_${System.currentTimeMillis()}.mp4"
             )
 
-        var muxerStarted = false
+        if (
+            temp.exists()
+        ) {
+            temp.delete()
+        }
+
+        val clipped =
+            MediaItem.Builder()
+                .setUri(
+                    input
+                )
+                .setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(
+                            startMs
+                        )
+                        .setEndPositionMs(
+                            endMs
+                        )
+                        .build()
+                )
+                .build()
+
+        val socialEffects =
+            Effects(
+                emptyList(),
+                listOf(
+                    Presentation.createForWidthAndHeight(
+                        1080,
+                        1920,
+                        Presentation.LAYOUT_SCALE_TO_FIT
+                    )
+                )
+            )
+
+        val edited =
+            EditedMediaItem.Builder(
+                clipped
+            )
+                .setFrameRate(
+                    30
+                )
+                .setEffects(
+                    socialEffects
+                )
+                .build()
+
+        val sequence =
+            EditedMediaItemSequence.withAudioAndVideoFrom(
+                listOf(
+                    edited
+                )
+            )
+
+        val compositionBuilder =
+            Composition.Builder(
+                listOf(
+                    sequence
+                )
+            )
+
+        if (
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+        ) {
+            compositionBuilder.setHdrMode(
+                Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL
+            )
+        }
+
+        val composition =
+            compositionBuilder
+                .build()
+
+        val videoSettings =
+            VideoEncoderSettings.Builder()
+                .setBitrate(
+                    bitrate
+                )
+                .setiFrameIntervalSeconds(
+                    2f
+                )
+                .build()
+
+        val audioSettings =
+            AudioEncoderSettings.Builder()
+                .setBitrate(
+                    256_000
+                )
+                .build()
+
+        val encoderFactory =
+            DefaultEncoderFactory.Builder(
+                this
+            )
+                .setRequestedVideoEncoderSettings(
+                    videoSettings
+                )
+                .setRequestedAudioEncoderSettings(
+                    audioSettings
+                )
+                .build()
+
+        statusView.text =
+            "$platform MASTER • preparing 1080×1920 H.264/AAC • ${bitrate / 1_000_000} Mbps target"
+
+        val listener =
+            object :
+                Transformer.Listener {
+
+                override fun onCompleted(
+                    completedComposition: Composition,
+                    result: ExportResult
+                ) {
+                    transformer =
+                        null
+
+                    Thread {
+                        try {
+                            val uri =
+                                publishSocialMaster(
+                                    temp =
+                                        temp,
+                                    platform =
+                                        platform
+                                )
+
+                            temp.delete()
+
+                            socialMasterUri =
+                                uri
+
+                            socialMasterLabel =
+                                platform
+
+                            runOnUiThread {
+                                statusView.text =
+                                    "$platform MASTER SAVED • 1080×1920 • H.264 • AAC • 30 FPS MAX • original preserved"
+
+                                toast(
+                                    "$platform social master saved"
+                                )
+                            }
+                        } catch (
+                            e: Exception
+                        ) {
+                            runOnUiThread {
+                                statusView.text =
+                                    "$platform PUBLISH FAILED • ${e.message ?: "unknown error"}"
+
+                                toast(
+                                    "Could not publish social master"
+                                )
+                            }
+                        }
+                    }.start()
+                }
+
+                override fun onError(
+                    failedComposition: Composition,
+                    result: ExportResult,
+                    exception: ExportException
+                ) {
+                    transformer =
+                        null
+
+                    temp.delete()
+
+                    statusView.text =
+                        "$platform MASTER FAILED • ${exception.errorCodeName}"
+
+                    toast(
+                        "Social master export failed"
+                    )
+                }
+            }
+
+        transformer =
+            Transformer.Builder(
+                this
+            )
+                .setEncoderFactory(
+                    encoderFactory
+                )
+                .setVideoMimeType(
+                    MimeTypes.VIDEO_H264
+                )
+                .setAudioMimeType(
+                    MimeTypes.AUDIO_AAC
+                )
+                .addListener(
+                    listener
+                )
+                .build()
+                .also {
+                    it.start(
+                        composition,
+                        temp.absolutePath
+                    )
+                }
+    }
+
+    private fun publishSocialMaster(
+        temp: File,
+        platform: String
+    ): Uri {
+        if (
+            !temp.exists() ||
+            temp.length() <=
+                0L
+        ) {
+            error(
+                "Social master output is empty"
+            )
+        }
+
+        val stamp =
+            SimpleDateFormat(
+                "yyyyMMdd_HHmmss",
+                Locale.US
+            ).format(
+                Date()
+            )
+
+        val name =
+            "DEVELOP_UGANDA_V221_${platform}_MASTER_" +
+                stamp +
+                ".mp4"
+
+        val values =
+            ContentValues().apply {
+                put(
+                    MediaStore.Video.Media.DISPLAY_NAME,
+                    name
+                )
+
+                put(
+                    MediaStore.Video.Media.MIME_TYPE,
+                    "video/mp4"
+                )
+
+                if (
+                    Build.VERSION.SDK_INT >=
+                        Build.VERSION_CODES.Q
+                ) {
+                    put(
+                        MediaStore.Video.Media.RELATIVE_PATH,
+                        "Movies/develop.uganda/Social"
+                    )
+
+                    put(
+                        MediaStore.Video.Media.IS_PENDING,
+                        1
+                    )
+                }
+            }
+
+        val uri =
+            contentResolver.insert(
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                values
+            ) ?: error(
+                "Could not create social master in Gallery"
+            )
 
         try {
-            val trackMap = HashMap<Int, Int>()
-            var maxInputSize = 4 * 1024 * 1024
-
-            for (i in 0 until extractor.trackCount) {
-                val format = extractor.getTrackFormat(i)
-                val mime =
-                    format.getString(MediaFormat.KEY_MIME) ?: ""
-
-                val include =
-                    mime.startsWith("video/") ||
-                        (includeAudio && mime.startsWith("audio/"))
-
-                if (!include) continue
-
-                extractor.selectTrack(i)
-                trackMap[i] = muxer.addTrack(format)
-
-                if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
-                    maxInputSize =
-                        maxOf(
-                            maxInputSize,
-                            format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
-                        )
-                }
-            }
-
-            if (trackMap.isEmpty()) {
-                error("No supported video/audio tracks")
-            }
-
-            val rotation = readRotation(input)
-            if (rotation != 0) muxer.setOrientationHint(rotation)
-
-            muxer.start()
-            muxerStarted = true
-
-            val buffer =
-                ByteBuffer.allocateDirect(
-                    maxInputSize.coerceIn(
-                        1024 * 1024,
-                        32 * 1024 * 1024
+            contentResolver.openOutputStream(
+                uri,
+                "w"
+            )?.use { output ->
+                FileInputStream(
+                    temp
+                ).use { input ->
+                    input.copyTo(
+                        output,
+                        1024 * 1024
                     )
-                )
-
-            val info = MediaCodec.BufferInfo()
-
-            extractor.seekTo(
-                safeStartUs,
-                MediaExtractor.SEEK_TO_PREVIOUS_SYNC
+                }
+            } ?: error(
+                "Could not open social master output stream"
             )
 
-            var writtenSamples = 0
-
-            while (true) {
-                val track = extractor.sampleTrackIndex
-                if (track < 0) break
-
-                val sampleUs = extractor.sampleTime
-                if (sampleUs < 0L || sampleUs > requestedEndUs) break
-
-                val outputTrack = trackMap[track]
-
-                if (outputTrack != null && sampleUs >= safeStartUs) {
-                    buffer.clear()
-
-                    val size = extractor.readSampleData(buffer, 0)
-                    if (size < 0) break
-
-                    info.offset = 0
-                    info.size = size
-                    info.presentationTimeUs =
-                        (sampleUs - safeStartUs).coerceAtLeast(0L)
-                    info.flags = extractor.sampleFlags
-
-                    muxer.writeSampleData(
-                        outputTrack,
-                        buffer,
-                        info
-                    )
-
-                    writtenSamples++
-                }
-
-                if (!extractor.advance()) break
+            if (
+                Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.Q
+            ) {
+                contentResolver.update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Video.Media.IS_PENDING,
+                            0
+                        )
+                    },
+                    null,
+                    null
+                )
             }
 
-            if (writtenSamples <= 0) {
-                error("No samples were written")
-            }
-        } finally {
+            return uri
+        } catch (
+            e: Exception
+        ) {
             try {
-                if (muxerStarted) muxer.stop()
+                contentResolver.delete(
+                    uri,
+                    null,
+                    null
+                )
             } catch (_: Exception) {
             }
-            try { muxer.release() } catch (_: Exception) {}
-            try { extractor.release() } catch (_: Exception) {}
-            try { pfd.close() } catch (_: Exception) {}
+
+            throw e
         }
     }
 
-    private fun safeVideoStartUs(
-        uri: Uri,
-        requestedStartUs: Long
-    ): Long {
-        val extractor = MediaExtractor()
-
-        return try {
-            extractor.setDataSource(this, uri, null)
-
-            var videoTrack = -1
-
-            for (i in 0 until extractor.trackCount) {
-                val mime =
-                    extractor.getTrackFormat(i)
-                        .getString(MediaFormat.KEY_MIME)
-                        ?: ""
-
-                if (mime.startsWith("video/")) {
-                    videoTrack = i
-                    break
-                }
-            }
-
-            if (videoTrack < 0) {
-                requestedStartUs
-            } else {
-                extractor.selectTrack(videoTrack)
-
-                extractor.seekTo(
-                    requestedStartUs,
-                    MediaExtractor.SEEK_TO_PREVIOUS_SYNC
+    private fun shareSocialMaster() {
+        val uri =
+            socialMasterUri ?: run {
+                toast(
+                    "Create a TikTok or Reels master first"
                 )
-
-                extractor.sampleTime
-                    .takeIf { it >= 0L }
-                    ?: requestedStartUs
+                return
             }
-        } finally {
-            try { extractor.release() } catch (_: Exception) {}
-        }
+
+        startActivity(
+            Intent.createChooser(
+                Intent(
+                    Intent.ACTION_SEND
+                ).apply {
+                    type =
+                        "video/mp4"
+
+                    putExtra(
+                        Intent.EXTRA_STREAM,
+                        uri
+                    )
+
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        "develop.uganda ${socialMasterLabel} master"
+                    )
+
+                    addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                },
+                "Share ${socialMasterLabel} master"
+            )
+        )
     }
 
-    private fun createOutputVideo(muted: Boolean): Uri {
+    private fun publishTempVideo(
+        temp: File,
+        muted: Boolean
+    ): Uri {
+        if (
+            !temp.exists() ||
+            temp.length() <= 0L
+        ) {
+            error(
+                "Transformer output is empty"
+            )
+        }
+
         val stamp =
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
@@ -614,91 +1469,175 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
             ).format(Date())
 
         val name =
-            "DEVELOP_UGANDA_EDIT_V218_" +
+            "DEVELOP_UGANDA_EDIT_V220_" +
                 (if (muted) "MUTED_" else "") +
                 stamp +
                 ".mp4"
 
         val values =
             ContentValues().apply {
-                put(MediaStore.Video.Media.DISPLAY_NAME, name)
-                put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                put(
+                    MediaStore.Video.Media.DISPLAY_NAME,
+                    name
+                )
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(
+                    MediaStore.Video.Media.MIME_TYPE,
+                    "video/mp4"
+                )
+
+                if (
+                    Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.Q
+                ) {
                     put(
                         MediaStore.Video.Media.RELATIVE_PATH,
                         "Movies/develop.uganda/Edited"
                     )
-                    put(MediaStore.Video.Media.IS_PENDING, 1)
+
+                    put(
+                        MediaStore.Video.Media.IS_PENDING,
+                        1
+                    )
                 }
             }
 
-        return contentResolver.insert(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            values
-        ) ?: error("Could not create output video")
-    }
-
-    private fun finalizeOutput(uri: Uri) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            contentResolver.update(
-                uri,
-                ContentValues().apply {
-                    put(MediaStore.Video.Media.IS_PENDING, 0)
-                },
-                null,
-                null
+        val uri =
+            contentResolver.insert(
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                values
+            ) ?: error(
+                "Could not create Gallery output"
             )
+
+        try {
+            contentResolver.openOutputStream(
+                uri,
+                "w"
+            )?.use { output ->
+                FileInputStream(temp).use { input ->
+                    input.copyTo(
+                        output,
+                        1024 * 1024
+                    )
+                }
+            } ?: error(
+                "Could not open Gallery output stream"
+            )
+
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+                contentResolver.update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Video.Media.IS_PENDING,
+                            0
+                        )
+                    },
+                    null,
+                    null
+                )
+            }
+
+            return uri
+        } catch (e: Exception) {
+            try {
+                contentResolver.delete(
+                    uri,
+                    null,
+                    null
+                )
+            } catch (_: Exception) {
+            }
+
+            throw e
         }
     }
 
     private fun playSaved() {
-        val uri = exportedUri ?: run {
-            toast("Save a cut first")
-            return
-        }
+        val uri =
+            exportedUri ?: run {
+                toast("Save a cut first")
+                return
+            }
 
-        try {
-            startActivity(
-                Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, "video/mp4")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-            )
-        } catch (_: Exception) {
-            loadVideo(uri, "SAVED EDIT")
-        }
+        loadVideo(
+            uri,
+            "SAVED EDIT",
+            keepExport = true
+        )
+
+        player?.play()
     }
 
     private fun shareBestAvailable() {
-        val uri = exportedUri ?: sourceUri ?: run {
-            toast("Choose or save a video first")
-            return
-        }
+        val uri =
+            exportedUri ?: sourceUri ?: run {
+                toast(
+                    "Choose or save a video first"
+                )
+                return
+            }
 
         startActivity(
             Intent.createChooser(
                 Intent(Intent.ACTION_SEND).apply {
                     type = "video/mp4"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                    putExtra(
+                        Intent.EXTRA_STREAM,
+                        uri
+                    )
+
+                    addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
                 },
                 "Share develop.uganda video"
             )
         )
     }
 
+    private fun readyForEdit(): Boolean {
+        if (sourceUri == null) {
+            toast("Choose a video first")
+            return false
+        }
+
+        if (durationMs <= 0L) {
+            toast(
+                "Wait for video to finish loading"
+            )
+            return false
+        }
+
+        return true
+    }
+
     private fun currentStartMs(): Long =
-        durationMs * startSeek.progress / 1000L
+        durationMs *
+            startSeek.progress /
+            1000L
 
     private fun currentEndMs(): Long =
-        durationMs * endSeek.progress / 1000L
+        durationMs *
+            endSeek.progress /
+            1000L
 
-    private fun positionToProgress(positionMs: Long): Int {
-        if (durationMs <= 0L) return 0
+    private fun positionToProgress(
+        positionMs: Long
+    ): Int {
+        if (durationMs <= 0L) {
+            return 0
+        }
 
         return (
-            positionMs * 1000L / durationMs
+            positionMs *
+                1000L /
+                durationMs
             )
             .toInt()
             .coerceIn(0, 1000)
@@ -707,114 +1646,36 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
     private fun updateTrimLabels() {
         startLabel.text =
             "IN ${formatTime(currentStartMs())}"
+
         endLabel.text =
             "OUT ${formatTime(currentEndMs())}"
     }
 
-    private fun requirePrepared(): Boolean {
-        if (sourceUri == null) {
-            toast("Choose a video first")
-            return false
-        }
-
-        if (!prepared || durationMs <= 0L) {
-            toast("Wait for video to finish loading")
-            return false
-        }
-
-        return true
-    }
-
-    private fun metadataDuration(uri: Uri): Long {
-        val retriever = MediaMetadataRetriever()
-
-        return try {
-            retriever.setDataSource(this, uri)
-            retriever.extractMetadata(
-                MediaMetadataRetriever.METADATA_KEY_DURATION
-            )
-                ?.toLongOrNull()
-                ?: 0L
-        } catch (_: Exception) {
-            0L
-        } finally {
-            try { retriever.release() } catch (_: Exception) {}
-        }
-    }
-
-    private fun videoDetails(uri: Uri): String {
-        val retriever = MediaMetadataRetriever()
-
-        return try {
-            retriever.setDataSource(this, uri)
-
-            val width =
-                retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
-                )
-            val height =
-                retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
-                )
-            val rotation =
-                retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION
-                )
-
-            buildString {
-                if (!width.isNullOrBlank() && !height.isNullOrBlank()) {
-                    append("$width×$height")
-                }
-
-                if (!rotation.isNullOrBlank() && rotation != "0") {
-                    if (isNotEmpty()) append(" • ")
-                    append("ROT ${rotation}°")
-                }
-
-                val mime = contentResolver.getType(uri)
-
-                if (!mime.isNullOrBlank()) {
-                    if (isNotEmpty()) append(" • ")
-                    append(mime)
-                }
-            }
-        } catch (_: Exception) {
-            ""
-        } finally {
-            try { retriever.release() } catch (_: Exception) {}
-        }
-    }
-
-    private fun readRotation(uri: Uri): Int {
-        val retriever = MediaMetadataRetriever()
-
-        return try {
-            retriever.setDataSource(this, uri)
-            retriever.extractMetadata(
-                MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION
-            )
-                ?.toIntOrNull()
-                ?: 0
-        } catch (_: Exception) {
-            0
-        } finally {
-            try { retriever.release() } catch (_: Exception) {}
-        }
-    }
-
-    private fun displayName(uri: Uri): String =
+    private fun displayName(
+        uri: Uri
+    ): String =
         try {
             contentResolver.query(
                 uri,
-                arrayOf(MediaStore.MediaColumns.DISPLAY_NAME),
+                arrayOf(
+                    MediaStore.MediaColumns.DISPLAY_NAME
+                ),
                 null,
                 null,
                 null
             )?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0) else null
-            } ?: (uri.lastPathSegment ?: "video")
+                if (cursor.moveToFirst()) {
+                    cursor.getString(0)
+                } else {
+                    null
+                }
+            } ?: (
+                uri.lastPathSegment
+                    ?: "video"
+                )
         } catch (_: Exception) {
-            uri.lastPathSegment ?: "video"
+            uri.lastPathSegment
+                ?: "video"
         }
 
     private fun seekListener(
@@ -832,8 +1693,15 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(
+                seekBar: SeekBar?
+            ) {
+            }
+
+            override fun onStopTrackingTouch(
+                seekBar: SeekBar?
+            ) {
+            }
         }
 
     private fun action(
@@ -849,13 +1717,25 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
             background =
                 GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dp(15).toFloat()
-                    setColor(0xFF092236.toInt())
-                    setStroke(dp(1), accent)
+                    shape =
+                        GradientDrawable.RECTANGLE
+
+                    cornerRadius =
+                        dp(15).toFloat()
+
+                    setColor(
+                        0xFF092236.toInt()
+                    )
+
+                    setStroke(
+                        dp(1),
+                        accent
+                    )
                 }
 
-            setOnClickListener { click.invoke() }
+            setOnClickListener {
+                click.invoke()
+            }
         }
 
     private fun label(
@@ -868,14 +1748,20 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
             text = value
             textSize = sp
             setTextColor(color)
+
             typeface =
                 Typeface.create(
                     Typeface.DEFAULT,
-                    if (bold) Typeface.BOLD else Typeface.NORMAL
+                    if (bold) {
+                        Typeface.BOLD
+                    } else {
+                        Typeface.NORMAL
+                    }
                 )
         }
 
-    private fun weight(): LinearLayout.LayoutParams =
+    private fun weight():
+        LinearLayout.LayoutParams =
         LinearLayout.LayoutParams(
             0,
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -885,14 +1771,21 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
             marginEnd = dp(3)
         }
 
-    private fun formatTime(ms: Long): String {
-        val totalSeconds =
+    private fun formatTime(
+        ms: Long
+    ): String {
+        val total =
             (ms / 1000L)
                 .coerceAtLeast(0L)
 
-        val hours = totalSeconds / 3600L
-        val minutes = (totalSeconds % 3600L) / 60L
-        val seconds = totalSeconds % 60L
+        val hours =
+            total / 3600L
+
+        val minutes =
+            (total % 3600L) / 60L
+
+        val seconds =
+            total % 60L
 
         return if (hours > 0L) {
             String.format(
@@ -912,11 +1805,18 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density)
+    private fun dp(
+        value: Int
+    ): Int =
+        (
+            value *
+                resources.displayMetrics.density
+            )
             .roundToInt()
 
-    private fun toast(value: String) {
+    private fun toast(
+        value: String
+    ) {
         Toast.makeText(
             this,
             value,
