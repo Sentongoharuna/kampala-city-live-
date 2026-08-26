@@ -1,0 +1,315 @@
+name: Build develop.uganda V223 FIX1 All Cameras Auto View
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify FIX1 package and current base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW-PATCH.zip
+
+          CODE=$(grep -oE 'versionCode = [0-9]+' v172-source/app/build.gradle.kts | awk '{print $3}')
+
+          if [ "$CODE" != "22100" ] && [ "$CODE" != "22101" ] && [ "$CODE" != "22200" ]; then
+            echo "V223 FIX1 expects V221.0, V221.1, or V222. Found versionCode=$CODE"
+            exit 1
+          fi
+
+      - name: Unpack and syntax-check FIX1
+        run: |
+          set -e
+          rm -rf /tmp/v223fix1
+          mkdir -p /tmp/v223fix1
+          unzip -q DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW-PATCH.zip -d /tmp/v223fix1
+
+          python3 -m py_compile /tmp/v223fix1/v221_fix1_patch.py
+          python3 -m py_compile /tmp/v223fix1/v222_patch.py
+          python3 -m py_compile /tmp/v223fix1/v223_fix1_patch.py
+
+          if grep -q 'tuned banner anchor missing' /tmp/v223fix1/v223_fix1_patch.py; then
+            echo "Old brittle V223 banner anchor is still present."
+            exit 1
+          fi
+
+      - name: Retain V221 FIX1 and V222 if missing
+        run: |
+          set -e
+
+          CODE=$(grep -oE 'versionCode = [0-9]+' v172-source/app/build.gradle.kts | awk '{print $3}')
+
+          if [ "$CODE" = "22100" ]; then
+            echo "Applying V221 FIX1."
+            python3 /tmp/v223fix1/v221_fix1_patch.py
+            CODE=22101
+          fi
+
+          if [ "$CODE" = "22101" ]; then
+            echo "Applying V222 Social Media Camera as one additional camera."
+            python3 /tmp/v223fix1/v222_patch.py
+            CODE=22200
+          fi
+
+          grep -q 'versionCode = 22200' v172-source/app/build.gradle.kts
+
+      - name: Lock working CameraX bind engines
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+          }
+
+          hashes = {}
+
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              hashes[name] = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+
+          Path("/tmp/v223fix1-camera-hashes.json").write_text(
+              json.dumps(hashes),
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Apply V223 FIX1 All Cameras Auto View
+        run: |
+          set -e
+          python3 /tmp/v223fix1/v223_fix1_patch.py
+
+      - name: Prove CameraX bind engines unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          before = json.loads(
+              Path("/tmp/v223fix1-camera-hashes.json").read_text(encoding="utf-8")
+          )
+
+          paths = {
+              "report": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"),
+              "live": Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"),
+          }
+
+          for name, path in paths.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index("    private fun bindCamera() {")
+              end = text.index("    private fun ", start + len("    private fun bindCamera() {"))
+              current = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+
+              if current != before[name]:
+                  raise SystemExit(f"{name} CameraX bind/capture engine changed")
+
+          print("PASS: CameraX bind/capture engines unchanged.")
+          PY
+
+      - name: Verify all cameras and Auto View
+        run: |
+          set -e
+
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          LIVE="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          # All specialist cameras remain.
+          grep -q 'DevelopUgandaFocusAssistCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaMeteringLockCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaHorizonCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaSteadyShotCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaNightIntelligenceCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaAllProCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaAudioGuardCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaVerifiedCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaThermalSafeCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaModeSignatureCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaAutoDirectorCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaSocialMediaCameraActivity' "$INDEPENDENT"
+
+          # V222 remains one direct launcher among the others.
+          grep -q 'OPEN V205 FOCUS CAMERA' "$HOME"
+          grep -q 'OPEN V209 NIGHT CAMERA' "$HOME"
+          grep -q 'OPEN V215 AUTO CAMERA' "$HOME"
+          grep -q 'OPEN V222 SM CAMERA' "$HOME"
+
+          # Existing tuning remains.
+          grep -q 'quality("ACTION STAB")' "$REPORT"
+          grep -q 'quality("LOW LIGHT")' "$REPORT"
+          grep -q 'quality("SOCIAL HDR")' "$REPORT"
+          grep -q 'autoDirectorEnabled = true' "$REPORT"
+          grep -q 'reportDisplayMode = "SOCIAL POST"' "$REPORT"
+
+          # Saved REPORT video identifies specialist camera.
+          grep -q 'CAMERA • ${cameraExperienceShortLabel()}' "$REPORT"
+
+          # Real on-device scene labeling.
+          grep -q 'com.google.mlkit:image-labeling:17.0.9' "$GRADLE"
+          grep -q 'ImageLabeling.getClient' "$REPORT"
+          grep -q 'previewView.bitmap' "$REPORT"
+          grep -q 'AUTO VIEW • likely' "$REPORT"
+          grep -q 'ImageLabeling.getClient' "$LIVE"
+          grep -q 'previewView.bitmap' "$LIVE"
+          grep -q 'AUTO VIEW • likely' "$LIVE"
+
+          # Social output still retained.
+          grep -q 'exportAutomaticSocialMaster' "$REPORT"
+          grep -q 'Movies/develop.uganda/SM Posts' "$REPORT"
+
+          grep -q 'versionCode = 22301' "$GRADLE"
+          grep -q 'versionName = "223.1-all-cameras-auto-view-fix1"' "$GRADLE"
+
+          echo "PASS: V223 FIX1 source verification completed."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V223 FIX1 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v223-fix1-build.log
+
+      - name: Print exact compiler errors and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v223-fix1-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V223 FIX1 IMPORTANT ERRORS ====="
+
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v223-fix1-build.log \
+            | head -3200 \
+            || true
+
+          echo "===== SOURCE CONTEXT ====="
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v223-fix1-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          for filename, line_text, col in re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )[:28]:
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+
+              if not files:
+                  continue
+
+              lines = files[0].read_text(encoding="utf-8").splitlines()
+              print("\nFILE:", files[0], "LINE:", line_no)
+
+              for n in range(
+                  max(1, line_no - 32),
+                  min(len(lines), line_no + 58) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V223 FIX1 only after successful build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaEditorActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V223 FIX1 already committed"
+          else
+            git commit -m "Fix develop.uganda V223 All Cameras Auto View"
+            git push
+          fi
+
+      - name: Package V223 FIX1 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V223 FIX1 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW.apk
+
+      - name: Upload V223 FIX1 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW
+          path: DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V223 FIX1 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW-SOURCE
+          path: DEVELOP-UGANDA-V223-FIX1-ALL-CAMERAS-AUTO-VIEW-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V223 FIX1 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V223-FIX1-BUILD-LOG
+          path: v172-source/v223-fix1-build.log
+          if-no-files-found: warn
+          retention-days: 7
