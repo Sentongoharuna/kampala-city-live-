@@ -20,6 +20,7 @@ import android.location.Address
 import android.location.Geocoder
 import android.location.GnssStatus
 import android.location.LocationManager
+import android.media.MediaMetadataRetriever
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -77,13 +78,33 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Brightness
+import androidx.media3.effect.Presentation
+import androidx.media3.transformer.AudioEncoderSettings
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultEncoderFactory
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.Effects
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
+import androidx.media3.transformer.VideoEncoderSettings
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeler
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
@@ -99,6 +120,7 @@ import kotlin.math.log10
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
+@OptIn(UnstableApi::class)
 open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
     private companion object {
@@ -146,6 +168,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var previewSystemView: TextView
     private lateinit var previewHealthView: TextView
     private lateinit var cameraExperienceBannerView: TextView
+    private lateinit var autoViewDescriptionView: TextView
     private lateinit var focusReticleView: TextView
     private lateinit var horizonGuardView: TextView
     private lateinit var motionGuardView: TextView
@@ -267,6 +290,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var lastPreviewTapMs = 0L
     private var focusLongPressTriggered = false
     private var focusLockActive = false
+    private lateinit var autoViewLabeler: ImageLabeler
+    private var autoViewBusy = false
+    private var autoViewSummary = "AUTO VIEW • analysing scene"
 
     private val hideFocusReticleRunnable =
         Runnable {
@@ -314,6 +340,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var imageCapture: ImageCapture? = null
     private var recording: Recording? = null
     private var overlayEffect: OverlayEffect? = null
+    private var automaticSocialTransformer: Transformer? = null
+    private var automaticSocialExportActive = false
     private var useFront = false
     private var torchOn = false
 
@@ -441,6 +469,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var baseName = ""
 
     private val uiHandler = Handler(Looper.getMainLooper())
+
+    private val autoViewRunnable =
+        object : Runnable {
+            override fun run() {
+                analyzeAutoViewFrame()
+
+                uiHandler.postDelayed(
+                    this,
+                    3500L
+                )
+            }
+        }
     private val clock = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     private val tick = object : Runnable {
@@ -590,6 +630,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         enforceImmersiveCameraWindow()
 
         buildUi()
+        startAutoViewDescription()
         requestPermissionsAndStart()
         uiHandler.post(tick)
     }
@@ -1092,6 +1133,25 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(27)
+            )
+        )
+
+        autoViewDescriptionView =
+            hud(
+                "AUTO VIEW • analysing scene",
+                7.2f,
+                0xFF62D8C9.toInt(),
+                bold = true
+            ).apply {
+                maxLines = 1
+                isSingleLine = true
+            }
+
+        previewNarrationPanel.addView(
+            autoViewDescriptionView,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(24)
             )
         )
 
@@ -2634,6 +2694,581 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             .show()
     }
 
+
+    private fun isSocialMediaCamera(): Boolean {
+        return cameraExperienceId ==
+            "V222_SOCIAL"
+    }
+
+    private fun exportAutomaticSocialMaster(
+        inputUri: Uri
+    ) {
+        if (
+            !isSocialMediaCamera() ||
+            automaticSocialExportActive
+        ) {
+            return
+        }
+
+        automaticSocialExportActive =
+            true
+
+        runOnUiThread {
+            if (
+                ::statusView.isInitialized
+            ) {
+                statusView.text =
+                    "SM OPTIMIZING"
+
+                statusView.setTextColor(
+                    0xFF62D8C9.toInt()
+                )
+            }
+
+            toast(
+                "SM Camera • creating social-ready copy"
+            )
+        }
+
+        val exportDir =
+            File(
+                cacheDir,
+                "v222_social_camera_exports"
+            ).apply {
+                mkdirs()
+            }
+
+        val temp =
+            File(
+                exportDir,
+                "sm_${System.currentTimeMillis()}.mp4"
+            )
+
+        if (
+            temp.exists()
+        ) {
+            temp.delete()
+        }
+
+        val sourceItem =
+            MediaItem.Builder()
+                .setUri(
+                    inputUri
+                )
+                .build()
+
+        val socialEffects =
+            Effects(
+                emptyList(),
+                listOf(
+                    Presentation.createForWidthAndHeight(
+                        1080,
+                        1920,
+                        Presentation.LAYOUT_SCALE_TO_FIT
+                    ),
+
+                    // Deliberately non-zero so Media3 cannot transmux the
+                    // camera bitstream unchanged. This forces a real encode.
+                    Brightness(
+                        0.0001f
+                    )
+                )
+            )
+
+        val edited =
+            EditedMediaItem.Builder(
+                sourceItem
+            )
+                .setFrameRate(
+                    30
+                )
+                .setEffects(
+                    socialEffects
+                )
+                .build()
+
+        val sequence =
+            EditedMediaItemSequence.withAudioAndVideoFrom(
+                listOf(
+                    edited
+                )
+            )
+
+        val compositionBuilder =
+            Composition.Builder(
+                listOf(
+                    sequence
+                )
+            )
+
+        if (
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+        ) {
+            compositionBuilder.setHdrMode(
+                Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL
+            )
+        }
+
+        val composition =
+            compositionBuilder
+                .build()
+
+        val videoSettings =
+            VideoEncoderSettings.Builder()
+                .setBitrate(
+                    16_000_000
+                )
+                .setiFrameIntervalSeconds(
+                    2f
+                )
+                .build()
+
+        val audioSettings =
+            AudioEncoderSettings.Builder()
+                .setBitrate(
+                    256_000
+                )
+                .build()
+
+        val encoderFactory =
+            DefaultEncoderFactory.Builder(
+                this
+            )
+                .setRequestedVideoEncoderSettings(
+                    videoSettings
+                )
+                .setRequestedAudioEncoderSettings(
+                    audioSettings
+                )
+                .build()
+
+        val listener =
+            object :
+                Transformer.Listener {
+
+                override fun onCompleted(
+                    composition: Composition,
+                    result: ExportResult
+                ) {
+                    automaticSocialTransformer =
+                        null
+
+                    Thread {
+                        try {
+                            val verification =
+                                verifyAutomaticSocialMaster(
+                                    temp
+                                )
+
+                            publishAutomaticSocialMaster(
+                                temp
+                            )
+
+                            temp.delete()
+
+                            automaticSocialExportActive =
+                                false
+
+                            runOnUiThread {
+                                if (
+                                    ::statusView.isInitialized
+                                ) {
+                                    statusView.text =
+                                        "SM READY"
+
+                                    statusView.setTextColor(
+                                        0xFF62D8C9.toInt()
+                                    )
+                                }
+
+                                toast(
+                                    "SM READY • develop.uganda / SM Posts • $verification"
+                                )
+                            }
+                        } catch (
+                            e: Exception
+                        ) {
+                            automaticSocialExportActive =
+                                false
+
+                            temp.delete()
+
+                            runOnUiThread {
+                                if (
+                                    ::statusView.isInitialized
+                                ) {
+                                    statusView.text =
+                                        "SM EXPORT ERROR"
+
+                                    statusView.setTextColor(
+                                        0xFFFF5A54.toInt()
+                                    )
+                                }
+
+                                toast(
+                                    "SM optimization failed • original video is safe"
+                                )
+                            }
+                        }
+                    }.start()
+                }
+
+                override fun onError(
+                    composition: Composition,
+                    result: ExportResult,
+                    exception: ExportException
+                ) {
+                    automaticSocialTransformer =
+                        null
+
+                    automaticSocialExportActive =
+                        false
+
+                    temp.delete()
+
+                    runOnUiThread {
+                        if (
+                            ::statusView.isInitialized
+                        ) {
+                            statusView.text =
+                                "SM EXPORT ERROR"
+
+                            statusView.setTextColor(
+                                0xFFFF5A54.toInt()
+                            )
+                        }
+
+                        toast(
+                            "SM optimization failed • original video is safe"
+                        )
+                    }
+                }
+            }
+
+        automaticSocialTransformer =
+            Transformer.Builder(
+                this
+            )
+                .setEncoderFactory(
+                    encoderFactory
+                )
+                .setVideoMimeType(
+                    MimeTypes.VIDEO_H264
+                )
+                .setAudioMimeType(
+                    MimeTypes.AUDIO_AAC
+                )
+                .addListener(
+                    listener
+                )
+                .build()
+                .also {
+                    it.start(
+                        composition,
+                        temp.absolutePath
+                    )
+                }
+    }
+
+    private fun verifyAutomaticSocialMaster(
+        temp: File
+    ): String {
+        if (
+            !temp.exists() ||
+            temp.length() <=
+                0L
+        ) {
+            error(
+                "SM output is empty"
+            )
+        }
+
+        val retriever =
+            MediaMetadataRetriever()
+
+        return try {
+            retriever.setDataSource(
+                temp.absolutePath
+            )
+
+            val width =
+                retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
+                )
+                    ?.toIntOrNull()
+                    ?: 0
+
+            val height =
+                retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
+                )
+                    ?.toIntOrNull()
+                    ?: 0
+
+            val totalBitrate =
+                retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_BITRATE
+                )
+                    ?.toLongOrNull()
+                    ?: 0L
+
+            if (
+                width !=
+                    1080 ||
+                height !=
+                    1920
+            ) {
+                error(
+                    "Unexpected SM dimensions ${width}×${height}"
+                )
+            }
+
+            if (
+                totalBitrate >
+                    21_600_000L
+            ) {
+                error(
+                    "SM bitrate remained too close to original"
+                )
+            }
+
+            if (
+                totalBitrate <
+                    4_000_000L
+            ) {
+                error(
+                    "SM bitrate unexpectedly low"
+                )
+            }
+
+            val mbps =
+                String.format(
+                    Locale.US,
+                    "%.1f",
+                    totalBitrate /
+                        1_000_000.0
+                )
+
+            "1080×1920 • $mbps Mbps"
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun publishAutomaticSocialMaster(
+        temp: File
+    ): Uri {
+        val stamp =
+            SimpleDateFormat(
+                "yyyyMMdd_HHmmss",
+                Locale.US
+            ).format(
+                Date()
+            )
+
+        val name =
+            "DEVELOP_UGANDA_V222_SM_POST_" +
+                stamp +
+                ".mp4"
+
+        val values =
+            ContentValues().apply {
+                put(
+                    MediaStore.Video.Media.DISPLAY_NAME,
+                    name
+                )
+
+                put(
+                    MediaStore.Video.Media.MIME_TYPE,
+                    "video/mp4"
+                )
+
+                if (
+                    Build.VERSION.SDK_INT >=
+                        Build.VERSION_CODES.Q
+                ) {
+                    put(
+                        MediaStore.Video.Media.RELATIVE_PATH,
+                        "Movies/develop.uganda/SM Posts"
+                    )
+
+                    put(
+                        MediaStore.Video.Media.IS_PENDING,
+                        1
+                    )
+                }
+            }
+
+        val uri =
+            contentResolver.insert(
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                values
+            ) ?: error(
+                "Could not create SM Posts video"
+            )
+
+        try {
+            contentResolver.openOutputStream(
+                uri,
+                "w"
+            )?.use { output ->
+                FileInputStream(
+                    temp
+                ).use { input ->
+                    input.copyTo(
+                        output,
+                        1024 * 1024
+                    )
+                }
+            } ?: error(
+                "Could not write SM Posts video"
+            )
+
+            if (
+                Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.Q
+            ) {
+                contentResolver.update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Video.Media.IS_PENDING,
+                            0
+                        )
+                    },
+                    null,
+                    null
+                )
+            }
+
+            return uri
+        } catch (
+            e: Exception
+        ) {
+            try {
+                contentResolver.delete(
+                    uri,
+                    null,
+                    null
+                )
+            } catch (_: Exception) {
+            }
+
+            throw e
+        }
+    }
+
+
+    private fun startAutoViewDescription() {
+        if (
+            ::autoViewLabeler.isInitialized
+        ) {
+            return
+        }
+
+        autoViewLabeler =
+            ImageLabeling.getClient(
+                ImageLabelerOptions.Builder()
+                    .setConfidenceThreshold(
+                        0.62f
+                    )
+                    .build()
+            )
+
+        uiHandler.removeCallbacks(
+            autoViewRunnable
+        )
+
+        uiHandler.postDelayed(
+            autoViewRunnable,
+            1700L
+        )
+    }
+
+    private fun analyzeAutoViewFrame() {
+        if (
+            autoViewBusy ||
+            !::previewView.isInitialized ||
+            previewView.width <= 0 ||
+            previewView.height <= 0
+        ) {
+            return
+        }
+
+        val bitmap =
+            try {
+                previewView.bitmap
+            } catch (_: Exception) {
+                null
+            } ?: return
+
+        autoViewBusy =
+            true
+
+        autoViewLabeler.process(
+            InputImage.fromBitmap(
+                bitmap,
+                0
+            )
+        )
+            .addOnSuccessListener {
+                    labels ->
+                val top =
+                    labels
+                        .sortedByDescending {
+                            it.confidence
+                        }
+                        .filter {
+                            it.confidence >= 0.62f
+                        }
+                        .take(3)
+                        .map {
+                            it.text.trim()
+                        }
+                        .filter {
+                            it.isNotBlank()
+                        }
+
+                autoViewSummary =
+                    if (
+                        top.isEmpty()
+                    ) {
+                        "AUTO VIEW • scene not confidently identified"
+                    } else {
+                        "AUTO VIEW • likely " +
+                            top.joinToString(
+                                " • "
+                            )
+                    }
+
+                if (
+                    ::autoViewDescriptionView.isInitialized
+                ) {
+                    autoViewDescriptionView.text =
+                        autoViewSummary
+                }
+            }
+            .addOnFailureListener {
+                autoViewSummary =
+                    "AUTO VIEW • analysing scene"
+
+                if (
+                    ::autoViewDescriptionView.isInitialized
+                ) {
+                    autoViewDescriptionView.text =
+                        autoViewSummary
+                }
+            }
+            .addOnCompleteListener {
+                autoViewBusy =
+                    false
+            }
+    }
+
     private fun createIntegrityRecord(
         videoUri: Uri,
         finishedUtc: String
@@ -2747,7 +3382,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V221"
+                            "V223"
                         )
                         put(
                             "camera_engine",
@@ -4801,7 +5436,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawStrongRecordedText(
             c,
-            "${sceneTag()} • V221",
+            "${sceneTag()} • V223",
             safeLeft +
                 brandWidth +
                 (11f * u),
@@ -4862,7 +5497,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawFitText(
             c,
-            "$recState   •   TC ${tc()}   •   V221   •   THERM ${thermalStateLabel()}",
+            "$recState   •   TC ${tc()}   •   V223   •   THERM ${thermalStateLabel()}",
             safeLeft,
             y,
             maxWidth,
@@ -6760,7 +7395,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V221_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V223_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -6918,6 +7553,15 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             createIntegrityRecord(
                                 event.outputResults.outputUri,
                                 Instant.now().toString()
+                            )
+                        }
+
+                        if (
+                            !hadError &&
+                            isSocialMediaCamera()
+                        ) {
+                            exportAutomaticSocialMaster(
+                                event.outputResults.outputUri
                             )
                         }
 
@@ -7346,6 +7990,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "V214 • CINEMATIC LOOKS"
             "V215_AUTO" ->
                 "V215 • SMART AUTO"
+            "V222_SOCIAL" ->
+                "V222 • SOCIAL MEDIA CAM"
             else ->
                 "V210 • EVERYDAY PRO"
         }
@@ -7382,6 +8028,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "CINEMATIC • PEOPLE • TRAVEL • HDR/WARM WITH DEVICE FALLBACK"
             "V215_AUTO" ->
                 "QUICK SHOOTING • AUTO CHOOSES LOW-LIGHT/ACTION/60/BALANCED"
+            "V222_SOCIAL" ->
+                "RECORD → AUTO OPTIMIZE → SM POSTS • 9:16 • SOCIAL FHD • ORIGINAL + SOCIAL COPY"
             else ->
                 "ALL PRO CAMERA TOOLS"
         }
@@ -7412,6 +8060,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "CINEMATIC / PEOPLE / TRAVEL"
             "V215_AUTO" ->
                 "QUICK SHOOTING / WHEN UNSURE"
+            "V222_SOCIAL" ->
+                "TIKTOK / REELS / SHORTS / SOCIAL POSTS"
             else ->
                 "EVERYDAY PROFESSIONAL CAPTURE"
         }
@@ -7430,6 +8080,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             "V213_THERMAL" -> 0xFFC76D73.toInt()
             "V214_SIGNATURE" -> 0xFFA793D8.toInt()
             "V215_AUTO" -> 0xFF73B7D9.toInt()
+            "V222_SOCIAL" -> 0xFF62D8C9.toInt()
             else -> 0xFFAEBDEB.toInt()
         }
     }
@@ -7521,6 +8172,16 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 scene("REPORTER")
                 look("CLEAN")
                 autoDirectorEnabled = true
+            }
+            "V222_SOCIAL" -> {
+                quality("SOCIAL FHD")
+                scene("REPORTER")
+                look("CLEAN")
+                reportHudSizeIndex = 0
+                reportHudContrastIndex = 1
+                reportHudBackingIndex = 1
+                reportDisplayMode = "SOCIAL POST"
+                autoDirectorEnabled = false
             }
         }
 
@@ -10654,6 +11315,15 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         uiHandler.removeCallbacksAndMessages(
             null
         )
+
+        if (
+            ::autoViewLabeler.isInitialized
+        ) {
+            try {
+                autoViewLabeler.close()
+            } catch (_: Exception) {
+            }
+        }
 
         try {
             fused.removeLocationUpdates(

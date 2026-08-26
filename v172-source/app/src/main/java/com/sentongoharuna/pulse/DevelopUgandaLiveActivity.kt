@@ -54,6 +54,10 @@ import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeler
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.text.SimpleDateFormat
 import java.io.File
 import java.io.FileOutputStream
@@ -74,6 +78,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var liveSubTitle: TextView
     private lateinit var livePreviewMeta: TextView
     private lateinit var livePreviewTech: TextView
+    private lateinit var liveAutoViewDescriptionView: TextView
     private lateinit var netLamp: TextView
     private lateinit var gpsLamp: TextView
     private lateinit var micLamp: TextView
@@ -230,6 +235,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private var liveAudioAmplitude = 0.0
     private var liveAudioPeakAmplitude = 0.0
     private var liveBlinkOn = true
+    private lateinit var liveAutoViewLabeler: ImageLabeler
+    private var liveAutoViewBusy = false
+    private var liveAutoViewSummary = "AUTO VIEW • analysing scene"
 
     private lateinit var livePowerManager: PowerManager
     @Volatile private var liveThermalStatus =
@@ -254,6 +262,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private val uiHandler =
         Handler(Looper.getMainLooper())
+
+    private val liveAutoViewRunnable =
+        object : Runnable {
+            override fun run() {
+                analyzeLiveAutoViewFrame()
+
+                uiHandler.postDelayed(
+                    this,
+                    3500L
+                )
+            }
+        }
 
     private val uiTicker =
         object : Runnable {
@@ -315,6 +335,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         loadLiveIdentity()
         loadLiveCameraPreferences()
         buildLiveUi()
+        startLiveAutoViewDescription()
         requestNeededPermissions()
 
         uiHandler.post(
@@ -326,6 +347,15 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         uiHandler.removeCallbacksAndMessages(
             null
         )
+
+        if (
+            ::liveAutoViewLabeler.isInitialized
+        ) {
+            try {
+                liveAutoViewLabeler.close()
+            } catch (_: Exception) {
+            }
+        }
 
         recording?.stop()
         recording = null
@@ -394,6 +424,113 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     "LIVE REPORT"
                 }
                 ?: "LIVE REPORT"
+    }
+
+
+    private fun startLiveAutoViewDescription() {
+        if (
+            ::liveAutoViewLabeler.isInitialized
+        ) {
+            return
+        }
+
+        liveAutoViewLabeler =
+            ImageLabeling.getClient(
+                ImageLabelerOptions.Builder()
+                    .setConfidenceThreshold(
+                        0.62f
+                    )
+                    .build()
+            )
+
+        uiHandler.removeCallbacks(
+            liveAutoViewRunnable
+        )
+
+        uiHandler.postDelayed(
+            liveAutoViewRunnable,
+            1700L
+        )
+    }
+
+    private fun analyzeLiveAutoViewFrame() {
+        if (
+            liveAutoViewBusy ||
+            !::previewView.isInitialized ||
+            previewView.width <= 0 ||
+            previewView.height <= 0
+        ) {
+            return
+        }
+
+        val bitmap =
+            try {
+                previewView.bitmap
+            } catch (_: Exception) {
+                null
+            } ?: return
+
+        liveAutoViewBusy =
+            true
+
+        liveAutoViewLabeler.process(
+            InputImage.fromBitmap(
+                bitmap,
+                0
+            )
+        )
+            .addOnSuccessListener {
+                    labels ->
+                val top =
+                    labels
+                        .sortedByDescending {
+                            it.confidence
+                        }
+                        .filter {
+                            it.confidence >= 0.62f
+                        }
+                        .take(3)
+                        .map {
+                            it.text.trim()
+                        }
+                        .filter {
+                            it.isNotBlank()
+                        }
+
+                liveAutoViewSummary =
+                    if (
+                        top.isEmpty()
+                    ) {
+                        "AUTO VIEW • scene not confidently identified"
+                    } else {
+                        "AUTO VIEW • likely " +
+                            top.joinToString(
+                                " • "
+                            )
+                    }
+
+                if (
+                    ::liveAutoViewDescriptionView.isInitialized
+                ) {
+                    liveAutoViewDescriptionView.text =
+                        liveAutoViewSummary
+                }
+            }
+            .addOnFailureListener {
+                liveAutoViewSummary =
+                    "AUTO VIEW • analysing scene"
+
+                if (
+                    ::liveAutoViewDescriptionView.isInitialized
+                ) {
+                    liveAutoViewDescriptionView.text =
+                        liveAutoViewSummary
+                }
+            }
+            .addOnCompleteListener {
+                liveAutoViewBusy =
+                    false
+            }
     }
 
     private fun buildLiveUi() {
@@ -481,7 +618,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V221",
+                "develop.uganda • V223",
                 20f,
                 amber,
                 true
@@ -560,6 +697,28 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         topPanel.addView(
             livePreviewTech
+        )
+
+        liveAutoViewDescriptionView =
+            label(
+                "AUTO VIEW • analysing scene",
+                8f,
+                0xFF62D8C9.toInt(),
+                true
+            ).apply {
+                maxLines = 1
+                isSingleLine = true
+
+                setPadding(
+                    0,
+                    dp(2),
+                    0,
+                    dp(3)
+                )
+            }
+
+        topPanel.addView(
+            liveAutoViewDescriptionView
         )
 
         val signalRow =
@@ -2284,7 +2443,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        // V221: brand/build and blinking LIVE status use separate lanes.
+        // V223: brand/build and blinking LIVE status use separate lanes.
         // The build capsule never receives the LIVE glow.
         val brandX =
             safeLeft +
@@ -2308,7 +2467,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         val buildText =
-            "V221"
+            "V223"
 
         val brandWidth =
             paint.measureText(
@@ -2678,7 +2837,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V221   |   THERMAL • ${liveThermalStateLabel()}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V223   |   THERMAL • ${liveThermalStateLabel()}",
             safeLeft,
             safeTop +
                 (126f * u),
@@ -2823,7 +2982,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V221",
+            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V223",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -3398,7 +3557,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V221_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V223_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 

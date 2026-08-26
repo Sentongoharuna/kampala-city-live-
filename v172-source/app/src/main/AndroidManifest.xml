@@ -82,6 +82,11 @@
             android:exported="false"/>
 
         <activity
+            android:name=".DevelopUgandaSocialMediaCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".DevelopUgandaCameraActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>

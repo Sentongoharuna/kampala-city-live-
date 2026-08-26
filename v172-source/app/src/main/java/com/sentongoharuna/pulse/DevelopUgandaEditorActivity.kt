@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +30,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.effect.Brightness
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.AudioEncoderSettings
 import androidx.media3.transformer.Composition
@@ -155,7 +157,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
         root.addView(
             label(
-                "develop.uganda  EDITOR V221",
+                "develop.uganda  EDITOR V221.1",
                 21f,
                 0xFFAEBDEB.toInt(),
                 true
@@ -164,7 +166,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
         root.addView(
             label(
-                "MEDIA3 EDITOR + SOCIAL UPLOAD MASTER • ORIGINAL STAYS UNTOUCHED",
+                "OPTIONAL EDITOR SOCIAL MASTER • V222 SM CAMERA IS PRIMARY",
                 9.5f,
                 0xFF91B6A0.toInt(),
                 true
@@ -463,7 +465,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
         root.addView(
             label(
-                "SOCIAL UPLOAD MASTER • 1080×1920 • H.264 • AAC • 30 FPS MAX • 2s KEYFRAMES",
+                "SOCIAL MASTER • FORCED RE-ENCODE • 1080×1920 • H.264 • AAC • 30 FPS MAX • 2s KEYFRAMES",
                 8.5f,
                 0xFF91B6A0.toInt(),
                 true
@@ -1128,6 +1130,14 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                         1080,
                         1920,
                         Presentation.LAYOUT_SCALE_TO_FIT
+                    ),
+
+                    // Media3 may transmux when input/output already match.
+                    // A tiny non-zero RGB effect is visually negligible but
+                    // requires decode -> process -> encode, so the requested
+                    // social bitrate and H.264 encoder settings are applied.
+                    Brightness(
+                        0.0001f
                     )
                 )
             )
@@ -1201,7 +1211,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                 .build()
 
         statusView.text =
-            "$platform MASTER • preparing 1080×1920 H.264/AAC • ${bitrate / 1_000_000} Mbps target"
+            "$platform MASTER • FORCED RE-ENCODE • 1080×1920 H.264/AAC • ${bitrate / 1_000_000} Mbps target"
 
         val listener =
             object :
@@ -1216,6 +1226,14 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
                     Thread {
                         try {
+                            val verification =
+                                verifySocialEncode(
+                                    temp =
+                                        temp,
+                                    requestedBitrate =
+                                        bitrate
+                                )
+
                             val uri =
                                 publishSocialMaster(
                                     temp =
@@ -1234,7 +1252,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
 
                             runOnUiThread {
                                 statusView.text =
-                                    "$platform MASTER SAVED • 1080×1920 • H.264 • AAC • 30 FPS MAX • original preserved"
+                                    "$platform MASTER SAVED • FORCED RE-ENCODE VERIFIED • $verification • original preserved"
 
                                 toast(
                                     "$platform social master saved"
@@ -1299,6 +1317,103 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
                 }
     }
 
+
+    private fun verifySocialEncode(
+        temp: File,
+        requestedBitrate: Int
+    ): String {
+        if (
+            !temp.exists() ||
+            temp.length() <=
+                0L
+        ) {
+            error(
+                "Social master output is empty"
+            )
+        }
+
+        val retriever =
+            MediaMetadataRetriever()
+
+        return try {
+            retriever.setDataSource(
+                temp.absolutePath
+            )
+
+            val width =
+                retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
+                )
+                    ?.toIntOrNull()
+                    ?: 0
+
+            val height =
+                retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
+                )
+                    ?.toIntOrNull()
+                    ?: 0
+
+            val totalBitrate =
+                retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_BITRATE
+                )
+                    ?.toLongOrNull()
+                    ?: 0L
+
+            if (
+                width !=
+                    1080 ||
+                height !=
+                    1920
+            ) {
+                error(
+                    "Social master dimensions are ${width}×${height}, expected 1080×1920"
+                )
+            }
+
+            val maxAllowed =
+                (
+                    requestedBitrate.toLong() *
+                        135L
+                    ) /
+                    100L
+
+            if (
+                totalBitrate >
+                    maxAllowed
+            ) {
+                error(
+                    "Social master remained too close to original bitrate (${totalBitrate / 1_000_000L} Mbps). Forced re-encode verification failed."
+                )
+            }
+
+            if (
+                totalBitrate <
+                    4_000_000L
+            ) {
+                error(
+                    "Social master bitrate is unexpectedly low (${totalBitrate / 1_000_000L} Mbps)"
+                )
+            }
+
+            val mbps =
+                String.format(
+                    Locale.US,
+                    "%.1f",
+                    totalBitrate /
+                        1_000_000.0
+                )
+
+            "1080×1920 • $mbps Mbps"
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     private fun publishSocialMaster(
         temp: File,
         platform: String
@@ -1322,7 +1437,7 @@ class DevelopUgandaEditorActivity : AppCompatActivity() {
             )
 
         val name =
-            "DEVELOP_UGANDA_V221_${platform}_MASTER_" +
+            "DEVELOP_UGANDA_V221_FIX1_${platform}_MASTER_" +
                 stamp +
                 ".mp4"
 

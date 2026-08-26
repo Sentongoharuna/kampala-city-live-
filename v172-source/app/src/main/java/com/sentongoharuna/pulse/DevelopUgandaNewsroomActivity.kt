@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "SOCIAL UPLOAD MASTER • V221\nSHOT FINDER + MEDIA3 EDITOR",
+                "ALL CAMERAS RETAINED • V223\nAUTO VIEW • CAMERA ID IN SAVED VIDEO",
                 9f,
                 white,
                 true
@@ -253,10 +253,19 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             )
         )
 
+
+        page.addView(
+            compactStatus(
+                "AUTO VIEW • ON-DEVICE SCENE DESCRIPTION",
+                "MAIN REPORT + LIVE PREVIEW SHOW A BRIEF ML KIT DESCRIPTION OF THE CURRENT VIEW • SCREEN-ONLY SO A WRONG AI LABEL IS NOT PERMANENTLY BURNED INTO EVIDENCE FOOTAGE",
+                0xFF62D8C9.toInt()
+            )
+        )
+
         page.addView(
             compactStatus(
                 "CREATOR CAMERA ENGINE",
-                "V205→V215 INDEPENDENT CAMERAS RETAINED • V217 ADDS FULL-SCREEN CAMERA PREVIEW + POLISHED SAVED-VIDEO HUD • NOTHING DROPPED",
+                "V205→V222 INDEPENDENT CAMERAS RETAINED • V217 ADDS FULL-SCREEN CAMERA PREVIEW + POLISHED SAVED-VIDEO HUD • NOTHING DROPPED",
                 cyan
             )
         )
@@ -269,8 +278,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             compactStatus(
-                "SHOT FINDER • PICK THE CAMERA BY WHAT YOU ARE FILMING",
-                "PEOPLE → V205   •   BACKLIGHT → V206   •   BUILDINGS → V207   •   WALK/ACTION → V208   •   NIGHT → V209   •   EVERYDAY → V210   •   INTERVIEW AUDIO → V211   •   VERIFIED → V212   •   LONG RECORD → V213   •   CINEMATIC → V214   •   UNSURE → V215",
+                "SHOT FINDER • ALL CAMERAS ARE INDEPENDENT • PICK BY WHAT YOU ARE FILMING",
+                "PEOPLE → V205   •   BACKLIGHT → V206   •   BUILDINGS → V207   •   WALK/ACTION → V208   •   NIGHT → V209   •   EVERYDAY → V210   •   INTERVIEW AUDIO → V211   •   VERIFIED → V212   •   LONG RECORD → V213   •   CINEMATIC → V214   •   UNSURE → V215   •   SOCIAL POST → V222",
                 cyan
             )
         )
@@ -438,9 +447,31 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         )
 
         page.addView(
+            launchCard(
+                "V222 • SOCIAL MEDIA CAMERA",
+                "TikTok • Instagram Reels • YouTube Shorts • social posts",
+                "Direct 9:16 SOCIAL FHD camera • compact social HUD • records the normal high-quality original first • then automatically forces a separate H.264/AAC social re-encode • 1080×1920 • 30fps max • 16 Mbps target • 2s keyframes • saves separately in Movies/develop.uganda/SM Posts",
+                0xFF62D8C9.toInt(),
+                "OPEN V222 SM CAMERA"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaSocialMediaCameraActivity::class.java
+                )
+            }
+        )
+
+        page.addView(
+            compactStatus(
+                "SM CAMERA WORKFLOW",
+                "TAP V222 → RECORD → STOP → ORIGINAL SAVES NORMALLY → SM OPTIMIZING → SM READY → PICK THE SEPARATE SM POSTS VIDEO IN TIKTOK / REELS",
+                0xFF62D8C9.toInt()
+            )
+        )
+
+        page.addView(
             compactStatus(
                 "NOTHING DROPPED",
-                "V204 CAPTURE ENGINE + V205→V215 FUNCTIONAL MODULES REMAIN IN THE SHARED CORE • V216 MAKES THEM DIRECT-LAUNCH INDEPENDENT CAMERAS",
+                "V205 • V206 • V207 • V208 • V209 • V210 • V211 • V212 • V213 • V214 • V215 • V222 SOCIAL MEDIA CAMERA ALL REMAIN DIRECT-LAUNCH OPTIONS • V223 ADDS AUTO VIEW TO MAIN REPORT/LIVE",
                 gold
             )
         )
@@ -536,7 +567,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • V216 INDEPENDENT CAMERA SUITE • V205→V215 DIRECT HOME LAUNCHERS • SEPARATE CAMERA ACTIVITIES + PREFERENCES • NOTHING DROPPED • telemetry",
+                "FIELD REPORT • V216 INDEPENDENT CAMERA SUITE • V205→V222 DIRECT HOME LAUNCHERS • SEPARATE CAMERA ACTIVITIES + PREFERENCES • NOTHING DROPPED • telemetry",
                 "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
                 gold,
                 "OPEN REPORT CAMERA"
@@ -565,7 +596,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "EDIT + SOCIAL MASTER",
+                "EDIT + SOCIAL MASTER • OPTIONAL",
                 "Edit normally, then create TikTok or Reels upload masters without touching the original",
                 "GALLERY • FILES • RECENT • LAST CLIP • Media3 preview/edit • TIKTOK MASTER 16 Mbps • REELS MASTER 14 Mbps • original preserved",
                 cyan,

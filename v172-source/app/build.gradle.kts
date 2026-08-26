@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 22100
-        versionName = "221.0-social-upload-master"
+        versionCode = 22302
+        versionName = "223.2-all-cameras-auto-view-fix2"
     }
 
     buildTypes {
@@ -48,4 +48,5 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("androidx.camera:camera-effects:$camerax")
     implementation("com.google.android.gms:play-services-location:21.4.0")
+    implementation("com.google.mlkit:image-labeling:17.0.9")
 }

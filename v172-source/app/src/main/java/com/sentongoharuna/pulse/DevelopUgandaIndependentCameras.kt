@@ -65,3 +65,9 @@ class DevelopUgandaAutoDirectorCameraActivity :
     override fun defaultCameraExperienceId(): String =
         "V215_AUTO"
 }
+
+class DevelopUgandaSocialMediaCameraActivity :
+    DevelopUgandaCameraActivity() {
+    override fun defaultCameraExperienceId(): String =
+        "V222_SOCIAL"
+}
