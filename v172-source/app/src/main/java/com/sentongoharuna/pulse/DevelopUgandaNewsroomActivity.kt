@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "INDEPENDENT CAMERA SUITE • V216",
+                "FULL FRAME HUD PRO • V217",
                 9f,
                 white,
                 true
@@ -248,7 +248,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             compactStatus(
                 "SAVED VIDEO VISIBILITY",
-                "LARGER TEXT • LIGHTER SHADOW • OPTIONAL SOFT BACKING • FULL-OPACITY COLOURS",
+                "SHORT TELEMETRY RAIL • WIDER READABLE COLUMN • SOFT PANEL • CLEAR CAMERA/MODE ROWS • FULL-OPACITY COLOURS",
                 green
             )
         )
@@ -256,7 +256,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             compactStatus(
                 "CREATOR CAMERA ENGINE",
-                "V205→V215 NOW OPEN AS SEPARATE CAMERAS • V204 ENGINE RETAINED • EACH CAMERA HAS ITS OWN STATE/DEFAULTS/UI EMPHASIS/RECORDED IDENTITY • V216",
+                "V205→V215 INDEPENDENT CAMERAS RETAINED • V217 ADDS FULL-SCREEN CAMERA PREVIEW + POLISHED SAVED-VIDEO HUD • NOTHING DROPPED",
                 cyan
             )
         )
@@ -269,8 +269,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             compactStatus(
-                "V216 CAMERA ARCHITECTURE",
-                "NO DROPDOWN TO OPEN THESE CAMERAS • EVERY CARD BELOW OPENS ITS OWN ANDROID CAMERA ACTIVITY • EACH CAMERA REMEMBERS ITS OWN SETTINGS",
+                "V217 FULL FRAME CAMERA",
+                "EVERY CAMERA STILL OPENS DIRECTLY • CAMERA PREVIEW NOW FILLS THE SCREEN BEHIND CONTROLS • RECORDING FORCES FULL FRAME • SAVED HUD IS WIDER AND CLEANER",
                 green
             )
         )

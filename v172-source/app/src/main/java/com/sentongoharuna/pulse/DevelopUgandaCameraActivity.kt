@@ -74,6 +74,9 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -584,10 +587,43 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 ?: cameraExperienceDisplayName()
 
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        enforceImmersiveCameraWindow()
 
         buildUi()
         requestPermissionsAndStart()
         uiHandler.post(tick)
+    }
+
+    private fun enforceImmersiveCameraWindow() {
+        WindowCompat.setDecorFitsSystemWindows(
+            window,
+            false
+        )
+
+        WindowInsetsControllerCompat(
+            window,
+            window.decorView
+        ).apply {
+            hide(
+                WindowInsetsCompat.Type.systemBars()
+            )
+
+            systemBarsBehavior =
+                WindowInsetsControllerCompat
+                    .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    override fun onWindowFocusChanged(
+        hasFocus: Boolean
+    ) {
+        super.onWindowFocusChanged(
+            hasFocus
+        )
+
+        if (hasFocus) {
+            enforceImmersiveCameraWindow()
+        }
     }
 
     private fun buildUi() {
@@ -598,12 +634,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         previewView = PreviewView(this).apply {
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
 
-            // V181: show the full 9:16 recording canvas in the live camera.
-            // FILL_CENTER was cropping the left/right sides of the preview,
-            // even though the exported video was correct. FIT_START keeps the
-            // entire recorded frame visible and places any spare screen space
-            // below it, where the operator controls already live.
-            scaleType = PreviewView.ScaleType.FIT_CENTER
+            // V217: full-frame operator camera.
+            // The camera image fills the phone behind all controls.
+            // Gallery output remains the authoritative CameraX recording.
+            scaleType = PreviewView.ScaleType.FILL_CENTER
         }
 
         root.addView(
@@ -1312,7 +1346,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
 
         viewModeButton = deckButton(
-            "VIEW ▾\nFULL",
+            "VIEW\nFULL SCREEN",
             0xFF83B995.toInt()
         )
 
@@ -2046,107 +2080,58 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
     }
 
-    private fun togglePreviewMode() {
+    private fun enforceFullFramePreview() {
         halfPreviewMode =
-            !halfPreviewMode
-
-        val previewHeight =
-            if (halfPreviewMode) {
-                (
-                    resources.displayMetrics.heightPixels *
-                        0.50f
-                    ).roundToInt()
-            } else {
-                ViewGroup.LayoutParams.MATCH_PARENT
-            }
-
-        val previewParams =
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                previewHeight
-            ).apply {
-                gravity = Gravity.TOP
-            }
+  false
 
         previewView.layoutParams =
-            previewParams
+  FrameLayout.LayoutParams(
+      ViewGroup.LayoutParams.MATCH_PARENT,
+      ViewGroup.LayoutParams.MATCH_PARENT
+  ).apply {
+      gravity =
+          Gravity.TOP
+  }
 
-        // FULL intentionally fills under every control including the red
-        // record button. HALF shows the complete 9:16 camera frame in the
-        // upper half and leaves a dedicated operator/settings area below.
         previewView.scaleType =
-            if (halfPreviewMode) {
-                PreviewView.ScaleType.FIT_CENTER
-            } else {
-                PreviewView.ScaleType.FILL_CENTER
-            }
-
-        val guideParams =
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                previewHeight
-            ).apply {
-                gravity = Gravity.TOP
-            }
+  PreviewView.ScaleType.FILL_CENTER
 
         guidesView.layoutParams =
-            guideParams
+  FrameLayout.LayoutParams(
+      ViewGroup.LayoutParams.MATCH_PARENT,
+      ViewGroup.LayoutParams.MATCH_PARENT
+  ).apply {
+      gravity =
+          Gravity.TOP
+  }
 
-        viewModeButton.text =
-            "VIEW ▾\n" +
-                if (halfPreviewMode) {
-                    "HALF"
-                } else {
-                    "FULL"
-                }
-
-        if (
-            ::previewNarrationPanel.isInitialized
-        ) {
-            val hudParams =
-                previewNarrationPanel.layoutParams as
-                    FrameLayout.LayoutParams
-
-            hudParams.topMargin =
-                if (halfPreviewMode) {
-                    dp(34)
-                } else {
-                    dp(44)
-                }
-
-            previewNarrationPanel.layoutParams =
-                hudParams
-
-            previewBrandView.textSize =
-                if (halfPreviewMode) {
-                    11.6f
-                } else {
-                    13.8f
-                }
+        if (::viewModeButton.isInitialized) {
+  viewModeButton.text =
+      "VIEW\nFULL SCREEN"
         }
 
-        if (halfPreviewMode) {
-            detailedSettingsVisible =
-                true
-            settingsSummaryView.visibility =
-                View.VISIBLE
-        } else {
-            settingsSummaryView.visibility =
-                if (detailedSettingsVisible) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
-        }
+        if (::previewNarrationPanel.isInitialized) {
+  val hudParams =
+      previewNarrationPanel.layoutParams as
+          FrameLayout.LayoutParams
 
-        refreshReportSettingsSummary()
+  hudParams.topMargin =
+      dp(44)
+
+  previewNarrationPanel.layoutParams =
+      hudParams
+
+  previewBrandView.textSize =
+      13.8f
+        }
+    }
+
+    private fun togglePreviewMode() {
+        enforceFullFramePreview()
+        enforceImmersiveCameraWindow()
 
         toast(
-            if (halfPreviewMode) {
-                "Half-screen report view"
-            } else {
-                "Full-screen camera behind controls"
-            }
+  "Full-screen camera view"
         )
     }
 
@@ -2762,15 +2747,15 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V216"
+                            "V217"
                         )
                         put(
                             "camera_engine",
-                            "V216 INDEPENDENT CAMERA SUITE"
+                            "V217 FIX1 FULL FRAME HUD PRO"
                         )
                         put(
                             "camera_modules",
-                            "V204,V205,V206,V207,V208,V209,V210,V211,V212,V213,V214,V215,V216"
+                            "V204,V205,V206,V207,V208,V209,V210,V211,V212,V213,V214,V215,V216,V217"
                         )
                         put(
                             "report_id",
@@ -4715,15 +4700,38 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         // column, make the type larger, and keep only values that genuinely
         // change while the camera moves.
         val safeLeft =
-            finalWidth * 0.045f
+            finalWidth * 0.050f
 
         val safeTop =
-            finalHeight * 0.115f
+            finalHeight * 0.100f
 
         val maxWidth =
-            finalWidth * 0.39f
+            finalWidth * 0.56f
 
         var y = safeTop
+
+        val railStartY =
+            y - (14f * u)
+
+        val telemetryPanel =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    0x30000000
+                style =
+                    Paint.Style.FILL
+            }
+
+        c.drawRoundRect(
+            safeLeft - (14f * u),
+            safeTop - (26f * u),
+            safeLeft + maxWidth + (14f * u),
+            safeTop + (344f * u),
+            16f * u,
+            16f * u,
+            telemetryPanel
+        )
 
         val text = Paint(
             Paint.ANTI_ALIAS_FLAG
@@ -4754,21 +4762,13 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 }
 
             strokeWidth =
-                4.0f * u
+                2.3f * u
         }
-
-        c.drawLine(
-            safeLeft - (8f * u),
-            y - (8f * u),
-            safeLeft - (8f * u),
-            finalHeight * 0.67f,
-            rail
-        )
 
         text.color =
             0xFFD8B85B.toInt()
         text.textSize =
-            42f * u
+            34f * u
 
         val brand =
             "develop.uganda"
@@ -4801,7 +4801,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawStrongRecordedText(
             c,
-            "${sceneTag()} • V216",
+            "${sceneTag()} • V217",
             safeLeft +
                 brandWidth +
                 (11f * u),
@@ -4862,7 +4862,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawFitText(
             c,
-            "$recState   |   TC ${tc()}   |   V216   |   CAMERA ${cameraExperienceShortLabel()}   |   THERM ${thermalStateLabel()}",
+            "$recState   •   TC ${tc()}   •   V217   •   THERM ${thermalStateLabel()}",
             safeLeft,
             y,
             maxWidth,
@@ -4870,7 +4870,23 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             15.2f * u
         )
 
-        y += 19f * u
+        y += 18f * u
+        text.color =
+            cameraExperienceAccentColor()
+        text.textSize =
+            15.3f * u
+
+        drawFitText(
+            c,
+            "CAMERA • ${cameraExperienceShortLabel()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            13.6f * u
+        )
+
+        y += 18f * u
         text.color =
             reportModeAccentColor()
         text.textSize =
@@ -4878,12 +4894,28 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawFitText(
             c,
-            "MODE • ${qualityModes[qualityIndex]}   |   ${reportModePurposeLabel()}   |   SCENE • ${sceneModes[sceneIndex]}   |   LOOK • ${lookModes[lookIndex]}   |   ${autoDirectorStateText()}   |   CAMERA • ${cameraExperienceShortLabel()}",
+            "MODE • ${qualityModes[qualityIndex]}   •   SCENE ${sceneModes[sceneIndex]}   •   LOOK ${lookModes[lookIndex]}",
             safeLeft,
             y,
             maxWidth,
             text,
-            11.7f * u
+            12.8f * u
+        )
+
+        y += 18f * u
+        text.color =
+            0xFFAEBDEB.toInt()
+        text.textSize =
+            14.6f * u
+
+        drawFitText(
+            c,
+            autoDirectorStateText(),
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            12.6f * u
         )
 
         y += 20f * u
@@ -5117,6 +5149,25 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             maxWidth,
             text,
             12.9f * u
+        )
+
+        val railEndY =
+            y + (6f * u)
+
+        c.drawLine(
+            safeLeft - (8f * u),
+            railStartY,
+            safeLeft - (8f * u),
+            railEndY,
+            rail
+        )
+
+        c.drawLine(
+            safeLeft - (8f * u),
+            railEndY,
+            safeLeft + (7f * u),
+            railEndY,
+            rail
         )
 
         c.restore()
@@ -6709,7 +6760,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V216_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V217_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -6760,6 +6811,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         ) { event ->
             when (event) {
                 is VideoRecordEvent.Start -> {
+                    enforceFullFramePreview()
+                    enforceImmersiveCameraWindow()
+
                     recStarted = System.currentTimeMillis()
                     recordStartUtc =
                         Instant.ofEpochMilli(

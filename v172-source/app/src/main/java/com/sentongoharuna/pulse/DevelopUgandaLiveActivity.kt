@@ -481,7 +481,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V216",
+                "develop.uganda • V217",
                 20f,
                 amber,
                 true
@@ -3322,7 +3322,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V216_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V217_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 
@@ -3772,7 +3772,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
             liveSubTitle.text =
-                "LIVE STUDIO • ${profiles[profileIndex]} • ${liveQualityProfiles[liveQualityIndex]} • LOOK ${liveEffectLabels[liveEffectIndex]} • MANUAL LIVE • V216"
+                "LIVE STUDIO • ${profiles[profileIndex]} • ${liveQualityProfiles[liveQualityIndex]} • LOOK ${liveEffectLabels[liveEffectIndex]} • MANUAL LIVE • V217"
         }
     }
 
@@ -3875,7 +3875,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private fun liveVerifiedStateText(): String {
         return buildString {
-            append("V216 VERIFIED")
+            append("V217 VERIFIED")
             append(" • ")
             append(
                 liveQualityProfiles[

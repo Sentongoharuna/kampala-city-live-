@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 21603
-        versionName = "216.3-independent-camera-suite-fix3"
+        versionCode = 21701
+        versionName = "217.1-full-frame-hud-pro-fix1"
     }
 
     buildTypes {
