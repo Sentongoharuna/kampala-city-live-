@@ -1,0 +1,219 @@
+name: Build develop.uganda V217 FIX1 Full Frame HUD Pro
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V216 FIX3 base and V217 FIX1 patch
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO-PATCH.zip
+          grep -q 'versionCode = 21603' v172-source/app/build.gradle.kts
+          grep -q 'versionName = "216.3-independent-camera-suite-fix3"' v172-source/app/build.gradle.kts
+          echo "Correct V216 FIX3 base confirmed"
+
+      - name: Unpack and syntax-check V217 FIX1
+        run: |
+          set -e
+          rm -rf /tmp/v217fix1
+          mkdir -p /tmp/v217fix1
+          unzip -q DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO-PATCH.zip -d /tmp/v217fix1
+          python3 -m py_compile /tmp/v217fix1/v217_fix1_patch.py
+
+      - name: Apply V217 FIX1
+        run: |
+          set -e
+          python3 /tmp/v217fix1/v217_fix1_patch.py
+
+      - name: Verify V217 FIX1 source before Gradle
+        run: |
+          set -e
+
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          # Exact FIX1 compiler repair: Kotlin string must contain escaped \n,
+          # never a literal newline inside the quoted string.
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path(
+              "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          )
+          t = p.read_text(encoding="utf-8")
+
+          good = '"VIEW\\nFULL SCREEN"'
+          bad = '"VIEW\nFULL SCREEN"'
+
+          if good not in t:
+              raise SystemExit(
+                  "V217 FIX1: escaped VIEW/FULL SCREEN string missing"
+              )
+
+          if bad in t:
+              raise SystemExit(
+                  "V217 FIX1: literal-newline Kotlin string still present"
+              )
+
+          print("PASS: V217 FIX1 VIEW string is valid Kotlin")
+          PY
+
+          # Full-frame behavior.
+          grep -q 'PreviewView.ScaleType.FILL_CENTER' "$REPORT"
+          grep -q 'enforceImmersiveCameraWindow' "$REPORT"
+          grep -q 'enforceFullFramePreview' "$REPORT"
+          grep -q 'BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE' "$REPORT"
+
+          # Saved-video HUD changes remain.
+          ! grep -q 'finalHeight \* 0.67f' "$REPORT"
+          grep -q 'val railEndY' "$REPORT"
+          grep -q 'finalWidth \* 0.56f' "$REPORT"
+          grep -q 'telemetryPanel' "$REPORT"
+          grep -q 'CAMERA • ${cameraExperienceShortLabel()}' "$REPORT"
+
+          # Independent cameras remain.
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt
+          grep -q 'V205 • FOCUS ASSIST CAMERA' "$HOME"
+          grep -q 'V215 • SMART AUTO DIRECTOR CAMERA' "$HOME"
+
+          grep -q 'versionCode = 21701' "$GRADLE"
+          grep -q 'versionName = "217.1-full-frame-hud-pro-fix1"' "$GRADLE"
+
+          echo "PASS: V217 FIX1 source verification completed"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V217 FIX1 APK before committing source
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v217-fix1-build.log
+
+      - name: Print exact compiler errors and context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v217-fix1-build.log ]; then
+            echo "Gradle did not start; failure occurred before compilation."
+            exit 0
+          fi
+
+          echo "===== V217 FIX1 IMPORTANT ERRORS ====="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v217-fix1-build.log \
+            | head -2400 \
+            || true
+
+          echo "===== SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v217-fix1-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          for filename, line_text, col in re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )[:18]:
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files:
+                  continue
+              lines = files[0].read_text(encoding="utf-8").splitlines()
+              print("\nFILE:", files[0], "LINE:", line_no)
+              for n in range(
+                  max(1, line_no - 28),
+                  min(len(lines), line_no + 48) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V217 FIX1 source only after successful build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V217 FIX1 source already committed"
+          else
+            git commit -m "Add develop.uganda V217 FIX1 Full Frame HUD Pro"
+            git push
+          fi
+
+      - name: Package successful V217 FIX1 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V217 FIX1 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO.apk
+
+      - name: Upload V217 FIX1 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO
+          path: DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V217 FIX1 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO-SOURCE
+          path: DEVELOP-UGANDA-V217-FIX1-FULL-FRAME-HUD-PRO-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V217 FIX1 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V217-FIX1-BUILD-LOG
+          path: v172-source/v217-fix1-build.log
+          if-no-files-found: warn
+          retention-days: 7
