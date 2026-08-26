@@ -1,0 +1,214 @@
+name: Build develop.uganda V216 Independent Camera Suite
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V216 inputs
+        run: |
+          set -e
+          test -d v172-source/app
+          test -f DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE-PATCH.zip
+
+      - name: Unpack and syntax-check
+        run: |
+          set -e
+          rm -rf /tmp/v216
+          mkdir -p /tmp/v216
+          unzip -q DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE-PATCH.zip -d /tmp/v216
+          for f in /tmp/v216/v*.py; do python3 -m py_compile "$f"; done
+
+      - name: Apply only missing versions through V216
+        run: |
+          set -e
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+
+          if ! grep -q 'activeVideoFpsLabel' "$REPORT"; then python3 /tmp/v216/v203_patch.py; fi
+          if ! grep -q '"ACTION 60"' "$REPORT"; then python3 /tmp/v216/v204_patch.py; fi
+          if ! grep -q 'focusLockRunnable' "$REPORT"; then python3 /tmp/v216/v205_patch.py; fi
+          if ! grep -q 'focusReticleView' "$REPORT"; then python3 /tmp/v216/v206_patch.py; fi
+          if ! grep -q 'horizonGuardView' "$REPORT"; then python3 /tmp/v216/v207_patch.py; fi
+          if ! grep -q 'motionGuardView' "$REPORT"; then python3 /tmp/v216/v208_patch.py; fi
+          if ! grep -q 'ambientLightSensor' "$REPORT"; then python3 /tmp/v216/v209_patch.py; fi
+          if ! grep -q 'CAMERA MODULES ▾  •  ALL PRO ACTIVE' "$HOME"; then python3 /tmp/v216/v210_patch.py; fi
+          if ! grep -q 'audioGuardView' "$REPORT"; then python3 /tmp/v216/v211_patch.py; fi
+          if ! grep -q 'verifiedCameraStateText' "$REPORT"; then python3 /tmp/v216/v212_patch.py; fi
+          if ! grep -q 'thermalGuardView' "$REPORT"; then python3 /tmp/v216/v213_patch.py; fi
+          if ! grep -q 'previewModeToneView' "$REPORT"; then python3 /tmp/v216/v214_patch.py; fi
+          if ! grep -q 'autoDirectorSuggestedMode' "$REPORT"; then python3 /tmp/v216/v215_patch.py; fi
+          if ! test -f "$INDEPENDENT"; then python3 /tmp/v216/v216_patch.py; fi
+
+      - name: Verify direct independent cameras and retained behavior
+        run: |
+          set -e
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          test -f "$INDEPENDENT"
+
+          grep -q 'getSupportedFrameRateRanges' "$REPORT"
+          grep -q 'setVideoStabilizationEnabled' "$REPORT"
+          grep -q 'disableAutoCancel' "$REPORT"
+          grep -q 'FocusMeteringAction.FLAG_AE' "$REPORT"
+          grep -q 'FocusMeteringAction.FLAG_AWB' "$REPORT"
+          grep -q 'horizonGuardView' "$REPORT"
+          grep -q 'cameraShakeScore' "$REPORT"
+          grep -q 'Sensor.TYPE_LIGHT' "$REPORT"
+          grep -q 'audioStats.audioAmplitude' "$REPORT"
+          grep -q 'PowerManager.OnThermalStatusChangedListener' "$REPORT"
+          grep -q 'previewModeToneView' "$REPORT"
+          grep -q 'autoDirectorSuggestedMode' "$REPORT"
+
+          grep -q 'open class DevelopUgandaCameraActivity' "$REPORT"
+          grep -q 'reportCameraPrefsName' "$REPORT"
+          grep -q 'cameraExperienceDisplayName' "$REPORT"
+          grep -q 'cameraExperienceInstruction' "$REPORT"
+          grep -q 'applyIndependentCameraDefaultsIfNeeded' "$REPORT"
+          grep -q 'applyIndependentCameraExperienceUi' "$REPORT"
+          grep -q 'camera_experience_id' "$REPORT"
+          grep -q 'DEVELOP_UGANDA_V216_${cameraExperienceId}' "$REPORT"
+
+          for cls in \
+            DevelopUgandaFocusAssistCameraActivity \
+            DevelopUgandaMeteringLockCameraActivity \
+            DevelopUgandaHorizonCameraActivity \
+            DevelopUgandaSteadyShotCameraActivity \
+            DevelopUgandaNightIntelligenceCameraActivity \
+            DevelopUgandaAllProCameraActivity \
+            DevelopUgandaAudioGuardCameraActivity \
+            DevelopUgandaVerifiedCameraActivity \
+            DevelopUgandaThermalSafeCameraActivity \
+            DevelopUgandaModeSignatureCameraActivity \
+            DevelopUgandaAutoDirectorCameraActivity
+          do
+            grep -q "class $cls" "$INDEPENDENT"
+            grep -q "android:name=\".$cls\"" "$MANIFEST"
+            grep -q "$cls::class.java" "$HOME"
+          done
+
+          grep -q 'INDEPENDENT PRO CAMERAS' "$HOME"
+          grep -q 'OPEN V205 FOCUS CAMERA' "$HOME"
+          grep -q 'OPEN V206 METER CAMERA' "$HOME"
+          grep -q 'OPEN V207 HORIZON CAMERA' "$HOME"
+          grep -q 'OPEN V208 STEADYSHOT CAMERA' "$HOME"
+          grep -q 'OPEN V209 NIGHT CAMERA' "$HOME"
+          grep -q 'OPEN V210 ALL-PRO CAMERA' "$HOME"
+          grep -q 'OPEN V211 AUDIO CAMERA' "$HOME"
+          grep -q 'OPEN V212 VERIFIED CAMERA' "$HOME"
+          grep -q 'OPEN V213 THERMAL CAMERA' "$HOME"
+          grep -q 'OPEN V214 SIGNATURE CAMERA' "$HOME"
+          grep -q 'OPEN V215 AUTO CAMERA' "$HOME"
+
+          grep -q 'versionCode = 21600' "$GRADLE"
+          grep -q 'versionName = "216.0-independent-camera-suite"' "$GRADLE"
+
+          echo "PASS: V205-V215 are separate direct-open Android camera Activities with independent settings."
+
+      - name: Commit V216 source
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V216 source already committed"
+          else
+            git commit -m "Add develop.uganda V216 Independent Camera Suite"
+            git push
+          fi
+
+      - name: Package full V216 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE-SOURCE.zip app
+          cd ..
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V216 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v216-build.log
+
+      - name: Print exact compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v216-build.log \
+            | head -2200 \
+            || true
+
+      - name: Prepare APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE.apk
+
+      - name: Upload V216 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE
+          path: DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V216 source
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE-SOURCE
+          path: DEVELOP-UGANDA-V216-INDEPENDENT-CAMERA-SUITE-SOURCE.zip
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload V216 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V216-BUILD-LOG
+          path: v172-source/v216-build.log
+          if-no-files-found: warn
+          retention-days: 7
