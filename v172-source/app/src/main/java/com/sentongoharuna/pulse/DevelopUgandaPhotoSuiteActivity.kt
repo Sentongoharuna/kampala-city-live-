@@ -1224,7 +1224,7 @@ open class DevelopUgandaPhotoSuiteActivity :
                             "{\n"
                         )
                         append(
-                            "  \"app_version\": \"V225\",\n"
+                            "  \"app_version\": \"V226\",\n"
                         )
                         append(
                             "  \"camera\": \"${modeDisplayName()}\",\n"

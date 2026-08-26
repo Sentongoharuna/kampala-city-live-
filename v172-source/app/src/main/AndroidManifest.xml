@@ -10,6 +10,12 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="true"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+    </queries>
+
     <application
         android:theme="@style/AppTheme"
         android:label="develop.uganda"
@@ -108,6 +114,11 @@
 
         <activity
             android:name=".DevelopUgandaVerifiedPhotoCameraActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
+            android:name=".DevelopUgandaStoryPackagesActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
 

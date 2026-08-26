@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "PROFESSIONAL PHOTO SUITE • V225\nVIDEO CAMERAS + V224 GUARD RETAINED",
+                "AUTO STORY PACKAGE • V226\nV225 PHOTO + V224 GUARD RETAINED",
                 9f,
                 white,
                 true
@@ -564,6 +564,34 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             quickLaunch
+        )
+
+        page.addView(
+            sectionTitle(
+                "AUTO STORY PACKAGE • V226"
+            )
+        )
+
+        page.addView(
+            compactStatus(
+                "AFTER A SUCCESSFUL REPORT / LIVE RECORDING",
+                "ORIGINAL PACKAGE COPY • THUMBNAIL • MANIFEST • METADATA • SHA-256 COPY CHECK • CAPTION DRAFT • SOCIAL MASTER WHEN AVAILABLE • OPTIONAL ON-DEVICE TRANSCRIPT / SRT DRAFT",
+                0xFF62D8C9.toInt()
+            )
+        )
+
+        page.addView(
+            launchCard(
+                "V226 • STORY PACKAGES",
+                "Open, share and transcribe completed report packages",
+                "Each package is stored under Download/develop.uganda/Story Packages/<Package ID> • original Gallery video stays untouched • Interview/V211 can request on-device transcript automatically • any package can request transcript manually on Android 13+ when an on-device recognizer exists",
+                0xFF62D8C9.toInt(),
+                "OPEN STORY PACKAGES"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaStoryPackagesActivity::class.java
+                )
+            }
         )
 
         page.addView(

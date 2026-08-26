@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 22500
-        versionName = "225.0-professional-photo-suite"
+        versionCode = 22601
+        versionName = "226.1-auto-story-package-fix1"
     }
 
     buildTypes {

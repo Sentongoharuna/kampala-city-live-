@@ -62,6 +62,7 @@ import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.text.SimpleDateFormat
 import java.io.File
 import java.io.FileOutputStream
+import java.time.Instant
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
@@ -232,6 +233,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         mutableListOf<Long>()
 
     private var recordStartMs = 0L
+    private var liveRecordStartUtc = "--"
     private var liveRecordingName = ""
     private var liveAudioAmplitude = 0.0
     private var liveAudioPeakAmplitude = 0.0
@@ -621,7 +623,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V224",
+                "develop.uganda • V226",
                 20f,
                 amber,
                 true
@@ -2446,7 +2448,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        // V224: brand/build and blinking LIVE status use separate lanes.
+        // V226: brand/build and blinking LIVE status use separate lanes.
         // The build capsule never receives the LIVE glow.
         val brandX =
             safeLeft +
@@ -2470,7 +2472,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         val buildText =
-            "V224"
+            "V226"
 
         val brandWidth =
             paint.measureText(
@@ -2840,7 +2842,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V224   |   THERMAL • ${liveThermalStateLabel()}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V226   |   THERMAL • ${liveThermalStateLabel()}",
             safeLeft,
             safeTop +
                 (126f * u),
@@ -2985,7 +2987,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V224",
+            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V226",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -3958,7 +3960,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V224_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V226_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 
@@ -4034,6 +4036,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         recordStartMs =
                             SystemClock.elapsedRealtime()
 
+                        liveRecordStartUtc =
+                            Instant.now().toString()
+
                         markLiveJournalStarted()
 
                         recordButton.setRecordingState(
@@ -4107,6 +4112,40 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         markLiveJournalFinished(
                             event.hasError()
                         )
+
+                        if (
+                            !event.hasError()
+                        ) {
+                            DevelopUgandaStoryPackager.createVideoPackage(
+                                this@DevelopUgandaLiveActivity,
+                                event.outputResults.outputUri,
+                                DevelopUgandaStoryPackager.StoryMetadata(
+                                    packageId = liveRecordingName.ifBlank {
+                                        "LIVE_${System.currentTimeMillis()}"
+                                    },
+                                    camera = "LIVE STUDIO",
+                                    reporter = reporterName,
+                                    storyId = storyId,
+                                    title = headline,
+                                    place = null,
+                                    latitude = null,
+                                    longitude = null,
+                                    gpsAccuracyM = null,
+                                    startedUtc = liveRecordStartUtc,
+                                    finishedUtc = Instant.now().toString(),
+                                    scene = profiles[profileIndex],
+                                    look = liveEffectLabels[liveEffectIndex],
+                                    quality = qualityLabel,
+                                    autoView = liveAutoViewSummary,
+                                    warnings = buildLivePreflight().warnings,
+                                    sourceKind = "LIVE",
+                                    autoTranscribe =
+                                        profiles[profileIndex] == "INTERVIEW" ||
+                                            livePresetLabels[livePresetIndex] == "INTERVIEW",
+                                    expectSocialMaster = false
+                                )
+                            )
+                        }
 
                         if (
                             event.hasError()

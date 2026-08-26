@@ -299,6 +299,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var preflightApprovedOnce = false
     private var shotAssistModeIndex = DevelopUgandaShotAssistView.MODE_OFF
     private val shotAssistModeLabels = arrayOf("OFF", "PEAK", "ZEBRA", "BOTH")
+    private val recordingWarningsSeen = linkedSetOf<String>()
     private lateinit var autoViewLabeler: ImageLabeler
     private var autoViewBusy = false
     private var autoViewSummary = "AUTO VIEW • analysing scene"
@@ -657,6 +658,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         loadReporterIdentity()
         loadReportCameraPreferences()
         applyIndependentCameraDefaultsIfNeeded()
+        recordingWarningsSeen.clear()
+
         reportId = newReportId()
 
         reportDisplayMode =
@@ -2799,7 +2802,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     }
 
     private fun exportAutomaticSocialMaster(
-        inputUri: Uri
+        inputUri: Uri,
+        storyPackageId: String
     ) {
         if (
             !isSocialMediaCamera() ||
@@ -2959,8 +2963,15 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                                     temp
                                 )
 
-                            publishAutomaticSocialMaster(
-                                temp
+                            val socialUri =
+                                publishAutomaticSocialMaster(
+                                    temp
+                                )
+
+                            DevelopUgandaStoryPackager.attachSocialMaster(
+                                this@DevelopUgandaCameraActivity,
+                                storyPackageId,
+                                socialUri
                             )
 
                             temp.delete()
@@ -3036,6 +3047,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                                 0xFFFF5A54.toInt()
                             )
                         }
+
+                        DevelopUgandaStoryPackager.markSocialMasterFailed(
+                            this@DevelopUgandaCameraActivity,
+                            storyPackageId,
+                            "Media3 social export failed"
+                        )
 
                         toast(
                             "SM optimization failed • original video is safe"
@@ -3480,7 +3497,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V224"
+                            "V226"
                         )
                         put(
                             "camera_engine",
@@ -3936,6 +3953,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         val warnings =
             shotQualityWarnings()
+
+        if (recording != null) {
+            recordingWarningsSeen.addAll(
+                warnings
+            )
+        }
 
         shotQualityGuardView.text =
             if (
@@ -6272,7 +6295,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawStrongRecordedText(
             c,
-            "${sceneTag()} • V224",
+            "${sceneTag()} • V226",
             safeLeft +
                 brandWidth +
                 (11f * u),
@@ -6333,7 +6356,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawFitText(
             c,
-            "$recState   •   TC ${tc()}   •   V224   •   THERM ${thermalStateLabel()}",
+            "$recState   •   TC ${tc()}   •   V226   •   THERM ${thermalStateLabel()}",
             safeLeft,
             y,
             maxWidth,
@@ -8237,7 +8260,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V224_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V226_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -8404,11 +8427,53 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         }
 
                         if (
+                            !hadError
+                        ) {
+                            val packageFinishedUtc =
+                                Instant.now().toString()
+
+                            DevelopUgandaStoryPackager.createVideoPackage(
+                                this@DevelopUgandaCameraActivity,
+                                event.outputResults.outputUri,
+                                DevelopUgandaStoryPackager.StoryMetadata(
+                                    packageId = reportId.ifBlank {
+                                        baseName.ifBlank {
+                                            "DU_${System.currentTimeMillis()}"
+                                        }
+                                    },
+                                    camera = cameraExperienceShortLabel(),
+                                    reporter = reporterDisplayName(),
+                                    storyId = storyDisplayId(),
+                                    title = storyId.ifBlank {
+                                        "FIELD REPORT"
+                                    },
+                                    place = placeName,
+                                    latitude = lat,
+                                    longitude = lon,
+                                    gpsAccuracyM = accuracy,
+                                    startedUtc = recordStartUtc,
+                                    finishedUtc = packageFinishedUtc,
+                                    scene = sceneModes[sceneIndex],
+                                    look = lookModes[lookIndex],
+                                    quality = qualityModes[qualityIndex],
+                                    autoView = autoViewSummary,
+                                    warnings = recordingWarningsSeen.toList(),
+                                    sourceKind = "REPORT",
+                                    autoTranscribe =
+                                        cameraExperienceId == "V211_AUDIO" ||
+                                            sceneModes[sceneIndex] == "INTERVIEW",
+                                    expectSocialMaster = isSocialMediaCamera()
+                                )
+                            )
+                        }
+
+                        if (
                             !hadError &&
                             isSocialMediaCamera()
                         ) {
                             exportAutomaticSocialMaster(
-                                event.outputResults.outputUri
+                                event.outputResults.outputUri,
+                                reportId
                             )
                         }
 
