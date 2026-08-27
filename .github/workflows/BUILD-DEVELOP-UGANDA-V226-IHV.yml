@@ -1,0 +1,126 @@
+name: Build V226 IHV Side-by-Side APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify V226 IHV inputs
+        run: |
+          set -e
+          test -d v172-source/app
+          test -f DEVELOP-UGANDA-V226-IHV-PATCH.zip
+          CODE=$(grep -oE 'versionCode = [0-9]+' v172-source/app/build.gradle.kts | awk '{print $3}')
+          if [ "$CODE" != "22602" ] && [ "$CODE" != "22603" ] && [ "$CODE" != "22604" ]; then
+            echo "V226 IHV expects the V226.2/V226.3 source line. Found versionCode=$CODE"
+            exit 1
+          fi
+          echo "PASS: main V226 source found. It will NOT be modified."
+
+      - name: Create separate V226 IHV source
+        run: |
+          set -e
+          rm -rf /tmp/v226ihv
+          mkdir -p /tmp/v226ihv
+          unzip -q DEVELOP-UGANDA-V226-IHV-PATCH.zip -d /tmp/v226ihv
+          python3 -m py_compile /tmp/v226ihv/v226_ihv_patch.py
+          python3 /tmp/v226ihv/v226_ihv_patch.py
+
+      - name: Verify side-by-side identity
+        run: |
+          set -e
+          G="v226-ihv-source/app/build.gradle.kts"
+          M="v226-ihv-source/app/src/main/AndroidManifest.xml"
+          R="v226-ihv-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          B="v226-ihv-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaVideoBranding.kt"
+          L="v226-ihv-source/app/src/main/res/drawable-nodpi/develop_uganda_video_logo.png"
+
+          grep -q 'applicationId = "com.sentongoharuna.pulse.ihv"' "$G"
+          grep -q 'versionCode = 2260301' "$G"
+          grep -q 'versionName = "226.3-ihv-in-house-branded-social"' "$G"
+          grep -q 'android:label="V226 IHV"' "$M"
+          grep -q 'DevelopUgandaVideoBranding.effect(this@DevelopUgandaCameraActivity)' "$R"
+          grep -q 'exportAutomaticSocialMaster' "$R"
+          grep -q 'BitmapOverlay.createStaticBitmapOverlay' "$B"
+          test -s "$L"
+
+          # Prove the main app source still keeps its original identity.
+          grep -q 'applicationId = "com.sentongoharuna.pulse"' v172-source/app/build.gradle.kts
+          ! grep -q 'applicationId = "com.sentongoharuna.pulse.ihv"' v172-source/app/build.gradle.kts
+
+          echo "PASS: V226 IHV will install beside develop.uganda as a separate app."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V226 IHV APK
+        working-directory: v226-ihv-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v226-ihv-build.log
+
+      - name: Print compiler errors if needed
+        if: failure()
+        working-directory: v226-ihv-source
+        run: |
+          if [ -f v226-ihv-build.log ]; then
+            grep -Ein "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" v226-ihv-build.log | head -3800 || true
+          fi
+
+      - name: Prepare V226 IHV APK
+        run: |
+          cp v226-ihv-source/app/build/outputs/apk/debug/app-debug.apk V226-IHV-IN-HOUSE.apk
+
+      - name: Package V226 IHV source
+        run: |
+          cd v226-ihv-source
+          zip -qr ../V226-IHV-IN-HOUSE-SOURCE.zip app
+          cd ..
+
+      - name: Upload V226 IHV APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: V226-IHV-IN-HOUSE
+          path: V226-IHV-IN-HOUSE.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V226 IHV source
+        uses: actions/upload-artifact@v4
+        with:
+          name: V226-IHV-IN-HOUSE-SOURCE
+          path: V226-IHV-IN-HOUSE-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: V226-IHV-BUILD-LOG
+          path: v226-ihv-source/v226-ihv-build.log
+          if-no-files-found: warn
+          retention-days: 7
