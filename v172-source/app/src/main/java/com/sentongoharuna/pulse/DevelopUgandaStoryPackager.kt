@@ -71,6 +71,13 @@ object DevelopUgandaStoryPackager {
     ) {
         val appContext = context.applicationContext
 
+        // Snapshot before the background task starts, so the Story Package
+        // records the V228 brand/tag profile that belonged to this clip.
+        val brandSnapshot =
+            DevelopUgandaBrandMetadataStore.snapshot(
+                context
+            )
+
         executor.execute {
             val packageId = safeSegment(
                 metadata.packageId.ifBlank {
@@ -166,9 +173,28 @@ object DevelopUgandaStoryPackager {
                 writeJson(
                     appContext,
                     relative,
+                    "BRAND_METADATA.json",
+                    brandSnapshot.toJson()
+                        .put(
+                            "captured_for_package",
+                            packageId
+                        )
+                        .put(
+                            "captured_utc",
+                            Instant.now().toString()
+                        )
+                )
+
+                writeJson(
+                    appContext,
+                    relative,
                     "METADATA.json",
                     JSONObject()
-                        .put("app_version", "V227")
+                        .put("app_version", "V228")
+                        .put("brand_display_name", brandSnapshot.displayName)
+                        .put("brand_organization", brandSnapshot.organization)
+                        .put("brand_overlay_preset", brandSnapshot.preset)
+                        .put("brand_output_profile", brandSnapshot.outputProfile)
                         .put("package_id", packageId)
                         .put("source_kind", metadata.sourceKind)
                         .put("camera", metadata.camera)
@@ -193,7 +219,10 @@ object DevelopUgandaStoryPackager {
                     appContext,
                     relative,
                     "CAPTION_DRAFT.txt",
-                    suggestedCaption(metadata)
+                    suggestedCaption(
+                        metadata,
+                        brandSnapshot
+                    )
                 )
 
                 writeText(
@@ -227,7 +256,7 @@ object DevelopUgandaStoryPackager {
                     "MANIFEST.json",
                     JSONObject()
                         .put("package_version", 1)
-                        .put("app_version", "V227")
+                        .put("app_version", "V228")
                         .put("package_id", packageId)
                         .put("created_utc", Instant.now().toString())
                         .put("source_uri", sourceUri.toString())
@@ -247,6 +276,7 @@ object DevelopUgandaStoryPackager {
                                     "ORIGINAL_VIDEO.mp4",
                                     "THUMBNAIL.jpg",
                                     "METADATA.json",
+                                    "BRAND_METADATA.json",
                                     "INTEGRITY.json",
                                     "CAPTION_DRAFT.txt",
                                     "SOCIAL_MASTER_STATUS.txt",
@@ -615,7 +645,7 @@ object DevelopUgandaStoryPackager {
         packageId: String,
         metadata: StoryMetadata
     ): String = buildString {
-        append("develop.uganda AUTO STORY PACKAGE • V227\n\n")
+        append("develop.uganda AUTO STORY PACKAGE • V228\n\n")
         append("PACKAGE ID • $packageId\n")
         append("CAMERA • ${metadata.camera}\n")
         append("REPORTER • ${metadata.reporter}\n")
@@ -626,29 +656,77 @@ object DevelopUgandaStoryPackager {
         append("INTEGRITY.json uses SHA-256 only to detect later file changes. It is not a digital signature and does not prove authorship.\n")
     }
 
-    private fun suggestedCaption(metadata: StoryMetadata): String {
-        val subject = metadata.autoView
-            .substringAfter("likely", "")
-            .replace("•", ",")
-            .trim()
-        val title = metadata.title.trim().takeIf {
-            it.isNotBlank() && it != "--"
-        }
-        val place = metadata.place?.trim()?.takeIf {
-            it.isNotBlank() && !it.startsWith("Locating", ignoreCase = true)
-        }
-        val sentence = listOfNotNull(
-            title,
-            subject.takeIf { it.isNotBlank() },
-            place
-        ).joinToString(" — ").ifBlank {
-            "develop.uganda field report"
-        }
+    private fun suggestedCaption(
+        metadata: StoryMetadata,
+        brand: DevelopUgandaBrandMetadataStore.Snapshot
+    ): String {
+        val subject =
+            metadata.autoView
+                .substringAfter(
+                    "likely",
+                    ""
+                )
+                .replace(
+                    "•",
+                    ","
+                )
+                .trim()
+
+        val title =
+            metadata.title
+                .trim()
+                .takeIf {
+                    it.isNotBlank() &&
+                        it !=
+                            "--"
+                }
+
+        val place =
+            metadata.place
+                ?.trim()
+                ?.takeIf {
+                    it.isNotBlank() &&
+                        !it.startsWith(
+                            "Locating",
+                            ignoreCase =
+                                true
+                        )
+                }
+
+        val sentence =
+            listOfNotNull(
+                title,
+                subject.takeIf {
+                    it.isNotBlank()
+                },
+                place
+            )
+                .joinToString(
+                    " — "
+                )
+                .ifBlank {
+                    "Field report"
+                }
+
+        val byline =
+            when {
+                brand.organization.isNotBlank() ->
+                    "${brand.displayName} • ${brand.organization}"
+
+                brand.displayName.isNotBlank() ->
+                    brand.displayName
+
+                else ->
+                    metadata.reporter
+            }
 
         return "DRAFT CAPTION • REVIEW BEFORE POSTING\n\n" +
             sentence +
-            "\n\nRecorded with develop.uganda • ${metadata.camera}\n"
+            "\n\nField report • $byline\n" +
+            "Camera • ${metadata.camera}\n" +
+            "Recorded with develop.uganda • V228\n"
     }
+
 
     private fun createThumbnail(
         context: Context,

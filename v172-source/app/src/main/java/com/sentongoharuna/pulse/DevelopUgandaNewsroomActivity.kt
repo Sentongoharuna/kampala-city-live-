@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "DIRECTOR & QC PRO • V227\nV226 FIX2 NEWSROOM + V225 PHOTO RETAINED",
+                "BRAND & METADATA STUDIO • V228\nV227 DIRECTOR/QC + V226 FIX2 NEWSROOM RETAINED",
                 9f,
                 white,
                 true
@@ -284,6 +284,28 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
                 "SCREEN-ONLY REAL FACE COMPOSITION FOR PEOPLE/INTERVIEW • PREVIEW LUMA HISTOGRAM • ESTIMATED RECORD TIME • REAL CAMERA DEVICE MAP • SHOT CONTINUITY • INSTANT MP4 QC + REVIEW • V226 FIX2 NEWSROOM INTAKE RETAINED",
                 0xFF91B6A0.toInt()
             )
+        )
+
+        page.addView(
+            compactStatus(
+                "V228 • BRAND & METADATA STUDIO",
+                "CUSTOM TOP NAME / ORGANIZATION • EVERY SAVED-VIDEO METADATA CATEGORY CAN BE ON/OFF • FULL FORENSIC / NEWS / SOCIAL CLEAN / CONSTRUCTION / INTERVIEW / PRIVATE MASTER / CUSTOM • PUBLIC PROFILE HIDES EXACT GPS BY DEFAULT • STORY PACKAGE PRESERVES BRAND/TAG SNAPSHOT",
+                0xFFD0B06F.toInt()
+            )
+        )
+
+        page.addView(
+            launchCard(
+                "V228 • BRAND & METADATA",
+                "Make the camera yours without losing the professional system",
+                "Change the main saved-video name • optional organization • choose exactly which telemetry is visibly burned into NEW recordings • privacy-aware PUBLIC/SOCIAL profile • VERIFIED MASTER defaults to the full V227 experience",
+                0xFFD0B06F.toInt(),
+                "OPEN BRAND & TAG STUDIO"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaBrandMetadataActivity::class.java
+                )
+            }
         )
 
         page.addView(

@@ -150,6 +150,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         const val ACTION_DIRECTOR = 24
         const val ACTION_CONTINUITY = 25
         const val ACTION_HEALTH = 26
+        const val ACTION_BRAND_METADATA = 27
     }
 
 
@@ -231,6 +232,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var directorButton: Button
     private lateinit var continuityButton: Button
     private lateinit var healthButton: Button
+    private lateinit var brandMetadataButton: Button
     private lateinit var reportDisplayRow: LinearLayout
     private lateinit var reportOutputRow: LinearLayout
     private lateinit var reportDirectorRow: LinearLayout
@@ -1218,7 +1220,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         previewBrandView =
             hud(
-                "develop.uganda • V227",
+                DevelopUgandaBrandMetadataStore.previewTitle(
+                    this,
+                    "V228"
+                ),
                 13.8f,
                 0xFFD8B85B.toInt(),
                 bold = true
@@ -1869,10 +1874,17 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 0xFF73B7D9.toInt()
             )
 
+        brandMetadataButton =
+            deckButton(
+                "BRAND\nTAGS",
+                0xFFD0B06F.toInt()
+            )
+
         listOf(
             directorButton,
             continuityButton,
-            healthButton
+            healthButton,
+            brandMetadataButton
         ).forEachIndexed {
                 index,
                 button ->
@@ -2142,6 +2154,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         healthButton.setOnTouchListener(
             DeckTouchListener(ACTION_HEALTH)
+        )
+
+        brandMetadataButton.setOnTouchListener(
+            DeckTouchListener(ACTION_BRAND_METADATA)
         )
 
         lensButton.setOnTouchListener(
@@ -5171,6 +5187,43 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         )
     }
 
+    private fun refreshV228BrandUi() {
+        if (
+            ::previewBrandView.isInitialized
+        ) {
+            previewBrandView.text =
+                DevelopUgandaBrandMetadataStore.previewTitle(
+                    this,
+                    "V228"
+                )
+        }
+
+        if (
+            ::brandMetadataButton.isInitialized
+        ) {
+            val config =
+                DevelopUgandaBrandMetadataStore.snapshot(
+                    this
+                )
+
+            brandMetadataButton.text =
+                "BRAND\n" +
+                    config.preset
+                        .take(
+                            9
+                        )
+        }
+    }
+
+    private fun openV228BrandMetadataStudio() {
+        startActivity(
+            android.content.Intent(
+                this,
+                DevelopUgandaBrandMetadataActivity::class.java
+            )
+        )
+    }
+
     private fun openV227CameraHealth() {
         startActivity(
             android.content.Intent(
@@ -6749,13 +6802,20 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
     }
 
-        private fun drawReporterOverlay(frame: Frame) {
-        val c = frame.overlayCanvas
-        val crop = frame.cropRect
+        private fun drawReporterOverlay(
+        frame: Frame
+    ) {
+        val c =
+            frame.overlayCanvas
+
+        val crop =
+            frame.cropRect
 
         if (
-            crop.width() <= 0 ||
-            crop.height() <= 0
+            crop.width() <=
+                0 ||
+            crop.height() <=
+                0
         ) {
             return
         }
@@ -6765,67 +6825,97 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             android.graphics.PorterDuff.Mode.CLEAR
         )
 
-        val rotation = (
-            (frame.rotationDegrees % 360) + 360
-        ) % 360
+        val rotation =
+            (
+                (
+                    frame.rotationDegrees %
+                        360
+                    ) +
+                    360
+                ) %
+                360
 
         val finalWidth =
             if (
-                rotation == 90 ||
-                rotation == 270
+                rotation ==
+                    90 ||
+                rotation ==
+                    270
             ) {
-                crop.height().toFloat()
+                crop.height()
+                    .toFloat()
             } else {
-                crop.width().toFloat()
+                crop.width()
+                    .toFloat()
             }
 
         val finalHeight =
             if (
-                rotation == 90 ||
-                rotation == 270
+                rotation ==
+                    90 ||
+                rotation ==
+                    270
             ) {
-                crop.width().toFloat()
+                crop.width()
+                    .toFloat()
             } else {
-                crop.height().toFloat()
+                crop.height()
+                    .toFloat()
             }
 
-        val l = crop.left.toFloat()
-        val t = crop.top.toFloat()
-        val r = crop.right.toFloat()
-        val b = crop.bottom.toFloat()
+        val l =
+            crop.left.toFloat()
 
-        val nonMirrored = when (rotation) {
-            90 -> floatArrayOf(
-                l, b,
-                l, t,
-                r, t,
-                r, b
-            )
+        val t =
+            crop.top.toFloat()
 
-            180 -> floatArrayOf(
-                r, b,
-                l, b,
-                l, t,
-                r, t
-            )
+        val r =
+            crop.right.toFloat()
 
-            270 -> floatArrayOf(
-                r, t,
-                r, b,
-                l, b,
-                l, t
-            )
+        val b =
+            crop.bottom.toFloat()
 
-            else -> floatArrayOf(
-                l, t,
-                r, t,
-                r, b,
-                l, b
-            )
-        }
+        val nonMirrored =
+            when (
+                rotation
+            ) {
+                90 ->
+                    floatArrayOf(
+                        l, b,
+                        l, t,
+                        r, t,
+                        r, b
+                    )
+
+                180 ->
+                    floatArrayOf(
+                        r, b,
+                        l, b,
+                        l, t,
+                        r, t
+                    )
+
+                270 ->
+                    floatArrayOf(
+                        r, t,
+                        r, b,
+                        l, b,
+                        l, t
+                    )
+
+                else ->
+                    floatArrayOf(
+                        l, t,
+                        r, t,
+                        r, b,
+                        l, b
+                    )
+            }
 
         val destination =
-            if (frame.isMirroring) {
+            if (
+                frame.isMirroring
+            ) {
                 floatArrayOf(
                     nonMirrored[2],
                     nonMirrored[3],
@@ -6840,18 +6930,20 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 nonMirrored
             }
 
-        val source = floatArrayOf(
-            0f,
-            0f,
-            finalWidth,
-            0f,
-            finalWidth,
-            finalHeight,
-            0f,
-            finalHeight
-        )
+        val source =
+            floatArrayOf(
+                0f,
+                0f,
+                finalWidth,
+                0f,
+                finalWidth,
+                finalHeight,
+                0f,
+                finalHeight
+            )
 
-        val finalToBuffer = Matrix()
+        val finalToBuffer =
+            Matrix()
 
         if (
             !finalToBuffer.setPolyToPoly(
@@ -6866,7 +6958,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
 
         c.save()
-        c.concat(finalToBuffer)
+        c.concat(
+            finalToBuffer
+        )
 
         drawCreativeLook(
             c,
@@ -6884,22 +6978,33 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     reportHudSizeIndex
                 ]
 
-        // V201: move the REPORT burn-in to a deliberate left-side telemetry
-        // column, make the type larger, and keep only values that genuinely
-        // change while the camera moves.
+        val brandConfig =
+            DevelopUgandaBrandMetadataStore
+                .snapshot(
+                    this
+                )
+
         val safeLeft =
-            finalWidth * 0.050f
+            finalWidth *
+                0.050f
 
         val safeTop =
-            finalHeight * 0.100f
+            finalHeight *
+                0.100f
 
         val maxWidth =
-            finalWidth * 0.56f
+            finalWidth *
+                0.56f
 
-        var y = safeTop
+        var y =
+            safeTop
 
         val railStartY =
-            y - (14f * u)
+            y -
+                (
+                    14f *
+                        u
+                    )
 
         val telemetryPanel =
             Paint(
@@ -6907,459 +7012,1014 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             ).apply {
                 color =
                     0x30000000
+
                 style =
                     Paint.Style.FILL
             }
 
         c.drawRoundRect(
-            safeLeft - (14f * u),
-            safeTop - (26f * u),
-            safeLeft + maxWidth + (14f * u),
-            safeTop + (344f * u),
-            16f * u,
-            16f * u,
+            safeLeft -
+                (
+                    14f *
+                        u
+                    ),
+            safeTop -
+                (
+                    26f *
+                        u
+                    ),
+            safeLeft +
+                maxWidth +
+                (
+                    14f *
+                        u
+                    ),
+            safeTop +
+                (
+                    brandConfig
+                        .reportPanelHeightUnits() *
+                        u
+                    ),
+            16f *
+                u,
+            16f *
+                u,
             telemetryPanel
         )
 
-        val text = Paint(
-            Paint.ANTI_ALIAS_FLAG
-        ).apply {
-            typeface = Typeface.create(
-                Typeface.MONOSPACE,
-                Typeface.BOLD
+        val text =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                typeface =
+                    Typeface.create(
+                        Typeface.MONOSPACE,
+                        Typeface.BOLD
+                    )
+
+                setShadowLayer(
+                    reportHudShadowRadius(
+                        u
+                    ),
+                    0.45f *
+                        u,
+                    0.45f *
+                        u,
+                    reportHudOutlineColor()
+                )
+            }
+
+        val rail =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    if (
+                        recording !=
+                            null
+                    ) {
+                        0xFFFF4138.toInt()
+                    } else {
+                        0xFFD8B85B.toInt()
+                    }
+
+                strokeWidth =
+                    2.3f *
+                        u
+            }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .BRAND
+            )
+        ) {
+            text.color =
+                0xFFD8B85B.toInt()
+
+            text.textSize =
+                34f *
+                    u
+
+            drawStrongRecordedText(
+                c,
+                brandConfig.displayName,
+                safeLeft,
+                y,
+                text
             )
 
-            setShadowLayer(
-                reportHudShadowRadius(
+            if (
+                brandConfig.organization
+                    .isNotBlank()
+            ) {
+                y +=
+                    18f *
+                        u
+
+                text.color =
+                    Color.WHITE
+
+                text.textSize =
+                    13.0f *
+                        u
+
+                drawFitText(
+                    c,
+                    brandConfig.organization,
+                    safeLeft,
+                    y,
+                    maxWidth,
+                    text,
+                    10.5f *
+                        u
+                )
+            }
+
+            y +=
+                22f *
                     u
-                ),
-                0.45f * u,
-                0.45f * u,
-                reportHudOutlineColor()
-            )
         }
 
-        val rail = Paint(
-            Paint.ANTI_ALIAS_FLAG
-        ).apply {
-            color =
-                if (recording != null) {
-                    0xFFFF4138.toInt()
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .VERSION
+            )
+        ) {
+            text.color =
+                if (
+                    reportDisplayMode ==
+                        "LIVE EFFECT"
+                ) {
+                    0xFFFF5A52.toInt()
                 } else {
-                    0xFFD8B85B.toInt()
+                    Color.WHITE
                 }
 
-            strokeWidth =
-                2.3f * u
+            text.textSize =
+                15.8f *
+                    u
+
+            drawFitText(
+                c,
+                "${sceneTag()} • V228",
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                12.4f *
+                    u
+            )
+
+            y +=
+                18f *
+                    u
         }
 
-        text.color =
-            0xFFD8B85B.toInt()
-        text.textSize =
-            34f * u
-
-        val brand =
-            "develop.uganda"
-
-        drawStrongRecordedText(
-            c,
-            brand,
-            safeLeft,
-            y,
-            text
-        )
-
-        val brandWidth =
-            text.measureText(
-                brand
+        // The V227 instruments remain, but V228 lets the user decide
+        // which of them is permanently burned into new saved media.
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .COMPASS
             )
+        ) {
+            drawCompassInstrument(
+                c,
+                finalWidth *
+                    0.80f,
+                finalHeight *
+                    0.875f,
+                43f *
+                    u,
+                u
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .AUDIO
+            )
+        ) {
+            drawAudioMeterInstrument(
+                c,
+                finalWidth *
+                    0.705f,
+                finalHeight *
+                    0.815f,
+                finalWidth *
+                    0.15f,
+                10f *
+                    u,
+                u
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .HORIZON
+            )
+        ) {
+            drawLevelInstrument(
+                c,
+                finalWidth *
+                    0.80f,
+                finalHeight *
+                    0.935f,
+                92f *
+                    u,
+                28f *
+                    u,
+                u
+            )
+        }
 
         text.color =
             if (
-                reportDisplayMode ==
-                "LIVE EFFECT"
+                recording !=
+                    null
             ) {
-                0xFFFF5A52.toInt()
-            } else {
-                Color.WHITE
-            }
-
-        text.textSize =
-            15.8f * u
-
-        drawStrongRecordedText(
-            c,
-            "${sceneTag()} • V226",
-            safeLeft +
-                brandWidth +
-                (11f * u),
-            y,
-            text
-        )
-
-        // Keep the moving instruments at the lower-right.
-        val instrumentCenterX =
-            finalWidth * 0.80f
-
-        val compassCenterY =
-            finalHeight * 0.875f
-
-        drawCompassInstrument(
-            c,
-            instrumentCenterX,
-            compassCenterY,
-            43f * u,
-            u
-        )
-
-        drawAudioMeterInstrument(
-            c,
-            finalWidth * 0.705f,
-            finalHeight * 0.815f,
-            finalWidth * 0.15f,
-            10f * u,
-            u
-        )
-
-        drawLevelInstrument(
-            c,
-            instrumentCenterX,
-            finalHeight * 0.935f,
-            92f * u,
-            28f * u,
-            u
-        )
-
-        // Dynamic-only rows.
-        y += 30f * u
-        text.color =
-            if (recording != null) {
                 0xFFFF4138.toInt()
             } else {
                 Color.WHITE
             }
+
         text.textSize =
-            18.0f * u
+            18.0f *
+                u
 
         val recState =
             when {
-                recording != null -> "● REC"
-                captureModes[captureModeIndex] == "PHOTO" -> "● PHOTO"
-                else -> "STBY"
+                recording !=
+                    null ->
+                        "● REC"
+
+                captureModes[
+                    captureModeIndex
+                ] ==
+                    "PHOTO" ->
+                        "● PHOTO"
+
+                else ->
+                    "STBY"
             }
 
+        val stateParts =
+            mutableListOf(
+                recState,
+                "TC ${tc()}"
+            )
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .VERSION
+            )
+        ) {
+            stateParts.add(
+                "V228"
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .THERMAL
+            )
+        ) {
+            stateParts.add(
+                "THERM ${thermalStateLabel()}"
+            )
+        }
+
         drawFitText(
             c,
-            "$recState   •   TC ${tc()}   •   V227   •   THERM ${thermalStateLabel()}",
+            stateParts.joinToString(
+                "   •   "
+            ),
             safeLeft,
             y,
             maxWidth,
             text,
-            15.2f * u
+            14.2f *
+                u
         )
 
-        y += 18f * u
-        text.color =
-            cameraExperienceAccentColor()
-        text.textSize =
-            15.3f * u
+        y +=
+            19f *
+                u
 
-        drawFitText(
-            c,
-            "CAMERA • ${cameraExperienceShortLabel()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            13.6f * u
-        )
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .CAMERA_MODE
+            )
+        ) {
+            text.color =
+                cameraExperienceAccentColor()
 
-        y += 18f * u
-        text.color =
-            reportModeAccentColor()
-        text.textSize =
-            15.2f * u
+            text.textSize =
+                15.3f *
+                    u
 
-        drawFitText(
-            c,
-            "MODE • ${qualityModes[qualityIndex]}   •   SCENE ${sceneModes[sceneIndex]}   •   LOOK ${lookModes[lookIndex]}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            12.8f * u
-        )
+            drawFitText(
+                c,
+                "CAMERA • ${cameraExperienceShortLabel()}",
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                13.6f *
+                    u
+            )
 
-        y += 18f * u
-        text.color =
-            0xFFAEBDEB.toInt()
-        text.textSize =
-            14.6f * u
+            y +=
+                18f *
+                    u
 
-        drawFitText(
-            c,
-            autoDirectorStateText(),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            12.6f * u
-        )
+            text.color =
+                reportModeAccentColor()
 
-        y += 20f * u
-        text.color = Color.WHITE
-        text.textSize =
-            16.0f * u
+            text.textSize =
+                15.2f *
+                    u
 
-        drawFitText(
-            c,
-            "LOCAL ${clock.format(Date())}   |   UTC ${utcClockText()}",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            13.6f * u
-        )
+            drawFitText(
+                c,
+                "MODE • ${qualityModes[qualityIndex]}   •   SCENE ${sceneModes[sceneIndex]}   •   LOOK ${lookModes[lookIndex]}",
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                12.8f *
+                    u
+            )
 
-        y += 20f * u
-        text.color =
-            0xFF9FD9FF.toInt()
-        text.textSize =
-            16.8f * u
+            y +=
+                18f *
+                    u
 
-        drawFitText(
-            c,
-            "POSITION",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            15.0f * u
-        )
+            text.color =
+                0xFFAEBDEB.toInt()
 
-        y += 16f * u
-        text.color =
-            0xFF83C7D4.toInt()
-        text.textSize =
-            15.2f * u
+            text.textSize =
+                14.6f *
+                    u
 
-        drawFitText(
-            c,
-            coordinatePrimaryOverlay(),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            13.2f * u
-        )
+            drawFitText(
+                c,
+                autoDirectorStateText(),
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                12.6f *
+                    u
+            )
 
-        y += 20f * u
-        text.color =
-            0xFF9FD9FF.toInt()
-        text.textSize =
-            16.8f * u
+            y +=
+                20f *
+                    u
+        }
 
-        drawFitText(
-            c,
-            "GPS STATUS",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            15.0f * u
-        )
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .REPORTER
+            ) ||
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .STORY
+            )
+        ) {
+            val identityParts =
+                mutableListOf<String>()
 
-        y += 16f * u
-        text.color =
-            0xFF83C7D4.toInt()
-        text.textSize =
-            15.2f * u
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .REPORTER
+                )
+            ) {
+                identityParts.add(
+                    "REPORTER • $reporterName"
+                )
+            }
 
-        drawFitText(
-            c,
-            gnssOverlay(),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            13.0f * u
-        )
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .STORY
+                )
+            ) {
+                identityParts.add(
+                    "STORY • $storyId"
+                )
+            }
 
-        y += 20f * u
-        text.color =
-            0xFF9FD9FF.toInt()
-        text.textSize =
-            16.8f * u
+            text.color =
+                Color.WHITE
 
-        drawFitText(
-            c,
-            "NAVIGATION",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            15.0f * u
-        )
+            text.textSize =
+                14.4f *
+                    u
 
-        y += 16f * u
-        text.color =
-            0xFF83C7D4.toInt()
-        text.textSize =
-            15.2f * u
+            drawFitText(
+                c,
+                identityParts.joinToString(
+                    "   |   "
+                ),
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                11.8f *
+                    u
+            )
 
-        drawFitText(
-            c,
-            navigationOverlay(),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            13.0f * u
-        )
+            y +=
+                20f *
+                    u
+        }
 
-        y += 20f * u
-        text.color =
-            0xFFFFFFFF.toInt()
-        text.textSize =
-            16.8f * u
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .DATE_TIME
+            )
+        ) {
+            text.color =
+                Color.WHITE
 
-        drawFitText(
-            c,
-            "LEVEL",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            15.0f * u
-        )
+            text.textSize =
+                16.0f *
+                    u
 
-        y += 16f * u
-        text.textSize =
-            15.0f * u
+            drawFitText(
+                c,
+                "LOCAL ${clock.format(Date())}   |   UTC ${utcClockText()}",
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                13.6f *
+                    u
+            )
 
-        drawFitText(
-            c,
-            orientationOverlay(),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            12.9f * u
-        )
+            y +=
+                20f *
+                    u
+        }
 
-        y += 20f * u
-        text.color =
-            0xFF9FD9FF.toInt()
-        text.textSize =
-            16.8f * u
+        fun section(
+            heading: String,
+            value: String,
+            accent: Int =
+                0xFF9FD9FF.toInt(),
+            valueColor: Int =
+                0xFF83C7D4.toInt()
+        ) {
+            text.color =
+                accent
 
-        drawFitText(
-            c,
-            "WEATHER",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            15.0f * u
-        )
+            text.textSize =
+                16.8f *
+                    u
 
-        y += 16f * u
-        text.color =
-            0xFF9FD9FF.toInt()
-        text.textSize =
-            15.0f * u
+            drawFitText(
+                c,
+                heading,
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                15.0f *
+                    u
+            )
 
-        drawFitText(
-            c,
-            weatherOverlay().removePrefix("WX "),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            12.9f * u
-        )
+            y +=
+                16f *
+                    u
 
-        y += 20f * u
-        text.color =
-            0xFF83B995.toInt()
-        text.textSize =
-            16.8f * u
+            text.color =
+                valueColor
 
-        drawFitText(
-            c,
-            "AUDIO",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            15.0f * u
-        )
+            text.textSize =
+                15.2f *
+                    u
 
-        y += 16f * u
-        text.textSize =
-            15.0f * u
+            drawFitText(
+                c,
+                value,
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                12.9f *
+                    u
+            )
 
-        drawFitText(
-            c,
-            audioLevelOverlay(),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            12.9f * u
-        )
+            y +=
+                20f *
+                    u
+        }
 
-        y += 20f * u
-        text.color =
-            0xFF83B995.toInt()
-        text.textSize =
-            16.8f * u
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .LOCATION
+            )
+        ) {
+            section(
+                "LOCATION",
+                placeName
+            )
+        }
 
-        drawFitText(
-            c,
-            "SYSTEM",
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            15.0f * u
-        )
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .GPS_COORDS
+            ) ||
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .ALTITUDE
+            )
+        ) {
+            val positionParts =
+                mutableListOf<String>()
 
-        y += 16f * u
-        text.textSize =
-            15.0f * u
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .GPS_COORDS
+                )
+            ) {
+                positionParts.add(
+                    "LAT " +
+                        (
+                            lat?.let {
+                                String.format(
+                                    Locale.US,
+                                    "%.5f",
+                                    it
+                                )
+                            } ?: "--"
+                        )
+                )
 
-        drawFitText(
-            c,
-            systemOverlay(),
-            safeLeft,
-            y,
-            maxWidth,
-            text,
-            12.9f * u
-        )
+                positionParts.add(
+                    "LON " +
+                        (
+                            lon?.let {
+                                String.format(
+                                    Locale.US,
+                                    "%.5f",
+                                    it
+                                )
+                            } ?: "--"
+                        )
+                )
+            }
+
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .ALTITUDE
+                )
+            ) {
+                positionParts.add(
+                    "ALT " +
+                        (
+                            alt?.let {
+                                String.format(
+                                    Locale.US,
+                                    "%.0fm",
+                                    it
+                                )
+                            } ?: "--"
+                        )
+                )
+            }
+
+            section(
+                "POSITION",
+                positionParts.joinToString(
+                    " • "
+                )
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .GPS_ACCURACY
+            )
+        ) {
+            val fixAge =
+                if (
+                    lastGpsUpdateMs >
+                        0L
+                ) {
+                    (
+                        System.currentTimeMillis() -
+                            lastGpsUpdateMs
+                        ) /
+                        1000f
+                } else {
+                    null
+                }
+
+            section(
+                "GPS STATUS",
+                buildString {
+                    append(
+                        accuracy?.let {
+                            String.format(
+                                Locale.US,
+                                "ACC ±%.0fm",
+                                it
+                            )
+                        } ?: "ACC --"
+                    )
+
+                    append(
+                        " • SAT ${gnssSatellitesUsed}/${gnssSatellitesVisible}"
+                    )
+
+                    append(
+                        " • FIX " +
+                            (
+                                fixAge?.let {
+                                    String.format(
+                                        Locale.US,
+                                        "%.1fs",
+                                        it
+                                    )
+                                } ?: "--"
+                            )
+                    )
+                }
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .COMPASS
+            ) ||
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .SPEED_MOTION
+            )
+        ) {
+            val navParts =
+                mutableListOf<String>()
+
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .COMPASS
+                )
+            ) {
+                navParts.add(
+                    "COMP " +
+                        (
+                            compassAzimuthDeg?.let {
+                                String.format(
+                                    Locale.US,
+                                    "%.0f°",
+                                    it
+                                )
+                            } ?: "--"
+                        )
+                )
+
+                navParts.add(
+                    "GPS HDG " +
+                        (
+                            heading?.let {
+                                String.format(
+                                    Locale.US,
+                                    "%.0f°",
+                                    it
+                                )
+                            } ?: "--"
+                        )
+                )
+            }
+
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .SPEED_MOTION
+                )
+            ) {
+                navParts.add(
+                    "SPD " +
+                        (
+                            speedKmh?.let {
+                                String.format(
+                                    Locale.US,
+                                    "%.1fkm/h",
+                                    it
+                                )
+                            } ?: "--"
+                        )
+                )
+
+                navParts.add(
+                    motionGuardLabel()
+                )
+
+                navParts.add(
+                    String.format(
+                        Locale.US,
+                        "DIST %.0fm",
+                        distanceTravelledM
+                    )
+                )
+            }
+
+            section(
+                "NAVIGATION",
+                navParts.joinToString(
+                    " • "
+                )
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .HORIZON
+            )
+        ) {
+            section(
+                "LEVEL",
+                orientationOverlay(),
+                Color.WHITE,
+                Color.WHITE
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .WEATHER
+            )
+        ) {
+            section(
+                "WEATHER",
+                weatherOverlay()
+                    .removePrefix(
+                        "WX "
+                    )
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .AUDIO
+            )
+        ) {
+            section(
+                "AUDIO",
+                audioLevelOverlay(),
+                0xFF83B995.toInt(),
+                0xFF83B995.toInt()
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .BATTERY_STORAGE
+            )
+        ) {
+            val battery =
+                batteryPct()
+
+            val free =
+                freeStorageGb()
+
+            section(
+                "DEVICE",
+                "BAT " +
+                    (
+                        battery?.let {
+                            "$it%"
+                        } ?: "--"
+                    ) +
+                    " • FREE " +
+                    (
+                        free?.let {
+                            "${it}GB"
+                        } ?: "--"
+                    ),
+                0xFF83B995.toInt(),
+                0xFF83B995.toInt()
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .NETWORK
+            )
+        ) {
+            section(
+                "NETWORK",
+                networkType() +
+                    " • " +
+                    (
+                        estimatedUploadKbps?.let {
+                            "UP~${it}kbps"
+                        } ?: "UP~--"
+                    ),
+                0xFF83B995.toInt(),
+                0xFF83B995.toInt()
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .SHOT_GUARD
+            )
+        ) {
+            val warnings =
+                shotQualityWarnings()
+
+            section(
+                "SHOT GUARD",
+                if (
+                    warnings.isEmpty()
+                ) {
+                    "READY"
+                } else {
+                    warnings.joinToString(
+                        " • "
+                    )
+                },
+                if (
+                    warnings.isEmpty()
+                ) {
+                    0xFF83B995.toInt()
+                } else {
+                    0xFFD8B85B.toInt()
+                },
+                if (
+                    warnings.isEmpty()
+                ) {
+                    0xFF83B995.toInt()
+                } else {
+                    0xFFD8B85B.toInt()
+                }
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .INTEGRITY
+            )
+        ) {
+            text.color =
+                0xFFAEBDEB.toInt()
+
+            text.textSize =
+                13.0f *
+                    u
+
+            drawFitText(
+                c,
+                "INTEGRITY • " +
+                    if (
+                        integrityEnabled
+                    ) {
+                        "SHA-256 STORY PACKAGE"
+                    } else {
+                        "OFF"
+                    },
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                10.5f *
+                    u
+            )
+
+            y +=
+                18f *
+                    u
+        }
+
+        val credit =
+            brandConfig.creditLine()
+
+        if (
+            credit.isNotBlank()
+        ) {
+            text.color =
+                0xFFAEB7C7.toInt()
+
+            text.textSize =
+                10.0f *
+                    u
+
+            drawFitText(
+                c,
+                credit,
+                safeLeft,
+                y,
+                maxWidth,
+                text,
+                8.4f *
+                    u
+            )
+
+            y +=
+                14f *
+                    u
+        }
 
         val railEndY =
-            y + (6f * u)
+            y +
+                (
+                    6f *
+                        u
+                    )
 
         c.drawLine(
-            safeLeft - (8f * u),
+            safeLeft -
+                (
+                    8f *
+                        u
+                    ),
             railStartY,
-            safeLeft - (8f * u),
+            safeLeft -
+                (
+                    8f *
+                        u
+                    ),
             railEndY,
             rail
         )
 
         c.drawLine(
-            safeLeft - (8f * u),
+            safeLeft -
+                (
+                    8f *
+                        u
+                    ),
             railEndY,
-            safeLeft + (7f * u),
+            safeLeft +
+                (
+                    7f *
+                        u
+                    ),
             railEndY,
             rail
         )
 
         c.restore()
     }
+
 
 
     private fun drawStrongRecordedText(
@@ -8151,6 +8811,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
     override fun onResume() {
         super.onResume()
+
+        refreshV228BrandUi()
 
         rotationVectorSensor?.let { sensor ->
             sensorManager.registerListener(
@@ -8954,7 +9616,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V227_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V228_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -11205,6 +11867,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                         ACTION_HEALTH ->
                             openV227CameraHealth()
+
+                        ACTION_BRAND_METADATA ->
+                            openV228BrandMetadataStudio()
 
                         ACTION_LENS ->
                             showReportLensDropdown(

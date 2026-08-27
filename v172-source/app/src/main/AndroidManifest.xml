@@ -133,6 +133,11 @@
             android:exported="false"/>
 
         <activity
+            android:name=".DevelopUgandaBrandMetadataActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".DevelopUgandaCameraActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>

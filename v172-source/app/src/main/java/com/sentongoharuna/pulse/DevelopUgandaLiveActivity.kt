@@ -674,7 +674,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V227",
+                DevelopUgandaBrandMetadataStore.previewTitle(
+                    this,
+                    "V228"
+                ),
                 20f,
                 amber,
                 true
@@ -2294,8 +2297,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             frame.cropRect
 
         if (
-            crop.width() <= 0 ||
-            crop.height() <= 0
+            crop.width() <=
+                0 ||
+            crop.height() <=
+                0
         ) {
             return
         }
@@ -2317,8 +2322,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val finalWidth =
             if (
-                rotation == 90 ||
-                rotation == 270
+                rotation ==
+                    90 ||
+                rotation ==
+                    270
             ) {
                 crop.height().toFloat()
             } else {
@@ -2327,8 +2334,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val finalHeight =
             if (
-                rotation == 90 ||
-                rotation == 270
+                rotation ==
+                    90 ||
+                rotation ==
+                    270
             ) {
                 crop.width().toFloat()
             } else {
@@ -2337,10 +2346,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val l =
             crop.left.toFloat()
+
         val t =
             crop.top.toFloat()
+
         val r =
             crop.right.toFloat()
+
         val b =
             crop.bottom.toFloat()
 
@@ -2444,6 +2456,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             return
         }
 
+        val brandConfig =
+            DevelopUgandaBrandMetadataStore
+                .snapshot(
+                    this
+                )
+
         val u =
             minOf(
                 finalWidth,
@@ -2454,8 +2472,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     liveHudSizeIndex
                 ]
 
-        // V186: conservative social-safe margins. V184/V185 used 8% and
-        // the CameraX crop could place the left side outside the saved MP4.
         val safeLeft =
             finalWidth *
                 0.16f
@@ -2482,14 +2498,17 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     liveHudShadowRadius(
                         u
                     ),
-                    0.6f * u,
-                    0.6f * u,
+                    0.6f *
+                        u,
+                    0.6f *
+                        u,
                     liveHudOutlineColor()
                 )
             }
 
         val liveOn =
-            recording != null
+            recording !=
+                null
 
         val blink =
             (
@@ -2499,139 +2518,227 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        // V227: brand/build and blinking LIVE status use separate lanes.
-        // The build capsule never receives the LIVE glow.
         val brandX =
             safeLeft +
-                (23f * u)
+                (
+                    23f *
+                        u
+                    )
 
-        paint.textSize =
-            38f * u
+        var brandWidth =
+            0f
 
-        paint.color =
-            amber
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .BRAND
+            )
+        ) {
+            paint.textSize =
+                38f *
+                    u
 
-        val brandText =
-            "develop.uganda"
+            paint.color =
+                amber
 
-        drawStrongLiveText(
-            canvas,
-            brandText,
-            brandX,
-            safeTop,
-            paint
-        )
-
-        val buildText =
-            "V227"
-
-        val brandWidth =
-            paint.measureText(
-                brandText
+            drawStrongLiveText(
+                canvas,
+                brandConfig.displayName,
+                brandX,
+                safeTop,
+                paint
             )
 
-        val buildLeft =
-            brandX +
-                brandWidth +
-                (13f * u)
+            brandWidth =
+                paint.measureText(
+                    brandConfig.displayName
+                )
 
-        val buildTop =
-            safeTop -
-                (25f * u)
+            if (
+                brandConfig.organization
+                    .isNotBlank()
+            ) {
+                paint.textSize =
+                    10.8f *
+                        u
 
-        val buildRight =
-            buildLeft +
-                (72f * u)
-
-        val buildBottom =
-            safeTop +
-                (4f * u)
-
-        val buildPlate =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    0xD9163B5A.toInt()
-
-                style =
-                    Paint.Style.FILL
-            }
-
-        val buildStroke =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    cyan
-
-                style =
-                    Paint.Style.STROKE
-
-                strokeWidth =
-                    1.4f * u
-            }
-
-        canvas.drawRoundRect(
-            buildLeft,
-            buildTop,
-            buildRight,
-            buildBottom,
-            8f * u,
-            8f * u,
-            buildPlate
-        )
-
-        canvas.drawRoundRect(
-            buildLeft,
-            buildTop,
-            buildRight,
-            buildBottom,
-            8f * u,
-            8f * u,
-            buildStroke
-        )
-
-        val buildPaint =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
+                paint.color =
                     white
 
-                textSize =
-                    12.4f * u
-
-                typeface =
-                    Typeface.create(
-                        Typeface.MONOSPACE,
-                        Typeface.BOLD
-                    )
+                drawFitText(
+                    canvas,
+                    brandConfig.organization,
+                    brandX,
+                    safeTop +
+                        (
+                            15f *
+                                u
+                            ),
+                    safeRight -
+                        brandX,
+                    paint,
+                    8.8f *
+                        u
+                )
             }
+        }
 
-        canvas.drawText(
-            buildText,
-            buildLeft +
-                (14f * u),
-            safeTop -
-                (6f * u),
-            buildPaint
-        )
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .VERSION
+            )
+        ) {
+            val buildText =
+                "V228"
 
+            val buildLeft =
+                if (
+                    brandWidth >
+                        0f
+                ) {
+                    brandX +
+                        brandWidth +
+                        (
+                            13f *
+                                u
+                            )
+                } else {
+                    brandX
+                }
+
+            val buildTop =
+                safeTop -
+                    (
+                        25f *
+                            u
+                        )
+
+            val buildRight =
+                buildLeft +
+                    (
+                        72f *
+                            u
+                        )
+
+            val buildBottom =
+                safeTop +
+                    (
+                        4f *
+                            u
+                        )
+
+            val buildPlate =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        0xD9163B5A.toInt()
+
+                    style =
+                        Paint.Style.FILL
+                }
+
+            val buildStroke =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        cyan
+
+                    style =
+                        Paint.Style.STROKE
+
+                    strokeWidth =
+                        1.4f *
+                            u
+                }
+
+            canvas.drawRoundRect(
+                buildLeft,
+                buildTop,
+                buildRight,
+                buildBottom,
+                8f *
+                    u,
+                8f *
+                    u,
+                buildPlate
+            )
+
+            canvas.drawRoundRect(
+                buildLeft,
+                buildTop,
+                buildRight,
+                buildBottom,
+                8f *
+                    u,
+                8f *
+                    u,
+                buildStroke
+            )
+
+            val buildPaint =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    color =
+                        white
+
+                    textSize =
+                        12.4f *
+                            u
+
+                    typeface =
+                        Typeface.create(
+                            Typeface.MONOSPACE,
+                            Typeface.BOLD
+                        )
+                }
+
+            canvas.drawText(
+                buildText,
+                buildLeft +
+                    (
+                        14f *
+                            u
+                        ),
+                safeTop -
+                    (
+                        6f *
+                            u
+                        ),
+                buildPaint
+            )
+        }
+
+        // LIVE/REC is a broadcast-state indicator, not optional metadata.
+        // Keep it in the separate V227 lane so it never overlaps the brand/build.
         val badgeLeft =
             safeRight -
-                (160f * u)
+                (
+                    160f *
+                        u
+                    )
 
         val badgeTop =
             safeTop +
-                (17f * u)
+                (
+                    17f *
+                        u
+                    )
 
         val badgeRight =
             safeRight
 
         val badgeBottom =
             safeTop +
-                (51f * u)
+                (
+                    51f *
+                        u
+                    )
 
         val badgeGlow =
             Paint(
@@ -2644,7 +2751,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             blink
                         ) {
                             95
-                        } else if (liveOn) {
+                        } else if (
+                            liveOn
+                        ) {
                             34
                         } else {
                             18
@@ -2660,15 +2769,29 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         canvas.drawRoundRect(
             badgeLeft -
-                (5f * u),
+                (
+                    5f *
+                        u
+                    ),
             badgeTop -
-                (5f * u),
+                (
+                    5f *
+                        u
+                    ),
             badgeRight +
-                (2f * u),
+                (
+                    2f *
+                        u
+                    ),
             badgeBottom +
-                (5f * u),
-            13f * u,
-            13f * u,
+                (
+                    5f *
+                        u
+                    ),
+            13f *
+                u,
+            13f *
+                u,
             badgeGlow
         )
 
@@ -2683,7 +2806,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             blink
                         ) {
                             245
-                        } else if (liveOn) {
+                        } else if (
+                            liveOn
+                        ) {
                             145
                         } else {
                             105
@@ -2702,8 +2827,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             badgeTop,
             badgeRight,
             badgeBottom,
-            11f * u,
-            11f * u,
+            11f *
+                u,
+            11f *
+                u,
             badgeBackground
         )
 
@@ -2739,9 +2866,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         canvas.drawCircle(
             badgeLeft +
-                (15f * u),
+                (
+                    15f *
+                        u
+                    ),
             badgeCenterY,
-            5.1f * u,
+            5.1f *
+                u,
             signalDot
         )
 
@@ -2768,20 +2899,26 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    1.5f * u
+                    1.5f *
+                        u
             }
 
         canvas.drawCircle(
             badgeLeft +
-                (15f * u),
+                (
+                    15f *
+                        u
+                    ),
             badgeCenterY,
             if (
                 liveOn &&
                 blink
             ) {
-                9.2f * u
+                9.2f *
+                    u
             } else {
-                7.0f * u
+                7.0f *
+                    u
             },
             pulseRing
         )
@@ -2806,7 +2943,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     )
 
                 textSize =
-                    14.2f * u
+                    14.2f *
+                        u
 
                 typeface =
                     Typeface.create(
@@ -2816,15 +2954,23 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
 
         canvas.drawText(
-            if (liveOn) {
+            if (
+                liveOn
+            ) {
                 "LIVE  •  REC"
             } else {
                 "LIVE  •  READY"
             },
             badgeLeft +
-                (29f * u),
+                (
+                    29f *
+                        u
+                    ),
             badgeCenterY +
-                (5f * u),
+                (
+                    5f *
+                        u
+                    ),
             badgeText
         )
 
@@ -2836,71 +2982,240 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     0xB0FF3B32.toInt()
 
                 strokeWidth =
-                    1.5f * u
+                    1.5f *
+                        u
             }
 
         canvas.drawLine(
             safeLeft,
             safeTop +
-                (63f * u),
+                (
+                    63f *
+                        u
+                    ),
             safeRight,
             safeTop +
-                (63f * u),
+                (
+                    63f *
+                        u
+                    ),
             rule
         )
 
-        paint.textSize =
-            12f * u
-
-        paint.color =
-            white
-
-        drawFitText(
-            canvas,
-            "LIVE PROFILE • ${profiles[profileIndex]}   |   REPORTER • $reporterName",
-            safeLeft,
+        var rowY =
             safeTop +
-                (84f * u),
-            safeRight -
+                (
+                    84f *
+                        u
+                    )
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .CAMERA_MODE
+            ) ||
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .REPORTER
+            )
+        ) {
+            val parts =
+                mutableListOf<String>()
+
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .CAMERA_MODE
+                )
+            ) {
+                parts.add(
+                    "LIVE PROFILE • ${profiles[profileIndex]}"
+                )
+            }
+
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .REPORTER
+                )
+            ) {
+                parts.add(
+                    "REPORTER • $reporterName"
+                )
+            }
+
+            paint.textSize =
+                12f *
+                    u
+
+            paint.color =
+                white
+
+            drawFitText(
+                canvas,
+                parts.joinToString(
+                    "   |   "
+                ),
                 safeLeft,
-            paint,
-            10.4f * u
-        )
+                rowY,
+                safeRight -
+                    safeLeft,
+                paint,
+                10.4f *
+                    u
+            )
+
+            rowY +=
+                20f *
+                    u
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .STORY
+            ) ||
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .AUDIO
+            )
+        ) {
+            val parts =
+                mutableListOf<String>()
+
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .STORY
+                )
+            ) {
+                parts.add(
+                    "STORY • $storyId"
+                )
+            }
+
+            if (
+                brandConfig.show(
+                    DevelopUgandaBrandMetadataStore
+                        .Tag
+                        .AUDIO
+                )
+            ) {
+                parts.add(
+                    if (
+                        audioEnabled
+                    ) {
+                        "AUDIO ON"
+                    } else {
+                        "AUDIO OFF"
+                    }
+                )
+            }
+
+            paint.textSize =
+                13.5f *
+                    u
+
+            paint.color =
+                white
+
+            drawFitText(
+                canvas,
+                parts.joinToString(
+                    "   |   "
+                ),
+                safeLeft,
+                rowY,
+                safeRight -
+                    safeLeft,
+                paint,
+                10.2f *
+                    u
+            )
+
+            rowY +=
+                20f *
+                    u
+        }
+
+        val statusParts =
+            mutableListOf(
+                if (
+                    liveOn
+                ) {
+                    "ON AIR"
+                } else {
+                    "READY"
+                },
+                "TIMECODE • ${liveTimecode()}"
+            )
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .CAMERA_MODE
+            )
+        ) {
+            statusParts.add(
+                "MODE • ${liveQualityProfiles[liveQualityIndex]}"
+            )
+
+            statusParts.add(
+                "LOOK • ${liveEffectLabels[liveEffectIndex]}"
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .VERSION
+            )
+        ) {
+            statusParts.add(
+                "V228"
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .THERMAL
+            )
+        ) {
+            statusParts.add(
+                "THERMAL • ${liveThermalStateLabel()}"
+            )
+        }
 
         paint.textSize =
-            13.5f * u
-
-        paint.color =
-            white
-
-        drawFitText(
-            canvas,
-            "STORY • $storyId   |   ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
-            safeLeft,
-            safeTop +
-                (104f * u),
-            safeRight -
-                safeLeft,
-            paint,
-            10.2f * u
-        )
-
-        paint.textSize =
-            15.4f * u
+            15.4f *
+                u
 
         paint.color =
             cyan
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V227   |   THERMAL • ${liveThermalStateLabel()}",
+            statusParts.joinToString(
+                "   |   "
+            ),
             safeLeft,
-            safeTop +
-                (126f * u),
+            rowY,
             safeRight -
                 safeLeft,
             paint,
-            10.1f * u
+            10.1f *
+                u
         )
 
         val lowerY =
@@ -2952,7 +3267,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
 
         val lowerH =
-            102f * u
+            102f *
+                u
 
         canvas.drawRoundRect(
             safeLeft,
@@ -2960,8 +3276,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             safeRight,
             lowerY +
                 lowerH,
-            12f * u,
-            12f * u,
+            12f *
+                u,
+            12f *
+                u,
             lowerBg
         )
 
@@ -2973,19 +3291,32 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     lowerAccent
 
                 strokeWidth =
-                    5f * u
+                    5f *
+                        u
             }
 
         canvas.drawLine(
             safeLeft +
-                (8f * u),
+                (
+                    8f *
+                        u
+                    ),
             lowerY +
-                (10.6f * u),
+                (
+                    10.6f *
+                        u
+                    ),
             safeLeft +
-                (8f * u),
+                (
+                    8f *
+                        u
+                    ),
             lowerY +
                 lowerH -
-                (12.0f * u),
+                (
+                    12.0f *
+                        u
+                    ),
             redRail
         )
 
@@ -2993,7 +3324,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             lowerAccent
 
         paint.textSize =
-            12f * u
+            12f *
+                u
 
         canvas.drawText(
             if (
@@ -3004,9 +3336,15 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 "LIVE READY • $lowerStyle"
             },
             safeLeft +
-                (22f * u),
+                (
+                    22f *
+                        u
+                    ),
             lowerY +
-                (24f * u),
+                (
+                    24f *
+                        u
+                    ),
             paint
         )
 
@@ -3014,44 +3352,147 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             white
 
         paint.textSize =
-            25.0f * u
+            25.0f *
+                u
 
         drawFitText(
             canvas,
             headline,
             safeLeft +
-                (22f * u),
+                (
+                    22f *
+                        u
+                    ),
             lowerY +
-                (60f * u),
+                (
+                    60f *
+                        u
+                    ),
             safeRight -
                 safeLeft -
-                (40f * u),
+                (
+                    40f *
+                        u
+                    ),
             paint,
-            13f * u
+            13f *
+                u
         )
 
-        paint.color =
-            0xFFD0D8DC.toInt()
+        val lowerParts =
+            mutableListOf<String>()
 
-        paint.textSize =
-            10f * u
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .CAMERA_MODE
+            )
+        ) {
+            lowerParts.add(
+                "CAMERA • LIVE STUDIO"
+            )
+        }
 
-        drawFitText(
-            canvas,
-            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V227",
-            safeLeft +
-                (22f * u),
-            lowerY +
-                (84f * u),
-            safeRight -
-                safeLeft -
-                (40f * u),
-            paint,
-            9.8f * u
-        )
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .REPORTER
+            )
+        ) {
+            lowerParts.add(
+                "REPORTER • $reporterName"
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .STORY
+            )
+        ) {
+            lowerParts.add(
+                "STORY • $storyId"
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .BRAND
+            )
+        ) {
+            lowerParts.add(
+                brandConfig.displayName
+            )
+        }
+
+        if (
+            brandConfig.show(
+                DevelopUgandaBrandMetadataStore
+                    .Tag
+                    .VERSION
+            )
+        ) {
+            lowerParts.add(
+                "V228"
+            )
+        }
+
+        val credit =
+            brandConfig.creditLine()
+
+        if (
+            credit.isNotBlank()
+        ) {
+            lowerParts.add(
+                credit
+            )
+        }
+
+        if (
+            lowerParts.isNotEmpty()
+        ) {
+            paint.color =
+                0xFFD0D8DC.toInt()
+
+            paint.textSize =
+                10f *
+                    u
+
+            drawFitText(
+                canvas,
+                lowerParts.joinToString(
+                    "   |   "
+                ),
+                safeLeft +
+                    (
+                        22f *
+                            u
+                        ),
+                lowerY +
+                    (
+                        84f *
+                            u
+                        ),
+                safeRight -
+                    safeLeft -
+                    (
+                        40f *
+                            u
+                        ),
+                paint,
+                8.8f *
+                    u
+            )
+        }
 
         canvas.restore()
     }
+
 
     private fun drawStrongLiveText(
         canvas: Canvas,
@@ -4078,7 +4519,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V227_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V228_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 

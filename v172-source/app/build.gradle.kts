@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 22700
-        versionName = "227.0-director-qc-pro"
+        versionCode = 22800
+        versionName = "228.0-brand-metadata-studio"
     }
 
     buildTypes {

@@ -320,7 +320,7 @@ open class DevelopUgandaPhotoSuiteActivity :
 
         titleView =
             label(
-                "${modeDisplayName()} • V225",
+                "${modeDisplayName()} • V228",
                 17f,
                 modeAccent(),
                 true

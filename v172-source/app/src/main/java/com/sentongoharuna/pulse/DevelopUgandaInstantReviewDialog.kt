@@ -317,7 +317,7 @@ object DevelopUgandaInstantReviewDialog {
             context
         )
             .setTitle(
-                "develop.uganda • V227 REVIEW"
+                "develop.uganda • V228 REVIEW"
             )
             .setView(
                 scroll
@@ -363,6 +363,50 @@ object DevelopUgandaInstantReviewDialog {
         context: Context,
         uri: Uri
     ) {
+        if (
+            DevelopUgandaBrandMetadataStore
+                .exactGpsVisible(
+                    context
+                )
+        ) {
+            AlertDialog.Builder(
+                context
+            )
+                .setTitle(
+                    "PRIVACY CHECK • EXACT GPS VISIBLE"
+                )
+                .setMessage(
+                    "Your current V228 burn-in profile includes exact latitude/longitude. If this is the clip you just recorded, those coordinates may be permanently visible in the video. Share anyway?"
+                )
+                .setNegativeButton(
+                    "CANCEL",
+                    null
+                )
+                .setPositiveButton(
+                    "SHARE ANYWAY"
+                ) {
+                        _,
+                        _ ->
+                    shareNow(
+                        context,
+                        uri
+                    )
+                }
+                .show()
+
+            return
+        }
+
+        shareNow(
+            context,
+            uri
+        )
+    }
+
+    private fun shareNow(
+        context: Context,
+        uri: Uri
+    ) {
         try {
             context.startActivity(
                 Intent.createChooser(
@@ -391,6 +435,7 @@ object DevelopUgandaInstantReviewDialog {
             )
         }
     }
+
 
     private fun title(
         context: Context,
