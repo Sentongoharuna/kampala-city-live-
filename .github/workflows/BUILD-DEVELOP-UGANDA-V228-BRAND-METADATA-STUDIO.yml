@@ -1,0 +1,505 @@
+name: Build develop.uganda V228 Brand Metadata Studio
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V227 Director QC Pro base
+        run: |
+          set -e
+
+          test -f DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO-PATCH.zip
+
+          GRADLE="v172-source/app/build.gradle.kts"
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          LIVE="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          DIRECTOR="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaDirectorOverlayView.kt"
+          QC="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaClipQc.kt"
+          INBOX="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaMediaInbox.kt"
+
+          grep -q 'versionCode = 22700' "$GRADLE"
+          grep -q 'versionName = "227.0-director-qc-pro"' "$GRADLE"
+
+          grep -q 'DevelopUgandaDirectorOverlayView' "$REPORT"
+          grep -q 'DevelopUgandaClipQc.inspect' "$REPORT"
+          grep -q 'DevelopUgandaInstantReviewDialog.show' "$REPORT"
+
+          grep -q 'DevelopUgandaDirectorOverlayView' "$LIVE"
+          grep -q 'DevelopUgandaClipQc.inspect' "$LIVE"
+
+          grep -q 'FaceDetection.getClient' "$DIRECTOR"
+          grep -q 'PREVIEW HISTOGRAM' "$DIRECTOR"
+          grep -q 'MediaMetadataRetriever' "$QC"
+
+          grep -q 'MediaStore.Video.Media.EXTERNAL_CONTENT_URI' "$INBOX"
+          grep -q 'fun findUnpackaged' "$INBOX"
+
+          echo "PASS: V227 Director/QC + V226 FIX2 newsroom base confirmed."
+
+      - name: Unpack and syntax-check V228 patch
+        run: |
+          set -e
+
+          rm -rf /tmp/v228
+          mkdir -p /tmp/v228
+
+          unzip -q DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO-PATCH.zip -d /tmp/v228
+
+          python3 -m py_compile /tmp/v228/v228_patch.py
+
+          test -f /tmp/v228/DevelopUgandaBrandMetadataStore.kt
+          test -f /tmp/v228/DevelopUgandaBrandMetadataActivity.kt
+          test -f /tmp/v228/report_v228_overlay.txt
+          test -f /tmp/v228/live_v228_overlay.txt
+
+      - name: Lock protected V227 and V226 functionality
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+
+          full_files = {
+              "director": SRC / "DevelopUgandaDirectorOverlayView.kt",
+              "clip_qc": SRC / "DevelopUgandaClipQc.kt",
+              "continuity": SRC / "DevelopUgandaContinuityMemory.kt",
+              "lens": SRC / "DevelopUgandaLensIntelligence.kt",
+              "health": SRC / "DevelopUgandaCameraHealthActivity.kt",
+              "media_inbox": SRC / "DevelopUgandaMediaInbox.kt",
+              "story_player": SRC / "DevelopUgandaStoryPlayerActivity.kt",
+          }
+
+          def function_block(path, function_name):
+              text = Path(path).read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+
+              depth = 0
+              quote = None
+              escaped = False
+
+              for index in range(brace, len(text)):
+                  char = text[index]
+
+                  if quote is not None:
+                      if escaped:
+                          escaped = False
+                      elif char == "\\":
+                          escaped = True
+                      elif char == quote:
+                          quote = None
+                      continue
+
+                  if char in ('"', "'"):
+                      quote = char
+                      continue
+
+                  if char == "{":
+                      depth += 1
+                  elif char == "}":
+                      depth -= 1
+
+                      if depth == 0:
+                          return text[line_start:index + 1]
+
+              raise RuntimeError(f"Function not closed: {function_name}")
+
+          values = {}
+
+          for name, path in full_files.items():
+              values[name] = hashlib.sha256(
+                  path.read_bytes()
+              ).hexdigest()
+
+          values["report_bind"] = hashlib.sha256(
+              function_block(
+                  SRC / "DevelopUgandaCameraActivity.kt",
+                  "bindCamera"
+              ).encode()
+          ).hexdigest()
+
+          values["live_bind"] = hashlib.sha256(
+              function_block(
+                  SRC / "DevelopUgandaLiveActivity.kt",
+                  "bindCamera"
+              ).encode()
+          ).hexdigest()
+
+          values["photo_bind"] = hashlib.sha256(
+              function_block(
+                  SRC / "DevelopUgandaPhotoSuiteActivity.kt",
+                  "bindCamera"
+              ).encode()
+          ).hexdigest()
+
+          Path("/tmp/v228-protected.json").write_text(
+              json.dumps(values),
+              encoding="utf-8"
+          )
+
+          print(values)
+          PY
+
+      - name: Apply V228 Brand Metadata Studio
+        run: |
+          set -e
+          python3 /tmp/v228/v228_patch.py
+
+      - name: Prove protected V227 capture systems remain unchanged
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          before = json.loads(
+              Path("/tmp/v228-protected.json").read_text(encoding="utf-8")
+          )
+
+          full_files = {
+              "director": SRC / "DevelopUgandaDirectorOverlayView.kt",
+              "clip_qc": SRC / "DevelopUgandaClipQc.kt",
+              "continuity": SRC / "DevelopUgandaContinuityMemory.kt",
+              "lens": SRC / "DevelopUgandaLensIntelligence.kt",
+              "health": SRC / "DevelopUgandaCameraHealthActivity.kt",
+              "media_inbox": SRC / "DevelopUgandaMediaInbox.kt",
+              "story_player": SRC / "DevelopUgandaStoryPlayerActivity.kt",
+          }
+
+          def function_block(path, function_name):
+              text = Path(path).read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+
+              depth = 0
+              quote = None
+              escaped = False
+
+              for index in range(brace, len(text)):
+                  char = text[index]
+
+                  if quote is not None:
+                      if escaped:
+                          escaped = False
+                      elif char == "\\":
+                          escaped = True
+                      elif char == quote:
+                          quote = None
+                      continue
+
+                  if char in ('"', "'"):
+                      quote = char
+                      continue
+
+                  if char == "{":
+                      depth += 1
+                  elif char == "}":
+                      depth -= 1
+
+                      if depth == 0:
+                          return text[line_start:index + 1]
+
+              raise RuntimeError(f"Function not closed: {function_name}")
+
+          current = {}
+
+          for name, path in full_files.items():
+              current[name] = hashlib.sha256(
+                  path.read_bytes()
+              ).hexdigest()
+
+          current["report_bind"] = hashlib.sha256(
+              function_block(
+                  SRC / "DevelopUgandaCameraActivity.kt",
+                  "bindCamera"
+              ).encode()
+          ).hexdigest()
+
+          current["live_bind"] = hashlib.sha256(
+              function_block(
+                  SRC / "DevelopUgandaLiveActivity.kt",
+                  "bindCamera"
+              ).encode()
+          ).hexdigest()
+
+          current["photo_bind"] = hashlib.sha256(
+              function_block(
+                  SRC / "DevelopUgandaPhotoSuiteActivity.kt",
+                  "bindCamera"
+              ).encode()
+          ).hexdigest()
+
+          for name, old_hash in before.items():
+              if current[name] != old_hash:
+                  raise SystemExit(
+                      f"Protected V227/V226 component changed unexpectedly: {name}"
+                  )
+
+          print("PASS: V227 Director, QC, continuity, lens, health and camera bind engines retained.")
+          print("PASS: V226 FIX2 MediaStore inbox and internal player retained.")
+          PY
+
+      - name: Verify V228 real implementation
+        run: |
+          set -e
+
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          STORE="$SRC/DevelopUgandaBrandMetadataStore.kt"
+          STUDIO="$SRC/DevelopUgandaBrandMetadataActivity.kt"
+          REPORT="$SRC/DevelopUgandaCameraActivity.kt"
+          LIVE="$SRC/DevelopUgandaLiveActivity.kt"
+          REVIEW="$SRC/DevelopUgandaInstantReviewDialog.kt"
+          PACKAGER="$SRC/DevelopUgandaStoryPackager.kt"
+          HOME="$SRC/DevelopUgandaNewsroomActivity.kt"
+          INBOX="$SRC/DevelopUgandaMediaInbox.kt"
+          DIRECTOR="$SRC/DevelopUgandaDirectorOverlayView.kt"
+          QC="$SRC/DevelopUgandaClipQc.kt"
+          HEALTH="$SRC/DevelopUgandaCameraHealthActivity.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          # Custom brand identity and real tag storage.
+          grep -q 'enum class Tag' "$STORE"
+          grep -q 'BRAND("brand"' "$STORE"
+          grep -q 'GPS_COORDS' "$STORE"
+          grep -q 'GPS_ACCURACY' "$STORE"
+          grep -q 'BATTERY_STORAGE' "$STORE"
+          grep -q 'SHOT_GUARD' "$STORE"
+          grep -q 'PRESET_FULL_FORENSIC' "$STORE"
+          grep -q 'PRESET_SOCIAL_CLEAN' "$STORE"
+          grep -q 'OUTPUT_VERIFIED_MASTER' "$STORE"
+          grep -q 'OUTPUT_PUBLIC_SOCIAL' "$STORE"
+
+          # Default is additive: all V227 categories stay visible for existing users.
+          grep -q 'Tag.values().toSet()' "$STORE"
+
+          # First-class user interface.
+          grep -q 'BRAND & METADATA STUDIO' "$STUDIO"
+          grep -q 'USE SAVED REPORTER NAME' "$STUDIO"
+          grep -q 'SAVE CUSTOM BRAND + TAGS' "$STUDIO"
+          grep -q 'PUBLIC / SOCIAL' "$STUDIO"
+          grep -q 'VISIBLE SAVED-VIDEO TAGS' "$STUDIO"
+          grep -q '.DevelopUgandaBrandMetadataActivity' "$MANIFEST"
+          grep -q 'V228 • BRAND & METADATA' "$HOME"
+
+          # REPORT + all V205-V215/V222 subclasses use the same real saved overlay.
+          grep -q 'DevelopUgandaBrandMetadataStore' "$REPORT"
+          grep -q 'brandConfig.displayName' "$REPORT"
+          grep -q 'Tag.GPS_COORDS' "$REPORT"
+          grep -q 'Tag.LOCATION' "$REPORT"
+          grep -q 'Tag.HORIZON' "$REPORT"
+          grep -q 'Tag.AUDIO' "$REPORT"
+          grep -q 'Tag.NETWORK' "$REPORT"
+          grep -q 'Tag.SHOT_GUARD' "$REPORT"
+          grep -q 'Tag.INTEGRITY' "$REPORT"
+          grep -q 'BRAND.*TAGS' "$REPORT"
+          grep -q 'ACTION_BRAND_METADATA' "$REPORT"
+
+          # V227 screen-only Director is still separate from burn-in.
+          grep -q 'directorOverlayView.submitFrame' "$REPORT"
+          ! grep -q 'OverlayEffect' "$DIRECTOR"
+          grep -q 'PREVIEW HISTOGRAM' "$DIRECTOR"
+
+          # LIVE uses the same custom saved brand/tag profile.
+          grep -q 'DevelopUgandaBrandMetadataStore' "$LIVE"
+          grep -q 'brandConfig.displayName' "$LIVE"
+          grep -q 'Tag.REPORTER' "$LIVE"
+          grep -q 'Tag.STORY' "$LIVE"
+          grep -q 'Tag.CAMERA_MODE' "$LIVE"
+          grep -q 'Tag.THERMAL' "$LIVE"
+          grep -q 'LIVE  •  REC' "$LIVE"
+
+          # Immediate sharing gets a real privacy warning when exact GPS is selected.
+          grep -q 'PRIVACY CHECK • EXACT GPS VISIBLE' "$REVIEW"
+          grep -q 'exactGpsVisible' "$REVIEW"
+          grep -q 'shareNow' "$REVIEW"
+
+          # Story Package captures the actual profile used for the clip.
+          grep -q 'BRAND_METADATA.json' "$PACKAGER"
+          grep -q 'brand_display_name' "$PACKAGER"
+          grep -q 'brand_overlay_preset' "$PACKAGER"
+          grep -q 'brand_output_profile' "$PACKAGER"
+          grep -q 'brandSnapshot.toJson' "$PACKAGER"
+          grep -q 'Recorded with develop.uganda • V228' "$PACKAGER"
+
+          # V226 FIX2 newsroom remains.
+          grep -q 'MediaStore.Video.Media.EXTERNAL_CONTENT_URI' "$INBOX"
+          grep -q 'fun findUnpackaged' "$INBOX"
+
+          # V227 QC / health remains.
+          grep -q 'MediaMetadataRetriever' "$QC"
+          grep -q 'Recorder.getVideoCapabilities' "$HEALTH"
+          grep -q 'DevelopUgandaClipQc.inspect' "$REPORT"
+          grep -q 'DevelopUgandaClipQc.inspect' "$LIVE"
+
+          grep -q 'versionCode = 22800' "$GRADLE"
+          grep -q 'versionName = "228.0-brand-metadata-studio"' "$GRADLE"
+
+          echo "PASS: V228 Brand & Metadata Studio verified without dropping V227/V226 systems."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V228 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v228-build.log
+
+      - name: Print exact compiler errors and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v228-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V228 IMPORTANT ERRORS ====="
+
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v228-build.log | head -4500 || true
+
+          echo "===== SOURCE CONTEXT ====="
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v228-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          for filename, line_text, col in re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )[:42]:
+              line_no = int(line_text)
+
+              files = list(
+                  Path("app/src/main/java").rglob(
+                      filename
+                  )
+              )
+
+              if not files:
+                  continue
+
+              lines = files[0].read_text(
+                  encoding="utf-8"
+              ).splitlines()
+
+              print(
+                  "\nFILE:",
+                  files[0],
+                  "LINE:",
+                  line_no
+              )
+
+              for n in range(
+                  max(1, line_no - 42),
+                  min(len(lines), line_no + 75) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V228 only after successful build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaInstantReviewDialog.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaBrandMetadataStore.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaBrandMetadataActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V228 already committed"
+          else
+            git commit -m "Add develop.uganda V228 Brand and Metadata Studio"
+            git push
+          fi
+
+      - name: Package V228 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V228 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO.apk
+
+      - name: Upload V228 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO
+          path: DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V228 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO-SOURCE
+          path: DEVELOP-UGANDA-V228-BRAND-METADATA-STUDIO-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V228 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V228-BUILD-LOG
+          path: v172-source/v228-build.log
+          if-no-files-found: warn
+          retention-days: 7
