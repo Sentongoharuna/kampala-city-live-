@@ -67,7 +67,7 @@ class DevelopUgandaStoryPackagesActivity : AppCompatActivity() {
         )
 
         val refresh = actionButton(
-            "REFRESH PACKAGES",
+            "SCAN RECORDINGS + REFRESH",
             cyan
         ) {
             refreshPackages()
@@ -103,13 +103,184 @@ class DevelopUgandaStoryPackagesActivity : AppCompatActivity() {
     private fun refreshPackages() {
         host.removeAllViews()
 
-        val packages = DevelopUgandaStoryPackager.listRegistry(this)
+        val inbox =
+            DevelopUgandaMediaInbox.findUnpackaged(
+                this,
+                24
+            )
 
-        if (packages.isEmpty()) {
+        if (
+            inbox.isNotEmpty()
+        ) {
             host.addView(
                 cardText(
-                    "NO STORY PACKAGES YET",
-                    "Record a successful REPORT or LIVE clip. V226 will create a package automatically after CameraX Finalize."
+                    "NEW RECORDINGS INBOX • ${inbox.size}",
+                    "These are develop.uganda videos found directly in Android MediaStore that do not yet have a V226 Story Package. PLAY and SHARE work immediately. BUILD PACKAGE creates the newsroom package."
+                )
+            )
+
+            inbox.take(
+                12
+            ).forEach {
+                    video ->
+                val intakeCard =
+                    LinearLayout(
+                        this
+                    ).apply {
+                        orientation =
+                            LinearLayout.VERTICAL
+
+                        setPadding(
+                            dp(10),
+                            dp(10),
+                            dp(10),
+                            dp(10)
+                        )
+
+                        background =
+                            rounded(
+                                panel,
+                                green
+                            )
+                    }
+
+                intakeCard.addView(
+                    label(
+                        video.displayName,
+                        10f,
+                        white,
+                        true
+                    )
+                )
+
+                intakeCard.addView(
+                    label(
+                        "MEDIASTORE RECORDING • ${formatDuration(video.durationMs)} • ${formatBytes(video.sizeBytes)}\nNOT PACKAGED YET",
+                        7.5f,
+                        muted,
+                        false
+                    ).apply {
+                        setPadding(
+                            0,
+                            dp(3),
+                            0,
+                            dp(6)
+                        )
+                    }
+                )
+
+                val mediaRow =
+                    LinearLayout(
+                        this
+                    ).apply {
+                        orientation =
+                            LinearLayout.HORIZONTAL
+                    }
+
+                mediaRow.addView(
+                    smallButton(
+                        "PLAY",
+                        green
+                    ) {
+                        playDirect(
+                            video.uri,
+                            video.displayName
+                        )
+                    },
+                    weight()
+                )
+
+                mediaRow.addView(
+                    smallButton(
+                        "SHARE",
+                        cyan
+                    ) {
+                        shareDirect(
+                            video.uri
+                        )
+                    },
+                    weight().apply {
+                        marginStart =
+                            dp(5)
+                    }
+                )
+
+                intakeCard.addView(
+                    mediaRow
+                )
+
+                val buildPackage =
+                    actionButton(
+                        "BUILD STORY PACKAGE",
+                        gold
+                    ) {
+                        DevelopUgandaMediaInbox.packageVideo(
+                            this,
+                            video
+                        )
+
+                        toast(
+                            "Building Story Package • original video stays safe"
+                        )
+
+                        host.postDelayed(
+                            {
+                                refreshPackages()
+                            },
+                            1800L
+                        )
+                    }
+
+                intakeCard.addView(
+                    buildPackage,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dp(44)
+                    ).apply {
+                        topMargin =
+                            dp(5)
+                    }
+                )
+
+                host.addView(
+                    intakeCard,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin =
+                            dp(7)
+                    }
+                )
+            }
+
+            host.addView(
+                label(
+                    "PACKAGED STORIES",
+                    10f,
+                    gold,
+                    true
+                ).apply {
+                    setPadding(
+                        0,
+                        dp(14),
+                        0,
+                        dp(5)
+                    )
+                }
+            )
+        }
+
+        val packages = DevelopUgandaStoryPackager.listRegistry(this)
+
+        if (
+            packages.isEmpty() &&
+            inbox.isEmpty()
+        ) {
+            host.addView(
+                cardText(
+                    "NO DEVELOP.UGANDA VIDEOS FOUND",
+                    "Record with a develop.uganda camera. New successful recordings package automatically after CameraX Finalize. This screen also scans MediaStore so older or missed develop.uganda recordings can be recovered into the newsroom."
                 )
             )
             return
@@ -148,14 +319,18 @@ class DevelopUgandaStoryPackagesActivity : AppCompatActivity() {
 
             row1.addView(
                 smallButton("PLAY ORIGINAL", green) {
-                    openPackageFile(entry.packageId, "ORIGINAL_VIDEO.mp4", "video/mp4")
+                    playOriginal(
+                        entry.packageId
+                    )
                 },
                 weight()
             )
 
             row1.addView(
                 smallButton("SHARE ORIGINAL", cyan) {
-                    sharePackageFile(entry.packageId, "ORIGINAL_VIDEO.mp4", "video/mp4")
+                    shareOriginal(
+                        entry.packageId
+                    )
                 },
                 weight().apply { marginStart = dp(5) }
             )
@@ -205,7 +380,7 @@ class DevelopUgandaStoryPackagesActivity : AppCompatActivity() {
                         this,
                         entry.packageId
                     )
-                    toast("Transcript request started • review the draft when ready")
+                    toast("Transcript request started • clear speech is required")
                 }
             }
 
@@ -250,6 +425,174 @@ class DevelopUgandaStoryPackagesActivity : AppCompatActivity() {
                 ).apply {
                     bottomMargin = dp(8)
                 }
+            )
+        }
+    }
+
+    private fun playOriginal(
+        packageId: String
+    ) {
+        val resolved =
+            DevelopUgandaStoryPackager.resolvePlayableVideo(
+                this,
+                packageId
+            )
+
+        if (
+            resolved == null
+        ) {
+            toast(
+                "Original video is not readable from Gallery or the Story Package"
+            )
+            return
+        }
+
+        startActivity(
+            Intent(
+                this,
+                DevelopUgandaStoryPlayerActivity::class.java
+            ).apply {
+                putExtra(
+                    DevelopUgandaStoryPlayerActivity.EXTRA_PACKAGE_ID,
+                    packageId
+                )
+            }
+        )
+    }
+
+    private fun playDirect(
+        uri: Uri,
+        label: String
+    ) {
+        startActivity(
+            Intent(
+                this,
+                DevelopUgandaStoryPlayerActivity::class.java
+            ).apply {
+                putExtra(
+                    DevelopUgandaStoryPlayerActivity.EXTRA_DIRECT_URI,
+                    uri.toString()
+                )
+
+                putExtra(
+                    DevelopUgandaStoryPlayerActivity.EXTRA_DIRECT_LABEL,
+                    label
+                )
+            }
+        )
+    }
+
+    private fun shareOriginal(
+        packageId: String
+    ) {
+        val resolved =
+            DevelopUgandaStoryPackager.resolvePlayableVideo(
+                this,
+                packageId
+            )
+
+        if (
+            resolved == null
+        ) {
+            toast(
+                "Original video is not readable"
+            )
+            return
+        }
+
+        shareDirect(
+            resolved.uri
+        )
+    }
+
+    private fun shareDirect(
+        uri: Uri
+    ) {
+        try {
+            startActivity(
+                Intent.createChooser(
+                    Intent(
+                        Intent.ACTION_SEND
+                    ).apply {
+                        type =
+                            "video/mp4"
+
+                        putExtra(
+                            Intent.EXTRA_STREAM,
+                            uri
+                        )
+
+                        addFlags(
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    },
+                    "Share video"
+                )
+            )
+        } catch (_: Exception) {
+            toast(
+                "Share is not available"
+            )
+        }
+    }
+
+    private fun formatDuration(
+        durationMs: Long?
+    ): String {
+        if (
+            durationMs == null ||
+            durationMs <= 0L
+        ) {
+            return "DURATION --"
+        }
+
+        val totalSeconds =
+            durationMs / 1000L
+
+        val minutes =
+            totalSeconds / 60L
+
+        val seconds =
+            totalSeconds % 60L
+
+        return String.format(
+            java.util.Locale.US,
+            "%02d:%02d",
+            minutes,
+            seconds
+        )
+    }
+
+    private fun formatBytes(
+        bytes: Long?
+    ): String {
+        if (
+            bytes == null ||
+            bytes <= 0L
+        ) {
+            return "SIZE --"
+        }
+
+        val mb =
+            bytes.toDouble() /
+                (
+                    1024.0 *
+                        1024.0
+                    )
+
+        return if (
+            mb >= 1024.0
+        ) {
+            String.format(
+                java.util.Locale.US,
+                "%.1f GB",
+                mb / 1024.0
+            )
+        } else {
+            String.format(
+                java.util.Locale.US,
+                "%.0f MB",
+                mb
             )
         }
     }

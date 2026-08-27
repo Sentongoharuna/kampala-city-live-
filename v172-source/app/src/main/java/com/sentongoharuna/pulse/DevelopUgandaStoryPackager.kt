@@ -54,6 +54,11 @@ object DevelopUgandaStoryPackager {
         val state: String
     )
 
+    data class PlayableVideo(
+        val uri: Uri,
+        val label: String
+    )
+
     private val executor = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
     private const val PREFS = "develop_uganda_story_packages"
@@ -515,6 +520,79 @@ object DevelopUgandaStoryPackager {
                 ?.use { it.readText() }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    fun resolvePlayableVideo(
+        context: Context,
+        packageId: String
+    ): PlayableVideo? {
+        val safeId = safeSegment(packageId)
+
+        val source = sourceUriFromManifest(
+            context,
+            safeId
+        )
+
+        if (
+            source != null &&
+            uriIsReadable(
+                context,
+                source
+            )
+        ) {
+            return PlayableVideo(
+                uri = source,
+                label = "ORIGINAL GALLERY VIDEO"
+            )
+        }
+
+        val packageCopy = findPackageFile(
+            context,
+            safeId,
+            "ORIGINAL_VIDEO.mp4"
+        )
+
+        if (
+            packageCopy != null &&
+            uriIsReadable(
+                context,
+                packageCopy
+            )
+        ) {
+            return PlayableVideo(
+                uri = packageCopy,
+                label = "STORY PACKAGE COPY"
+            )
+        }
+
+        return null
+    }
+
+    private fun uriIsReadable(
+        context: Context,
+        uri: Uri
+    ): Boolean {
+        return try {
+            if (
+                uri.scheme == "file"
+            ) {
+                val path = uri.path ?: return false
+                val file = File(path)
+                file.exists() && file.length() > 0L
+            } else {
+                context.contentResolver
+                    .openFileDescriptor(
+                        uri,
+                        "r"
+                    )
+                    ?.use {
+                        true
+                    }
+                    ?: false
+            }
+        } catch (_: Exception) {
+            false
         }
     }
 

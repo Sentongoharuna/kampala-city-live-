@@ -385,6 +385,17 @@ object DevelopUgandaTranscriptEngine {
                 override fun onEndOfSpeech() {}
 
                 override fun onError(error: Int) {
+                    if (
+                        error == SpeechRecognizer.ERROR_NO_MATCH ||
+                        error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                    ) {
+                        finish(
+                            "NO SPEECH DETECTED",
+                            "The phone's on-device recognizer did not confidently detect spoken words in this saved video. Quiet footage, construction noise, distant speech, music, or unsupported language/accent can produce this result. Original video is unchanged."
+                        )
+                        return
+                    }
+
                     finish(
                         "FAILED",
                         "On-device recognizer error ${speechErrorLabel(error)}. Original video is unchanged."
