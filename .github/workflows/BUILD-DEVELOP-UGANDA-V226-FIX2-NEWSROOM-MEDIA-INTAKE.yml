@@ -1,0 +1,231 @@
+name: Build develop.uganda V226 FIX2 Newsroom Media Intake
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V226 FIX1 base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V226-FIX2-NEWSROOM-MEDIA-INTAKE-PATCH.zip
+          grep -q 'versionCode = 22601' v172-source/app/build.gradle.kts
+          grep -q 'versionName = "226.1-auto-story-package-fix1"' v172-source/app/build.gradle.kts
+
+      - name: Unpack and syntax-check FIX2
+        run: |
+          set -e
+          rm -rf /tmp/v226intake
+          mkdir -p /tmp/v226intake
+          unzip -q DEVELOP-UGANDA-V226-FIX2-NEWSROOM-MEDIA-INTAKE-PATCH.zip -d /tmp/v226intake
+          python3 -m py_compile /tmp/v226intake/v226_fix2_intake_patch.py
+
+      - name: Lock working camera engines
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          checks = {
+              "report": (Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"), "    private fun bindCamera() {"),
+              "live": (Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"), "    private fun bindCamera() {"),
+              "photo": (Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt"), "    private fun bindCamera() {")
+          }
+
+          hashes = {}
+          for name, (path, marker) in checks.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index(marker)
+              end = text.index("    private fun ", start + len(marker))
+              hashes[name] = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+
+          Path("/tmp/v226intake-camera-hashes.json").write_text(json.dumps(hashes), encoding="utf-8")
+          PY
+
+      - name: Apply V226 FIX2 Newsroom Media Intake
+        run: |
+          set -e
+          python3 /tmp/v226intake/v226_fix2_intake_patch.py
+
+      - name: Prove camera engines unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          before = json.loads(Path("/tmp/v226intake-camera-hashes.json").read_text(encoding="utf-8"))
+
+          checks = {
+              "report": (Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"), "    private fun bindCamera() {"),
+              "live": (Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"), "    private fun bindCamera() {"),
+              "photo": (Path("v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt"), "    private fun bindCamera() {")
+          }
+
+          for name, (path, marker) in checks.items():
+              text = path.read_text(encoding="utf-8")
+              start = text.index(marker)
+              end = text.index("    private fun ", start + len(marker))
+              current = hashlib.sha256(text[start:end].encode("utf-8")).hexdigest()
+              if current != before[name]:
+                  raise SystemExit(f"{name} camera bind engine changed")
+
+          print("PASS: REPORT, LIVE and PHOTO camera engines unchanged.")
+          PY
+
+      - name: Verify MediaStore pickup playback and packaging
+        run: |
+          set -e
+
+          INBOX="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaMediaInbox.kt"
+          PACKAGER="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt"
+          PACKAGES="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackagesActivity.kt"
+          PLAYER="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPlayerActivity.kt"
+          TRANSCRIPT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaTranscriptEngine.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          grep -q 'MediaStore.Video.Media.EXTERNAL_CONTENT_URI' "$INBOX"
+          grep -q 'fun findUnpackaged' "$INBOX"
+          grep -q 'DEVELOP_UGANDA_%' "$INBOX"
+          grep -q 'packagedSourceUris' "$INBOX"
+          grep -q 'fun packageVideo' "$INBOX"
+          grep -q 'MEDIASTORE_BACKFILL' "$INBOX"
+
+          grep -q 'NEW RECORDINGS INBOX' "$PACKAGES"
+          grep -q 'BUILD STORY PACKAGE' "$PACKAGES"
+          grep -q 'playDirect' "$PACKAGES"
+          grep -q 'shareDirect' "$PACKAGES"
+
+          grep -q 'fun resolvePlayableVideo' "$PACKAGER"
+          grep -q 'ORIGINAL GALLERY VIDEO' "$PACKAGER"
+          grep -q 'STORY PACKAGE COPY' "$PACKAGER"
+
+          grep -q 'ExoPlayer.Builder' "$PLAYER"
+          grep -q 'EXTRA_DIRECT_URI' "$PLAYER"
+          grep -q 'MediaItem.fromUri' "$PLAYER"
+          grep -q '.DevelopUgandaStoryPlayerActivity' "$MANIFEST"
+
+          grep -q '"NO SPEECH DETECTED"' "$TRANSCRIPT"
+
+          grep -q 'fun createVideoPackage' "$PACKAGER"
+          grep -q 'INTEGRITY.json' "$PACKAGER"
+          grep -q 'CAPTION_DRAFT.txt' "$PACKAGER"
+
+          grep -q 'versionCode = 22602' "$GRADLE"
+          grep -q 'versionName = "226.2-newsroom-media-intake"' "$GRADLE"
+
+          echo "PASS: V226 FIX2 Newsroom Media Intake verified."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V226 FIX2 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v226-fix2-intake-build.log
+
+      - name: Print exact compiler errors and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v226-fix2-intake-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V226 FIX2 INTAKE IMPORTANT ERRORS ====="
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v226-fix2-intake-build.log | head -3800 || true
+
+          echo "===== SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v226-fix2-intake-build.log").read_text(encoding="utf-8", errors="ignore")
+
+          for filename, line_text, col in re.findall(r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)', log)[:34]:
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files:
+                  continue
+
+              lines = files[0].read_text(encoding="utf-8").splitlines()
+              print("\nFILE:", files[0], "LINE:", line_no)
+
+              for n in range(max(1, line_no - 36), min(len(lines), line_no + 65) + 1):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit FIX2 only after successful build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaMediaInbox.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackagesActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPlayerActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaTranscriptEngine.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V226 FIX2 already committed"
+          else
+            git commit -m "Fix V226 newsroom MediaStore intake and playback"
+            git push
+          fi
+
+      - name: Prepare APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V226-FIX2-NEWSROOM-MEDIA-INTAKE.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V226-FIX2-NEWSROOM-MEDIA-INTAKE
+          path: DEVELOP-UGANDA-V226-FIX2-NEWSROOM-MEDIA-INTAKE.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V226-FIX2-NEWSROOM-MEDIA-INTAKE-BUILD-LOG
+          path: v172-source/v226-fix2-intake-build.log
+          if-no-files-found: warn
+          retention-days: 7
