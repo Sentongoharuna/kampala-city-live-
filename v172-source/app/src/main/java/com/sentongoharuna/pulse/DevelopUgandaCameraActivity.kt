@@ -147,6 +147,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         const val ACTION_HUD_BACKING = 21
         const val ACTION_AUTO_DIRECTOR = 22
         const val ACTION_SHOT_ASSIST = 23
+        const val ACTION_DIRECTOR = 24
+        const val ACTION_CONTINUITY = 25
+        const val ACTION_HEALTH = 26
     }
 
 
@@ -172,6 +175,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var autoViewDescriptionView: TextView
     private lateinit var shotQualityGuardView: TextView
     private lateinit var shotAssistView: DevelopUgandaShotAssistView
+    private lateinit var directorOverlayView: DevelopUgandaDirectorOverlayView
     private lateinit var focusReticleView: TextView
     private lateinit var horizonGuardView: TextView
     private lateinit var motionGuardView: TextView
@@ -224,8 +228,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var reportPresetButton: Button
     private lateinit var autoDirectorButton: Button
     private lateinit var assistButton: Button
+    private lateinit var directorButton: Button
+    private lateinit var continuityButton: Button
+    private lateinit var healthButton: Button
     private lateinit var reportDisplayRow: LinearLayout
     private lateinit var reportOutputRow: LinearLayout
+    private lateinit var reportDirectorRow: LinearLayout
 
     private val reportPresetLabels =
         arrayOf(
@@ -304,6 +312,55 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var autoViewBusy = false
     private var autoViewSummary = "AUTO VIEW • analysing scene"
 
+    private val directorRunnable =
+        object : Runnable {
+            override fun run() {
+                if (
+                    ::directorOverlayView.isInitialized
+                ) {
+                    directorOverlayView.visibility =
+                        if (
+                            directorEnabled &&
+                            !cleanModeEnabled
+                        ) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
+                }
+
+                if (
+                    directorEnabled &&
+                    !cleanModeEnabled &&
+                    ::previewView.isInitialized &&
+                    ::directorOverlayView.isInitialized &&
+                    previewView.width > 0 &&
+                    previewView.height > 0
+                ) {
+                    val bitmap =
+                        try {
+                            previewView.bitmap
+                        } catch (_: Exception) {
+                            null
+                        }
+
+                    if (
+                        bitmap != null
+                    ) {
+                        directorOverlayView.submitFrame(
+                            bitmap,
+                            isDirectorPeopleMode()
+                        )
+                    }
+                }
+
+                uiHandler.postDelayed(
+                    this,
+                    1100L
+                )
+            }
+        }
+
     private val hideFocusReticleRunnable =
         Runnable {
             if (
@@ -352,6 +409,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var overlayEffect: OverlayEffect? = null
     private var automaticSocialTransformer: Transformer? = null
     private var automaticSocialExportActive = false
+    private var selectedCameraDeviceId: String? = null
+    private var directorEnabled = true
     private var useFront = false
     private var torchOn = false
 
@@ -676,6 +735,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         showRecordingRecoveryNoticeIfNeeded()
         startAutoViewDescription()
         startShotAssistLoop()
+        startDirectorLoop()
         requestPermissionsAndStart()
         uiHandler.post(tick)
     }
@@ -772,6 +832,30 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         root.addView(
             shotAssistView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+
+        directorOverlayView =
+            DevelopUgandaDirectorOverlayView(
+                this
+            ).apply {
+                setDirectorEnabled(
+                    directorEnabled
+                )
+
+                isClickable =
+                    false
+
+                isFocusable =
+                    false
+            }
+
+        root.addView(
+            directorOverlayView,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -1134,7 +1218,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         previewBrandView =
             hud(
-                "develop.uganda • V216",
+                "develop.uganda • V227",
                 13.8f,
                 0xFFD8B85B.toInt(),
                 bold = true
@@ -1738,6 +1822,82 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             reportOutputRow
         )
 
+        reportDirectorRow =
+            row().apply {
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    0,
+                    dp(4),
+                    0,
+                    0
+                )
+            }
+
+        directorButton =
+            deckButton(
+                "DIRECTOR ▾\n" +
+                    if (
+                        directorEnabled
+                    ) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    },
+                0xFF91B6A0.toInt()
+            ).apply {
+                isSelected =
+                    directorEnabled
+            }
+
+        continuityButton =
+            deckButton(
+                "MATCH LAST\nSHOT",
+                0xFFAEBDEB.toInt()
+            ).apply {
+                isSelected =
+                    DevelopUgandaContinuityMemory.load(
+                        this@DevelopUgandaCameraActivity,
+                        cameraExperienceId
+                    ) != null
+            }
+
+        healthButton =
+            deckButton(
+                "CAMERA\nHEALTH",
+                0xFF73B7D9.toInt()
+            )
+
+        listOf(
+            directorButton,
+            continuityButton,
+            healthButton
+        ).forEachIndexed {
+                index,
+                button ->
+            reportDirectorRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(34),
+                    1f
+                ).apply {
+                    if (
+                        index >
+                            0
+                    ) {
+                        marginStart =
+                            dp(7)
+                    }
+                }
+            )
+        }
+
+        bottomDeck.addView(
+            reportDirectorRow
+        )
+
         settingsSummaryView = hud(
             reportSettingsSummary(),
             5.9f,
@@ -1820,7 +1980,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
 
         lensButton = deckButton(
-            "LENS ▾\nBACK",
+            "LENS ▾\n${currentLensDeckLabel()}",
             0xFF83C7D4.toInt()
         )
         torchButton = deckButton(
@@ -1970,6 +2130,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         assistButton.setOnTouchListener(
             DeckTouchListener(ACTION_SHOT_ASSIST)
+        )
+
+        directorButton.setOnTouchListener(
+            DeckTouchListener(ACTION_DIRECTOR)
+        )
+
+        continuityButton.setOnTouchListener(
+            DeckTouchListener(ACTION_CONTINUITY)
+        )
+
+        healthButton.setOnTouchListener(
+            DeckTouchListener(ACTION_HEALTH)
         )
 
         lensButton.setOnTouchListener(
@@ -2197,15 +2369,14 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                                 recording ==
                                 null
                             ) {
+                                selectedCameraDeviceId =
+                                    null
+
                                 useFront =
                                     !useFront
 
                                 lensButton.text =
-                                    if (useFront) {
-                                        "LENS\nFRONT"
-                                    } else {
-                                        "LENS\nBACK"
-                                    }
+                                    "LENS\n${currentLensDeckLabel()}"
 
                                 bindCamera()
                                 toast(
@@ -2640,6 +2811,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             reportAdvancedRow,
             reportDisplayRow,
             reportOutputRow,
+            reportDirectorRow,
             zoomRow,
             exposureRow
         ).forEach {
@@ -3497,7 +3669,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V226"
+                            "V227"
                         )
                         put(
                             "camera_engine",
@@ -3767,6 +3939,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 reportAdvancedRow,
                 reportDisplayRow,
                 reportOutputRow,
+                reportDirectorRow,
                 zoomRow,
                 exposureRow
             ).forEach {
@@ -4540,6 +4713,473 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         )
     }
 
+    private fun isDirectorPeopleMode(): Boolean {
+        return cameraExperienceId in
+            setOf(
+                "V205_FOCUS",
+                "V211_AUDIO"
+            ) ||
+            sceneModes[
+                sceneIndex
+            ] ==
+                "INTERVIEW"
+    }
+
+    private fun startDirectorLoop() {
+        uiHandler.removeCallbacks(
+            directorRunnable
+        )
+
+        uiHandler.postDelayed(
+            directorRunnable,
+            1100L
+        )
+    }
+
+    private fun toggleDirectorGuidance() {
+        directorEnabled =
+            !directorEnabled
+
+        if (
+            ::directorOverlayView.isInitialized
+        ) {
+            directorOverlayView.setDirectorEnabled(
+                directorEnabled
+            )
+
+            directorOverlayView.visibility =
+                if (
+                    directorEnabled
+                ) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+        }
+
+        if (
+            ::directorButton.isInitialized
+        ) {
+            directorButton.text =
+                "DIRECTOR ▾\n" +
+                    if (
+                        directorEnabled
+                    ) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
+
+            directorButton.isSelected =
+                directorEnabled
+        }
+
+        saveReportCameraPreferences()
+
+        toast(
+            if (
+                directorEnabled
+            ) {
+                "Director + preview histogram ON"
+            } else {
+                "Director guidance OFF"
+            }
+        )
+    }
+
+    private fun estimatedRecordingTimeText(): String {
+        return try {
+            val freeBytes =
+                StatFs(
+                    Environment.getExternalStorageDirectory().path
+                ).availableBytes
+
+            val bitsPerSecond =
+                (
+                    targetVideoBitrate()
+                        .toLong() +
+                        320_000L
+                    )
+                    .coerceAtLeast(
+                        1L
+                    )
+
+            val seconds =
+                (
+                    freeBytes *
+                        8L
+                    ) /
+                    bitsPerSecond
+
+            when {
+                seconds <=
+                    0L ->
+                        "EST REC --"
+
+                seconds >=
+                    3600L ->
+                        String.format(
+                            Locale.US,
+                            "EST REC %dh %02dm",
+                            seconds /
+                                3600L,
+                            (
+                                seconds /
+                                    60L
+                                ) %
+                                60L
+                        )
+
+                else ->
+                    String.format(
+                        Locale.US,
+                        "EST REC %dm",
+                        seconds /
+                            60L
+                    )
+            }
+        } catch (_: Exception) {
+            "EST REC --"
+        }
+    }
+
+    private fun currentLensDeckLabel(): String {
+        val selected =
+            selectedCameraDeviceId
+
+        return if (
+            !selected.isNullOrBlank()
+        ) {
+            "ID " +
+                selected.takeLast(
+                    7
+                )
+        } else if (
+            useFront
+        ) {
+            "FRONT"
+        } else {
+            "BACK"
+        }
+    }
+
+    private fun showRealCameraDevicePicker() {
+        val p =
+            provider
+
+        if (
+            p ==
+                null
+        ) {
+            toast(
+                "Camera map is still loading"
+            )
+
+            return
+        }
+
+        val devices =
+            DevelopUgandaLensIntelligence.devices(
+                p
+            )
+
+        if (
+            devices.isEmpty()
+        ) {
+            toast(
+                "No additional CameraX device IDs were exposed"
+            )
+
+            return
+        }
+
+        AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                "REAL CAMERAS EXPOSED BY ANDROID"
+            )
+            .setMessage(
+                "These are actual CameraX / Camera2 devices exposed by this phone. develop.uganda does not invent 0.5× / 1× / 3× lens buttons."
+            )
+            .setItems(
+                devices
+                    .map {
+                        it.label()
+                    }
+                    .toTypedArray()
+            ) {
+                    _,
+                    which ->
+                val picked =
+                    devices[
+                        which
+                    ]
+
+                selectedCameraDeviceId =
+                    picked.cameraId
+
+                useFront =
+                    picked.facing ==
+                        "FRONT"
+
+                saveReportCameraPreferences()
+
+                bindCamera()
+
+                toast(
+                    "Selected ${picked.shortLabel()}"
+                )
+            }
+            .setNegativeButton(
+                "CANCEL",
+                null
+            )
+            .show()
+    }
+
+    private fun saveV227ContinuitySnapshot() {
+        val cam =
+            camera
+
+        val zoom =
+            cam
+                ?.cameraInfo
+                ?.zoomState
+                ?.value
+                ?.zoomRatio
+                ?: 1f
+
+        val exposure =
+            cam
+                ?.cameraInfo
+                ?.exposureState
+                ?.exposureCompensationIndex
+                ?: sceneExposureTarget
+
+        DevelopUgandaContinuityMemory.save(
+            this,
+            cameraExperienceId,
+            DevelopUgandaContinuityMemory.Snapshot(
+                sceneIndex =
+                    sceneIndex,
+                lookIndex =
+                    lookIndex,
+                qualityIndex =
+                    qualityIndex,
+                presetIndex =
+                    reportPresetIndex,
+                useFront =
+                    useFront,
+                cameraDeviceId =
+                    selectedCameraDeviceId,
+                zoomRatio =
+                    zoom,
+                exposureCompensation =
+                    exposure,
+                savedUtc =
+                    Instant.now().toString()
+            )
+        )
+
+        if (
+            ::continuityButton.isInitialized
+        ) {
+            continuityButton.text =
+                "MATCH LAST\nREADY"
+
+            continuityButton.isSelected =
+                true
+        }
+    }
+
+    private fun matchLastShotContinuity() {
+        if (
+            recording !=
+                null
+        ) {
+            toast(
+                "Stop recording before matching the last shot"
+            )
+
+            return
+        }
+
+        val snapshot =
+            DevelopUgandaContinuityMemory.load(
+                this,
+                cameraExperienceId
+            )
+
+        if (
+            snapshot ==
+                null
+        ) {
+            toast(
+                "No previous shot is stored for this camera"
+            )
+
+            return
+        }
+
+        sceneIndex =
+            snapshot.sceneIndex
+                .coerceIn(
+                    0,
+                    sceneModes.lastIndex
+                )
+
+        lookIndex =
+            snapshot.lookIndex
+                .coerceIn(
+                    0,
+                    lookModes.lastIndex
+                )
+
+        qualityIndex =
+            snapshot.qualityIndex
+                .coerceIn(
+                    0,
+                    qualityModes.lastIndex
+                )
+
+        reportPresetIndex =
+            snapshot.presetIndex
+                .coerceIn(
+                    0,
+                    reportPresetLabels.lastIndex
+                )
+
+        useFront =
+            snapshot.useFront
+
+        selectedCameraDeviceId =
+            snapshot.cameraDeviceId
+                ?.takeIf {
+                    DevelopUgandaLensIntelligence.hasCamera(
+                        provider,
+                        it
+                    )
+                }
+
+        sceneExposureTarget =
+            snapshot.exposureCompensation
+
+        saveReportCameraPreferences()
+
+        bindCamera()
+
+        uiHandler.postDelayed(
+            {
+                val cam =
+                    camera
+
+                val zoomState =
+                    cam
+                        ?.cameraInfo
+                        ?.zoomState
+                        ?.value
+
+                if (
+                    cam !=
+                        null &&
+                    zoomState !=
+                        null
+                ) {
+                    val ratio =
+                        snapshot.zoomRatio
+                            .coerceIn(
+                                zoomState.minZoomRatio,
+                                zoomState.maxZoomRatio
+                            )
+
+                    cam.cameraControl
+                        .setZoomRatio(
+                            ratio
+                        )
+
+                    val span =
+                        (
+                            zoomState.maxZoomRatio -
+                                zoomState.minZoomRatio
+                            )
+                            .coerceAtLeast(
+                                0.01f
+                            )
+
+                    zoomSeek.progress =
+                        (
+                            (
+                                ratio -
+                                    zoomState.minZoomRatio
+                                ) /
+                                span *
+                                100f
+                            )
+                            .roundToInt()
+                            .coerceIn(
+                                0,
+                                100
+                            )
+                }
+
+                val exposure =
+                    cam
+                        ?.cameraInfo
+                        ?.exposureState
+
+                if (
+                    cam !=
+                        null &&
+                    exposure !=
+                        null &&
+                    exposure.isExposureCompensationSupported
+                ) {
+                    val value =
+                        snapshot.exposureCompensation
+                            .coerceIn(
+                                exposure.exposureCompensationRange.lower,
+                                exposure.exposureCompensationRange.upper
+                            )
+
+                    cam.cameraControl
+                        .setExposureCompensationIndex(
+                            value
+                        )
+
+                    sceneExposureTarget =
+                        value
+
+                    exposureSeek.progress =
+                        (
+                            value +
+                                6
+                            )
+                            .coerceIn(
+                                0,
+                                12
+                            )
+                }
+
+                refreshHud()
+
+                toast(
+                    "MATCH LAST SHOT • restored controllable settings"
+                )
+            },
+            500L
+        )
+    }
+
+    private fun openV227CameraHealth() {
+        startActivity(
+            android.content.Intent(
+                this,
+                DevelopUgandaCameraHealthActivity::class.java
+            )
+        )
+    }
+
     private fun recordingHealthText(): String {
         val battery =
             batteryPct()
@@ -4765,6 +5405,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "integrity",
                 integrityEnabled
             )
+
+        selectedCameraDeviceId =
+            prefs.getString(
+                "real_camera_id",
+                selectedCameraDeviceId
+            )
+
+        directorEnabled =
+            prefs.getBoolean(
+                "director_enabled",
+                directorEnabled
+            )
     }
 
     private fun saveReportCameraPreferences() {
@@ -4820,6 +5472,14 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             .putBoolean(
                 "integrity",
                 integrityEnabled
+            )
+            .putString(
+                "real_camera_id",
+                selectedCameraDeviceId
+            )
+            .putBoolean(
+                "director_enabled",
+                directorEnabled
             )
             .apply()
     }
@@ -5749,12 +6409,23 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         overlayEffect = null
 
+        if (
+            selectedCameraDeviceId != null &&
+            !DevelopUgandaLensIntelligence.hasCamera(
+                p,
+                selectedCameraDeviceId
+            )
+        ) {
+            selectedCameraDeviceId =
+                null
+        }
+
         val selector =
-            if (useFront) {
-                CameraSelector.DEFAULT_FRONT_CAMERA
-            } else {
-                CameraSelector.DEFAULT_BACK_CAMERA
-            }
+            DevelopUgandaLensIntelligence.selectorFor(
+                p,
+                selectedCameraDeviceId,
+                useFront
+            )
 
         val selectedCameraInfo =
             try {
@@ -6051,7 +6722,30 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             refreshHud()
         } catch (e: Exception) {
-            toast("Selected camera is unavailable")
+            if (
+                selectedCameraDeviceId !=
+                    null
+            ) {
+                val failedId =
+                    selectedCameraDeviceId
+
+                selectedCameraDeviceId =
+                    null
+
+                saveReportCameraPreferences()
+
+                toast(
+                    "Camera ID $failedId cannot use this capture profile • returning to ${if (useFront) "front" else "back"} camera"
+                )
+
+                uiHandler.post {
+                    bindCamera()
+                }
+            } else {
+                toast(
+                    "Selected camera is unavailable"
+                )
+            }
         }
     }
 
@@ -6356,7 +7050,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         drawFitText(
             c,
-            "$recState   •   TC ${tc()}   •   V226   •   THERM ${thermalStateLabel()}",
+            "$recState   •   TC ${tc()}   •   V227   •   THERM ${thermalStateLabel()}",
             safeLeft,
             y,
             maxWidth,
@@ -8260,7 +8954,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V226_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V227_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -8314,6 +9008,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     enforceFullFramePreview()
                     enforceImmersiveCameraWindow()
 
+                    recordingWarningsSeen.clear()
                     recStarted = System.currentTimeMillis()
                     recordStartUtc =
                         Instant.ofEpochMilli(
@@ -8409,7 +9104,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         toast("Recording failed")
                     } else {
-                        statusView.text = "SAVED"
+                        statusView.text = "FINALIZED • QC"
                         statusView.setTextColor(
                             0xFF83B995.toInt()
                         )
@@ -8467,6 +9162,54 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             )
                         }
 
+                        saveV227ContinuitySnapshot()
+
+                        val reviewPackageId =
+                            reportId.ifBlank {
+                                baseName.ifBlank {
+                                    "DU_${System.currentTimeMillis()}"
+                                }
+                            }
+
+                        DevelopUgandaClipQc.inspect(
+                            this@DevelopUgandaCameraActivity,
+                            event.outputResults.outputUri,
+                            reviewPackageId
+                        ) {
+                                result ->
+                            statusView.text =
+                                if (
+                                    result.playableFrame &&
+                                    result.hasVideo &&
+                                    result.sourceReadable
+                                ) {
+                                    "QC READY"
+                                } else {
+                                    "QC CHECK"
+                                }
+
+                            statusView.setTextColor(
+                                if (
+                                    result.playableFrame &&
+                                    result.hasVideo &&
+                                    result.sourceReadable
+                                ) {
+                                    0xFF83B995.toInt()
+                                } else {
+                                    0xFFD8B85B.toInt()
+                                }
+                            )
+
+                            DevelopUgandaInstantReviewDialog.show(
+                                this@DevelopUgandaCameraActivity,
+                                result,
+                                reviewPackageId,
+                                isSocialMediaCamera()
+                            ) {
+                                matchLastShotContinuity()
+                            }
+                        }
+
                         if (
                             !hadError &&
                             isSocialMediaCamera()
@@ -8490,11 +9233,16 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
 
                         uiHandler.postDelayed({
-                            statusView.text = "STBY"
-                            statusView.setTextColor(
-                                0xFFFF5A52.toInt()
-                            )
-                        }, 1800L)
+                            if (
+                                statusView.text.toString() !=
+                                    "QC CHECK"
+                            ) {
+                                statusView.text = "STBY"
+                                statusView.setTextColor(
+                                    0xFFFF5A52.toInt()
+                                )
+                            }
+                        }, 5200L)
                     }
                 }
 
@@ -8654,7 +9402,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             ::previewNarrationPanel.isInitialized
         ) {
             previewTagView.text =
-                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V215"
+                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V227"
 
             previewIdentityView.text =
                 "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}"
@@ -8684,7 +9432,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "${weatherOverlay()} • ${audioLevelOverlay()} • ${systemOverlay()}"
 
             previewHealthView.text =
-                "${recordingHealthText()} • ${motionGuardLabel()}"
+                "${recordingHealthText()} • ${motionGuardLabel()} • ${estimatedRecordingTimeText()}"
 
             previewHealthView.setTextColor(
                 recordingHealthColor()
@@ -8734,7 +9482,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         if (::lensButton.isInitialized) {
             lensButton.text =
-                "LENS ▾\n${if (useFront) "FRONT" else "BACK"}"
+                "LENS ▾\n${currentLensDeckLabel()}"
         }
     }
 
@@ -10416,7 +11164,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             )
 
                         ACTION_CAPABILITIES ->
-                            showCameraCapabilities()
+                            openV227CameraHealth()
 
                         ACTION_CLEAN ->
                             showReportCleanDropdown(
@@ -10448,6 +11196,15 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                         ACTION_SHOT_ASSIST ->
                             cycleShotAssist()
+
+                        ACTION_DIRECTOR ->
+                            toggleDirectorGuidance()
+
+                        ACTION_CONTINUITY ->
+                            matchLastShotContinuity()
+
+                        ACTION_HEALTH ->
+                            openV227CameraHealth()
 
                         ACTION_LENS ->
                             showReportLensDropdown(
@@ -11535,42 +12292,67 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private fun showReportLensDropdown(
         anchor: View
     ) {
-        if (recording != null) {
+        if (
+            recording !=
+                null
+        ) {
             toast(
                 "Stop recording before changing lens"
             )
             return
         }
 
-        showReportPillDropdown(
-            anchor,
-            "LENS",
-            arrayOf(
-                "BACK",
-                "FRONT"
-            ),
-            if (useFront) 1 else 0
-        ) { picked ->
-            val wantFront =
-                picked ==
+        val selected =
+            when {
+                selectedCameraDeviceId !=
+                    null ->
+                        2
+
+                useFront ->
                     1
 
-            if (
-                wantFront !=
-                useFront
+                else ->
+                    0
+            }
+
+        showReportPillDropdown(
+            anchor,
+            "REAL LENS INTELLIGENCE",
+            arrayOf(
+                "AUTO BACK",
+                "AUTO FRONT",
+                "REAL CAMERAS"
+            ),
+            selected
+        ) {
+                picked ->
+            when (
+                picked
             ) {
-                useFront =
-                    wantFront
+                0 -> {
+                    selectedCameraDeviceId =
+                        null
 
-                lensButton.text =
-                    "LENS ▾\n" +
-                        if (useFront) {
-                            "FRONT"
-                        } else {
-                            "BACK"
-                        }
+                    useFront =
+                        false
 
-                bindCamera()
+                    saveReportCameraPreferences()
+                    bindCamera()
+                }
+
+                1 -> {
+                    selectedCameraDeviceId =
+                        null
+
+                    useFront =
+                        true
+
+                    saveReportCameraPreferences()
+                    bindCamera()
+                }
+
+                else ->
+                    showRealCameraDevicePicker()
             }
         }
     }

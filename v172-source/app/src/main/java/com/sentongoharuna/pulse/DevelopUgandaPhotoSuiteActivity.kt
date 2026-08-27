@@ -59,6 +59,7 @@ open class DevelopUgandaPhotoSuiteActivity :
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
     private lateinit var assistView: DevelopUgandaShotAssistView
+    private lateinit var directorView: DevelopUgandaDirectorOverlayView
     private lateinit var titleView: TextView
     private lateinit var capabilityView: TextView
     private lateinit var statusView: TextView
@@ -135,6 +136,41 @@ open class DevelopUgandaPhotoSuiteActivity :
             }
         }
 
+    private val directorRunnable =
+        object : Runnable {
+            override fun run() {
+                if (
+                    ::previewView.isInitialized &&
+                    ::directorView.isInitialized &&
+                    previewView.width > 0 &&
+                    previewView.height > 0
+                ) {
+                    val bitmap =
+                        try {
+                            previewView.bitmap
+                        } catch (_: Exception) {
+                            null
+                        }
+
+                    if (
+                        bitmap !=
+                            null
+                    ) {
+                        directorView.submitFrame(
+                            bitmap,
+                            modeId ==
+                                "PEOPLE_PHOTO"
+                        )
+                    }
+                }
+
+                uiHandler.postDelayed(
+                    this,
+                    1200L
+                )
+            }
+        }
+
     private val modeId by lazy {
         defaultPhotoModeId()
     }
@@ -162,6 +198,11 @@ open class DevelopUgandaPhotoSuiteActivity :
         uiHandler.postDelayed(
             assistRunnable,
             900L
+        )
+
+        uiHandler.postDelayed(
+            directorRunnable,
+            1200L
         )
     }
 
@@ -233,6 +274,19 @@ open class DevelopUgandaPhotoSuiteActivity :
 
         root.addView(
             assistView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        directorView =
+            DevelopUgandaDirectorOverlayView(
+                this
+            )
+
+        root.addView(
+            directorView,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT

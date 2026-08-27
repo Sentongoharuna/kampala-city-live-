@@ -74,6 +74,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
     private lateinit var livePreviewToneView: View
+    private lateinit var liveDirectorOverlayView: DevelopUgandaDirectorOverlayView
 
     private lateinit var liveBadge: TextView
     private lateinit var liveTitle: TextView
@@ -279,6 +280,39 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
         }
 
+    private val liveDirectorRunnable =
+        object : Runnable {
+            override fun run() {
+                if (
+                    ::previewView.isInitialized &&
+                    ::liveDirectorOverlayView.isInitialized &&
+                    previewView.width > 0 &&
+                    previewView.height > 0
+                ) {
+                    val bitmap =
+                        try {
+                            previewView.bitmap
+                        } catch (_: Exception) {
+                            null
+                        }
+
+                    if (
+                        bitmap != null
+                    ) {
+                        liveDirectorOverlayView.submitFrame(
+                            bitmap,
+                            liveDirectorPeopleMode()
+                        )
+                    }
+                }
+
+                uiHandler.postDelayed(
+                    this,
+                    1200L
+                )
+            }
+        }
+
     private val uiTicker =
         object : Runnable {
             override fun run() {
@@ -341,6 +375,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         buildLiveUi()
         showLiveRecoveryNoticeIfNeeded()
         startLiveAutoViewDescription()
+        uiHandler.postDelayed(
+            liveDirectorRunnable,
+            1200L
+        )
         requestNeededPermissions()
 
         uiHandler.post(
@@ -584,6 +622,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         )
 
+        liveDirectorOverlayView =
+            DevelopUgandaDirectorOverlayView(
+                this
+            )
+
+        root.addView(
+            liveDirectorOverlayView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
         val topPanel =
             LinearLayout(this).apply {
                 orientation =
@@ -623,7 +674,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                "develop.uganda • V226",
+                "develop.uganda • V227",
                 20f,
                 amber,
                 true
@@ -2448,7 +2499,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        // V226: brand/build and blinking LIVE status use separate lanes.
+        // V227: brand/build and blinking LIVE status use separate lanes.
         // The build capsule never receives the LIVE glow.
         val brandX =
             safeLeft +
@@ -2472,7 +2523,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
 
         val buildText =
-            "V226"
+            "V227"
 
         val brandWidth =
             paint.measureText(
@@ -2842,7 +2893,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V226   |   THERMAL • ${liveThermalStateLabel()}",
+            "${if (liveOn) "ON AIR" else "READY"}   |   TIMECODE • ${liveTimecode()}   |   MODE • ${liveQualityProfiles[liveQualityIndex]}   |   LOOK • ${liveEffectLabels[liveEffectIndex]}   |   MANUAL LIVE   |   V227   |   THERMAL • ${liveThermalStateLabel()}",
             safeLeft,
             safeTop +
                 (126f * u),
@@ -2987,7 +3038,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         drawFitText(
             canvas,
-            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V226",
+            "CAMERA • LIVE STUDIO   |   REPORTER • $reporterName   |   STORY • $storyId   |   develop.uganda • V227",
             safeLeft +
                 (22f * u),
             lowerY +
@@ -3187,6 +3238,73 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             "HD FAST" -> Quality.HD
             else -> Quality.FHD
         }
+    }
+
+    private fun liveEstimatedRecordingTimeText(): String {
+        return try {
+            val freeBytes =
+                StatFs(
+                    Environment.getExternalStorageDirectory().path
+                ).availableBytes
+
+            val bitsPerSecond =
+                (
+                    liveTargetBitrate()
+                        .toLong() +
+                        320_000L
+                    )
+                    .coerceAtLeast(
+                        1L
+                    )
+
+            val seconds =
+                (
+                    freeBytes *
+                        8L
+                    ) /
+                    bitsPerSecond
+
+            when {
+                seconds <=
+                    0L ->
+                        "EST REC --"
+
+                seconds >=
+                    3600L ->
+                        String.format(
+                            Locale.US,
+                            "EST REC %dh %02dm",
+                            seconds /
+                                3600L,
+                            (
+                                seconds /
+                                    60L
+                                ) %
+                                60L
+                        )
+
+                else ->
+                    String.format(
+                        Locale.US,
+                        "EST REC %dm",
+                        seconds /
+                            60L
+                    )
+            }
+        } catch (_: Exception) {
+            "EST REC --"
+        }
+    }
+
+    private fun liveDirectorPeopleMode(): Boolean {
+        return profiles[
+            profileIndex
+        ] ==
+            "INTERVIEW" ||
+            livePresetLabels[
+                livePresetIndex
+            ] ==
+                "INTERVIEW"
     }
 
     private fun liveTargetBitrate(): Int {
@@ -3960,7 +4078,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V226_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V227_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 
@@ -4094,7 +4212,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         )
 
                         liveSubTitle.text =
-                            "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
+                            "LIVE STUDIO • ${profiles[profileIndex]} • QC CHECK"
 
                         recLamp.setTextColor(
                             0xFF657078.toInt()
@@ -4145,6 +4263,36 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                                     expectSocialMaster = false
                                 )
                             )
+                        }
+
+                        if (
+                            !event.hasError()
+                        ) {
+                            DevelopUgandaClipQc.inspect(
+                                this@DevelopUgandaLiveActivity,
+                                event.outputResults.outputUri,
+                                liveRecordingName
+                            ) {
+                                    result ->
+                                liveSubTitle.text =
+                                    if (
+                                        result.playableFrame &&
+                                        result.hasVideo &&
+                                        result.sourceReadable
+                                    ) {
+                                        "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
+                                    } else {
+                                        "LIVE STUDIO • ${profiles[profileIndex]} • QC CHECK"
+                                    }
+
+                                DevelopUgandaInstantReviewDialog.show(
+                                    this@DevelopUgandaLiveActivity,
+                                    result,
+                                    liveRecordingName,
+                                    false,
+                                    null
+                                )
+                            }
                         }
 
                         if (
@@ -4764,7 +4912,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     } else {
                         "OFF"
                     }
-                } • HEALTH $health"
+                } • HEALTH $health • ${liveEstimatedRecordingTimeText()}"
         }
     }
 

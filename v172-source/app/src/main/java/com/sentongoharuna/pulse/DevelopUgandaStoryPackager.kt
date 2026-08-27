@@ -168,7 +168,7 @@ object DevelopUgandaStoryPackager {
                     relative,
                     "METADATA.json",
                     JSONObject()
-                        .put("app_version", "V226")
+                        .put("app_version", "V227")
                         .put("package_id", packageId)
                         .put("source_kind", metadata.sourceKind)
                         .put("camera", metadata.camera)
@@ -227,7 +227,7 @@ object DevelopUgandaStoryPackager {
                     "MANIFEST.json",
                     JSONObject()
                         .put("package_version", 1)
-                        .put("app_version", "V226")
+                        .put("app_version", "V227")
                         .put("package_id", packageId)
                         .put("created_utc", Instant.now().toString())
                         .put("source_uri", sourceUri.toString())
@@ -615,7 +615,7 @@ object DevelopUgandaStoryPackager {
         packageId: String,
         metadata: StoryMetadata
     ): String = buildString {
-        append("develop.uganda AUTO STORY PACKAGE • V226\n\n")
+        append("develop.uganda AUTO STORY PACKAGE • V227\n\n")
         append("PACKAGE ID • $packageId\n")
         append("CAMERA • ${metadata.camera}\n")
         append("REPORTER • ${metadata.reporter}\n")

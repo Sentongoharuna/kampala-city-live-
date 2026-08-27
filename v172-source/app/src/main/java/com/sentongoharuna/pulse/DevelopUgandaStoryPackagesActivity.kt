@@ -48,7 +48,7 @@ class DevelopUgandaStoryPackagesActivity : AppCompatActivity() {
 
         root.addView(
             label(
-                "develop.uganda • STORY PACKAGES V226",
+                "develop.uganda • STORY PACKAGES V227",
                 18f,
                 gold,
                 true
@@ -115,7 +115,7 @@ class DevelopUgandaStoryPackagesActivity : AppCompatActivity() {
             host.addView(
                 cardText(
                     "NEW RECORDINGS INBOX • ${inbox.size}",
-                    "These are develop.uganda videos found directly in Android MediaStore that do not yet have a V226 Story Package. PLAY and SHARE work immediately. BUILD PACKAGE creates the newsroom package."
+                    "These are develop.uganda videos found directly in Android MediaStore that do not yet have a V227 Story Package. PLAY and SHARE work immediately. BUILD PACKAGE creates the newsroom package."
                 )
             )
 

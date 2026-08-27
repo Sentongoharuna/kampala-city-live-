@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "AUTO STORY PACKAGE • V226\nV225 PHOTO + V224 GUARD RETAINED",
+                "DIRECTOR & QC PRO • V227\nV226 FIX2 NEWSROOM + V225 PHOTO RETAINED",
                 9f,
                 white,
                 true
@@ -276,6 +276,28 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
                 "V205→V222 INDEPENDENT CAMERAS RETAINED • V217 ADDS FULL-SCREEN CAMERA PREVIEW + POLISHED SAVED-VIDEO HUD • NOTHING DROPPED",
                 cyan
             )
+        )
+
+        page.addView(
+            compactStatus(
+                "V227 • DIRECTOR & QC PRO",
+                "SCREEN-ONLY REAL FACE COMPOSITION FOR PEOPLE/INTERVIEW • PREVIEW LUMA HISTOGRAM • ESTIMATED RECORD TIME • REAL CAMERA DEVICE MAP • SHOT CONTINUITY • INSTANT MP4 QC + REVIEW • V226 FIX2 NEWSROOM INTAKE RETAINED",
+                0xFF91B6A0.toInt()
+            )
+        )
+
+        page.addView(
+            launchCard(
+                "V227 • CAMERA HEALTH",
+                "See what this phone actually exposes",
+                "REAL CameraX/Camera2 device IDs + focal lengths • UHD • HLG HDR • stabilization • hardware FPS ranges • JPEG / Ultra HDR / RAW / RAW+JPEG • on-device transcription • thermal/location/storage • H.264/AAC encoder presence",
+                0xFF73B7D9.toInt(),
+                "OPEN CAMERA HEALTH"
+            ) {
+                openIndependentCamera(
+                    DevelopUgandaCameraHealthActivity::class.java
+                )
+            }
         )
 
         page.addView(
@@ -568,7 +590,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             sectionTitle(
-                "AUTO STORY PACKAGE • V226"
+                "AUTO STORY PACKAGE • V227"
             )
         )
 
@@ -582,7 +604,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V226 • STORY PACKAGES",
+                "V227 • STORY PACKAGES",
                 "Open, share and transcribe completed report packages",
                 "Each package is stored under Download/develop.uganda/Story Packages/<Package ID> • original Gallery video stays untouched • Interview/V211 can request on-device transcript automatically • any package can request transcript manually on Android 13+ when an on-device recognizer exists",
                 0xFF62D8C9.toInt(),

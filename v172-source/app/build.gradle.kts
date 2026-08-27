@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 22602
-        versionName = "226.2-newsroom-media-intake"
+        versionCode = 22700
+        versionName = "227.0-director-qc-pro"
     }
 
     buildTypes {
@@ -49,4 +49,5 @@ dependencies {
     implementation("androidx.camera:camera-effects:$camerax")
     implementation("com.google.android.gms:play-services-location:21.4.0")
     implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("com.google.mlkit:face-detection:16.1.7")
 }
