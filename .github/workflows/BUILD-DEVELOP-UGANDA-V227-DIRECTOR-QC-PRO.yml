@@ -1,0 +1,485 @@
+name: Build develop.uganda V227 Director QC Pro
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V226 FIX2 working base
+        run: |
+          set -e
+
+          test -f DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO-PATCH.zip
+
+          GRADLE="v172-source/app/build.gradle.kts"
+          INBOX="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaMediaInbox.kt"
+          PACKAGES="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackagesActivity.kt"
+          PLAYER="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPlayerActivity.kt"
+
+          grep -q 'versionCode = 22602' "$GRADLE"
+          grep -q 'versionName = "226.2-newsroom-media-intake"' "$GRADLE"
+
+          # V226 FIX2 must really be present, not only the version number.
+          test -f "$INBOX"
+          test -f "$PACKAGES"
+          test -f "$PLAYER"
+          grep -q 'fun findUnpackaged' "$INBOX"
+          grep -q 'MediaStore.Video.Media.EXTERNAL_CONTENT_URI' "$INBOX"
+          grep -q 'SCAN RECORDINGS + REFRESH' "$PACKAGES"
+          grep -q 'ExoPlayer.Builder' "$PLAYER"
+
+          echo "PASS: V226 FIX2 Newsroom Media Intake is the base."
+
+      - name: Unpack and syntax-check V227 patch
+        run: |
+          set -e
+
+          rm -rf /tmp/v227
+          mkdir -p /tmp/v227
+
+          unzip -q DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO-PATCH.zip -d /tmp/v227
+
+          python3 -m py_compile /tmp/v227/v227_patch.py
+
+          test -f /tmp/v227/DevelopUgandaDirectorOverlayView.kt
+          test -f /tmp/v227/DevelopUgandaClipQc.kt
+          test -f /tmp/v227/DevelopUgandaInstantReviewDialog.kt
+          test -f /tmp/v227/DevelopUgandaContinuityMemory.kt
+          test -f /tmp/v227/DevelopUgandaLensIntelligence.kt
+          test -f /tmp/v227/DevelopUgandaCameraHealthActivity.kt
+
+      - name: Lock protected camera output and V226 FIX2 fingerprints
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          def function_block(path, marker):
+              text = Path(path).read_text(encoding="utf-8")
+              start = text.index(marker)
+              end = text.index(
+                  "    private fun ",
+                  start + len(marker)
+              )
+              return text[start:end]
+
+          def normalized_version(text):
+              return (
+                  text
+                  .replace("V226", "VXXX")
+                  .replace("V227", "VXXX")
+              )
+
+          report_overlay = normalized_version(
+              function_block(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt",
+                  "        private fun drawReporterOverlay(frame: Frame) {"
+              )
+          )
+
+          live_overlay = normalized_version(
+              function_block(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt",
+                  "    private fun drawLiveBroadcastOverlay(frame: Frame) {"
+              )
+          )
+
+          photo_bind = function_block(
+              "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt",
+              "    private fun bindCamera() {"
+          )
+
+          live_bind = function_block(
+              "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt",
+              "    private fun bindCamera() {"
+          )
+
+          values = {
+              "report_overlay": hashlib.sha256(report_overlay.encode()).hexdigest(),
+              "live_overlay": hashlib.sha256(live_overlay.encode()).hexdigest(),
+              "photo_bind": hashlib.sha256(photo_bind.encode()).hexdigest(),
+              "live_bind": hashlib.sha256(live_bind.encode()).hexdigest(),
+          }
+
+          Path("/tmp/v227-protected-hashes.json").write_text(
+              json.dumps(values),
+              encoding="utf-8"
+          )
+
+          print(values)
+          PY
+
+      - name: Apply V227 Director and QC Pro
+        run: |
+          set -e
+          python3 /tmp/v227/v227_patch.py
+
+      - name: Prove protected capture/output work was not dropped
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          before = json.loads(
+              Path("/tmp/v227-protected-hashes.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          def function_block(path, marker):
+              text = Path(path).read_text(encoding="utf-8")
+              start = text.index(marker)
+              end = text.index(
+                  "    private fun ",
+                  start + len(marker)
+              )
+              return text[start:end]
+
+          def normalized_version(text):
+              return (
+                  text
+                  .replace("V226", "VXXX")
+                  .replace("V227", "VXXX")
+              )
+
+          checks = {
+              "report_overlay": normalized_version(
+                  function_block(
+                      "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt",
+                      "        private fun drawReporterOverlay(frame: Frame) {"
+                  )
+              ),
+              "live_overlay": normalized_version(
+                  function_block(
+                      "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt",
+                      "    private fun drawLiveBroadcastOverlay(frame: Frame) {"
+                  )
+              ),
+              "photo_bind": function_block(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt",
+                  "    private fun bindCamera() {"
+              ),
+              "live_bind": function_block(
+                  "v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt",
+                  "    private fun bindCamera() {"
+              ),
+          }
+
+          for name, value in checks.items():
+              current = hashlib.sha256(value.encode()).hexdigest()
+              if current != before[name]:
+                  raise SystemExit(
+                      f"Protected {name} changed unexpectedly"
+                  )
+
+          print("PASS: saved REPORT/LIVE graphics and LIVE/PHOTO camera bind engines retained.")
+          PY
+
+      - name: Verify every V227 feature is real and V226 FIX2 remains
+        run: |
+          set -e
+
+          REPORT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+          LIVE="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt"
+          PHOTO="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt"
+          DIRECTOR="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaDirectorOverlayView.kt"
+          QC="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaClipQc.kt"
+          REVIEW="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaInstantReviewDialog.kt"
+          CONTINUITY="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaContinuityMemory.kt"
+          LENS="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLensIntelligence.kt"
+          HEALTH="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraHealthActivity.kt"
+          INBOX="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaMediaInbox.kt"
+          PACKAGER="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt"
+          PACKAGES="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackagesActivity.kt"
+          PLAYER="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPlayerActivity.kt"
+          INDEPENDENT="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaIndependentCameras.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          # All established independent video cameras remain.
+          grep -q 'DevelopUgandaFocusAssistCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaMeteringLockCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaHorizonCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaSteadyShotCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaNightIntelligenceCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaAllProCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaAudioGuardCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaVerifiedCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaThermalSafeCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaModeSignatureCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaAutoDirectorCameraActivity' "$INDEPENDENT"
+          grep -q 'DevelopUgandaSocialMediaCameraActivity' "$INDEPENDENT"
+
+          # V226 FIX2 MediaStore intake/player/package system remains.
+          grep -q 'MediaStore.Video.Media.EXTERNAL_CONTENT_URI' "$INBOX"
+          grep -q 'fun findUnpackaged' "$INBOX"
+          grep -q 'fun packageVideo' "$INBOX"
+          grep -q 'NEW RECORDINGS INBOX' "$PACKAGES"
+          grep -q 'BUILD STORY PACKAGE' "$PACKAGES"
+          grep -q 'ExoPlayer.Builder' "$PLAYER"
+          grep -q 'fun createVideoPackage' "$PACKAGER"
+          grep -q 'INTEGRITY.json' "$PACKAGER"
+          grep -q 'CAPTION_DRAFT.txt' "$PACKAGER"
+
+          # Bundled real face detector + screen-only Director/histogram.
+          grep -q 'com.google.mlkit:face-detection:16.1.7' "$GRADLE"
+          grep -q 'FaceDetection.getClient' "$DIRECTOR"
+          grep -q 'PERFORMANCE_MODE_FAST' "$DIRECTOR"
+          grep -q 'HEADROOM GOOD' "$DIRECTOR"
+          grep -q 'MOVE SUBJECT LEFT' "$DIRECTOR"
+          grep -q 'MOVE SUBJECT RIGHT' "$DIRECTOR"
+          grep -q 'FACE TOO CLOSE' "$DIRECTOR"
+          grep -q 'EYE LINE HIGH' "$DIRECTOR"
+          grep -q 'PREVIEW HISTOGRAM' "$DIRECTOR"
+          grep -q 'HIGHLIGHTS HIGH' "$DIRECTOR"
+          grep -q 'SHADOWS HEAVY' "$DIRECTOR"
+          grep -q 'EXPOSURE BALANCED' "$DIRECTOR"
+
+          grep -q 'directorOverlayView.submitFrame' "$REPORT"
+          grep -q 'modeId ==.*PEOPLE_PHOTO' "$PHOTO" || grep -q '"PEOPLE_PHOTO"' "$PHOTO"
+          grep -q 'liveDirectorOverlayView.submitFrame' "$LIVE"
+
+          # Director view must remain screen-space and must not be a CameraEffect.
+          ! grep -q 'OverlayEffect' "$DIRECTOR"
+          ! grep -q 'CameraEffect' "$DIRECTOR"
+
+          # Instant MP4 technical QC uses real Android metadata + playable frame.
+          grep -q 'MediaMetadataRetriever.METADATA_KEY_DURATION' "$QC"
+          grep -q 'MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH' "$QC"
+          grep -q 'MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT' "$QC"
+          grep -q 'MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION' "$QC"
+          grep -q 'MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO' "$QC"
+          grep -q 'MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO' "$QC"
+          grep -q 'getFrameAtTime' "$QC"
+          grep -q 'MediaStore.MediaColumns.SIZE' "$QC"
+          grep -q 'DevelopUgandaClipQc.inspect' "$REPORT"
+          grep -q 'DevelopUgandaClipQc.inspect' "$LIVE"
+
+          # Instant Review Hub functions.
+          grep -q '"PLAY"' "$REVIEW"
+          grep -q '"SHARE"' "$REVIEW"
+          grep -q '"PACKAGE"' "$REVIEW"
+          grep -q '"SOCIAL MASTER"' "$REVIEW"
+          grep -q '"MATCH LAST SHOT"' "$REVIEW"
+          grep -q '"DELETE GALLERY SOURCE"' "$REVIEW"
+          grep -q '"DELETE ORIGINAL GALLERY VIDEO?"' "$REVIEW"
+
+          # Shot continuity genuinely stores/restores the controllable settings.
+          grep -q 'zoomRatio' "$CONTINUITY"
+          grep -q 'exposureCompensation' "$CONTINUITY"
+          grep -q 'cameraDeviceId' "$CONTINUITY"
+          grep -q 'sceneIndex' "$CONTINUITY"
+          grep -q 'qualityIndex' "$CONTINUITY"
+          grep -q 'matchLastShotContinuity' "$REPORT"
+          grep -q 'setZoomRatio' "$REPORT"
+          grep -q 'setExposureCompensationIndex' "$REPORT"
+
+          # Record-time estimate uses free bytes + actual selected target bitrate.
+          grep -q 'estimatedRecordingTimeText' "$REPORT"
+          grep -q 'targetVideoBitrate()' "$REPORT"
+          grep -q 'liveEstimatedRecordingTimeText' "$LIVE"
+          grep -q 'liveTargetBitrate()' "$LIVE"
+          grep -q 'availableBytes' "$REPORT"
+          grep -q 'availableBytes' "$LIVE"
+
+          # Real lens intelligence uses actual CameraX/Camera2-exposed devices.
+          grep -q 'provider.availableCameraInfos' "$LENS"
+          grep -q 'Camera2CameraInfo.from' "$LENS"
+          grep -q 'LENS_INFO_AVAILABLE_FOCAL_LENGTHS' "$LENS"
+          grep -q 'cameraId' "$LENS"
+          grep -q 'cameraSelector' "$LENS"
+          grep -q 'REAL CAMERAS' "$REPORT"
+          grep -q 'showRealCameraDevicePicker' "$REPORT"
+
+          # Camera Health queries real capabilities.
+          grep -q 'Recorder.getVideoCapabilities' "$HEALTH"
+          grep -q 'getSupportedQualities' "$HEALTH"
+          grep -q 'DynamicRange.HLG_10_BIT' "$HEALTH"
+          grep -q 'isStabilizationSupported' "$HEALTH"
+          grep -q 'CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES' "$HEALTH"
+          grep -q 'OUTPUT_FORMAT_JPEG_ULTRA_HDR' "$HEALTH"
+          grep -q 'OUTPUT_FORMAT_RAW' "$HEALTH"
+          grep -q 'OUTPUT_FORMAT_RAW_JPEG' "$HEALTH"
+          grep -q 'SpeechRecognizer.isOnDeviceRecognitionAvailable' "$HEALTH"
+          grep -q 'MediaCodecList' "$HEALTH"
+          grep -q '.DevelopUgandaCameraHealthActivity' "$MANIFEST"
+
+          # Existing CameraX video engine / saved telemetry remains.
+          grep -q 'OverlayEffect' "$REPORT"
+          grep -q 'CameraEffect.VIDEO_CAPTURE' "$REPORT"
+          grep -q 'targetVideoBitrate()' "$REPORT"
+          grep -q 'DevelopUgandaStoryPackager.createVideoPackage' "$REPORT"
+          grep -q 'CAMERA • ${cameraExperienceShortLabel()}' "$REPORT"
+          grep -q 'exportAutomaticSocialMaster' "$REPORT"
+
+          grep -q 'versionCode = 22700' "$GRADLE"
+          grep -q 'versionName = "227.0-director-qc-pro"' "$GRADLE"
+
+          echo "PASS: V227 Director & QC Pro feature verification completed."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V227 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v227-build.log
+
+      - name: Print exact compiler errors and source context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v227-build.log ]; then
+            echo "Gradle did not start."
+            exit 0
+          fi
+
+          echo "===== V227 IMPORTANT ERRORS ====="
+
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)" \
+            v227-build.log \
+            | head -4200 \
+            || true
+
+          echo "===== SOURCE CONTEXT ====="
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v227-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          for filename, line_text, col in re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )[:38]:
+              line_no = int(line_text)
+
+              files = list(
+                  Path("app/src/main/java").rglob(
+                      filename
+                  )
+              )
+
+              if not files:
+                  continue
+
+              lines = files[0].read_text(
+                  encoding="utf-8"
+              ).splitlines()
+
+              print(
+                  "\nFILE:",
+                  files[0],
+                  "LINE:",
+                  line_no
+              )
+
+              for n in range(
+                  max(1, line_no - 40),
+                  min(len(lines), line_no + 70) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V227 only after successful build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaPhotoSuiteActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackagesActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaDirectorOverlayView.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaClipQc.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaInstantReviewDialog.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaContinuityMemory.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLensIntelligence.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraHealthActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V227 already committed"
+          else
+            git commit -m "Add develop.uganda V227 Director and QC Pro"
+            git push
+          fi
+
+      - name: Package V227 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V227 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO.apk
+
+      - name: Upload V227 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO
+          path: DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V227 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO-SOURCE
+          path: DEVELOP-UGANDA-V227-DIRECTOR-QC-PRO-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V227 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V227-BUILD-LOG
+          path: v172-source/v227-build.log
+          if-no-files-found: warn
+          retention-days: 7
