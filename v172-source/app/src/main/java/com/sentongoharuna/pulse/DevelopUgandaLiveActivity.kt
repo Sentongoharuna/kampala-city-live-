@@ -640,6 +640,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val topPanel =
             LinearLayout(this).apply {
+                tag = "v237_live_top_panel"
                 orientation =
                     LinearLayout.VERTICAL
 
@@ -679,7 +680,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             label(
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V233"
+                    "V237"
                 ),
                 20f,
                 amber,
@@ -712,6 +713,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 white,
                 true
             ).apply {
+                tag = "v237_live_subtitle"
                 setPadding(
                     0,
                     dp(3),
@@ -768,6 +770,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 0xFF62D8C9.toInt(),
                 true
             ).apply {
+                tag = "v237_live_autoview"
                 maxLines = 1
                 isSingleLine = true
 
@@ -839,6 +842,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 white,
                 true
             ).apply {
+                tag = "v237_live_timer"
                 typeface =
                     Typeface.MONOSPACE
 
@@ -911,6 +915,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val liveDeck =
             LinearLayout(this).apply {
+                tag = "v237_live_deck"
                 orientation =
                     LinearLayout.VERTICAL
 
@@ -936,6 +941,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 0xFFAEB7C7.toInt(),
                 true
             ).apply {
+                tag = "v237_live_output_status"
                 gravity =
                     Gravity.CENTER
 
@@ -953,6 +959,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row1 =
             LinearLayout(this).apply {
+                tag = "v237_live_row1"
                 orientation =
                     LinearLayout.HORIZONTAL
             }
@@ -1008,6 +1015,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row2 =
             LinearLayout(this).apply {
+                tag = "v237_live_row2"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1070,6 +1078,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row3 =
             LinearLayout(this).apply {
+                tag = "v237_live_row3"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1126,6 +1135,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row4 =
             LinearLayout(this).apply {
+                tag = "v237_live_row4"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1197,6 +1207,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row5 =
             LinearLayout(this).apply {
+                tag = "v237_live_row5"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1286,6 +1297,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val displayRow =
             LinearLayout(this).apply {
+                tag = "v237_live_display_row"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1381,6 +1393,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val outputRow =
             LinearLayout(this).apply {
+                tag = "v237_live_output_row"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1447,6 +1460,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val recordArea =
             FrameLayout(this).apply {
+                tag = "v237_live_record_area"
                 setPadding(
                     0,
                     dp(8),
@@ -1517,6 +1531,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             activity = this,
             root = root,
             previewView = previewView
+        )
+        DevelopUgandaAdaptiveFormatUi.attach(
+            activity = this,
+            root = root,
+            role = DevelopUgandaAdaptiveFormatUi.Role.LIVE
         )
     }
 
@@ -2625,7 +2644,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             val buildText =
-                "V233"
+                "V237"
 
             val buildLeft =
                 if (
@@ -3218,7 +3237,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             statusParts.add(
-                "V233"
+                "V237"
             )
         }
 
@@ -3475,7 +3494,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             lowerParts.add(
-                "V233"
+                "V237"
             )
         }
 

@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.sentongoharuna.pulse"
-4    android:versionCode="23600"
-5    android:versionName="236.0-multiformat-satellite-field-intelligence" >
+4    android:versionCode="23700"
+5    android:versionName="237.0-adaptive-multiformat-ui" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="23"

@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 23600,
-      "versionName": "236.0-multiformat-satellite-field-intelligence",
+      "versionCode": 23700,
+      "versionName": "237.0-adaptive-multiformat-ui",
       "outputFile": "app-debug.apk"
     }
   ],

@@ -1226,7 +1226,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             hud(
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V233"
+                    "V237"
                 ),
                 13.8f,
                 0xFFD8B85B.toInt(),
@@ -1505,6 +1505,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         // ORBIT DECK: a custom floating control system. No large black panel.
         bottomDeck = LinearLayout(this).apply {
+            tag = "v237_camera_deck"
             orientation = LinearLayout.VERTICAL
             setPadding(
                 dp(10),
@@ -1516,6 +1517,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
 
         modeRow = row().apply {
+            tag = "v237_camera_mode_row"
             gravity = Gravity.CENTER
         }
 
@@ -1539,6 +1541,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             "COLOR ▾\n${v229ColorDeckLabel()}",
             0xFFA793D8.toInt()
         )
+
+        sceneButton.tag = "v237_scene_button"
+        lookButton.tag = "v237_look_button"
+        qualityButton.tag = "v237_quality_button"
+        captureModeButton.tag = "v237_capture_button"
+        colorButton.tag = "v237_color_button"
 
         listOf(
             sceneButton,
@@ -1570,6 +1578,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         bottomDeck.addView(modeRow)
 
         identityRow = row().apply {
+            tag = "v237_camera_identity_row"
             gravity = Gravity.CENTER
         }
         identityButton = deckButton(
@@ -1589,6 +1598,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         // V185: FIELD REPORT camera has its own role-specific view and
         // settings controls. These are deliberately separate from LIVE STUDIO.
         reportToolsRow = row().apply {
+            tag = "v237_camera_tools_row"
             gravity = Gravity.CENTER
         }
 
@@ -1637,6 +1647,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         // V188: compact operator controls for the FIELD REPORT role.
         reportAdvancedRow =
             row().apply {
+                tag = "v237_camera_advanced_row"
                 gravity =
                     Gravity.CENTER
             }
@@ -1709,6 +1720,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         reportDisplayRow =
             row().apply {
+                tag = "v237_camera_display_row"
                 gravity =
                     Gravity.CENTER
 
@@ -1755,6 +1767,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         reportOutputRow =
             row().apply {
+                tag = "v237_camera_output_row"
                 gravity =
                     Gravity.CENTER
 
@@ -1838,6 +1851,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         reportDirectorRow =
             row().apply {
+                tag = "v237_camera_director_row"
                 gravity =
                     Gravity.CENTER
 
@@ -1924,6 +1938,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             5.9f,
             0xFFC9D7DD.toInt()
         ).apply {
+            tag = "v237_camera_settings_summary"
             visibility = View.GONE
             setPadding(
                 dp(8),
@@ -1949,7 +1964,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         bottomDeck.addView(settingsSummaryView)
 
-        zoomRow = row()
+        zoomRow = row().apply { tag = "v237_camera_zoom_row" }
         zoomRow.addView(
             hud(
                 "ZOOM",
@@ -1972,7 +1987,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         )
         bottomDeck.addView(zoomRow)
 
-        exposureRow = row()
+        exposureRow = row().apply { tag = "v237_camera_exposure_row" }
         exposureRow.addView(
             hud(
                 "EXP",
@@ -1997,6 +2012,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         bottomDeck.addView(exposureRow)
 
         actionRow = row().apply {
+            tag = "v237_camera_action_row"
             gravity = Gravity.CENTER
         }
 
@@ -2091,6 +2107,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             activity = this,
             root = root,
             previewView = previewView
+        )
+        DevelopUgandaAdaptiveFormatUi.attach(
+            activity = this,
+            root = root,
+            role = DevelopUgandaAdaptiveFormatUi.Role.REPORT
         )
         sceneButton.setOnTouchListener(
             DeckTouchListener(ACTION_SCENE)
@@ -3724,7 +3745,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V233"
+                            "V237"
                         )
                         put(
                             "camera_engine",
@@ -5535,7 +5556,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             previewBrandView.text =
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V233"
+                    "V237"
                 )
         }
 
@@ -7507,7 +7528,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             drawFitText(
                 c,
-                "${sceneTag()} • V233",
+                "${sceneTag()} • V237",
                 safeLeft,
                 y,
                 maxWidth,
@@ -7628,7 +7649,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
         ) {
             stateParts.add(
-                "V233"
+                "V237"
             )
         }
 
@@ -10421,7 +10442,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             ::previewNarrationPanel.isInitialized
         ) {
             previewTagView.text =
-                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V233"
+                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V237"
 
             previewIdentityView.text =
                 "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}"
