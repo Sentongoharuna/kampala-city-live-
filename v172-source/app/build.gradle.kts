@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 23200
-        versionName = "232.0-live-grade-monitor"
+        versionCode = 23300
+        versionName = "233.0-unified-live-control-deck"
     }
 
     buildTypes {

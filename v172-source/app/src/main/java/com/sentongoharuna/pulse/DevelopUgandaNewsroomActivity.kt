@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "PROFESSIONAL COLOR ENGINE • V232\nV228 BRAND/METADATA + V227 DIRECTOR/QC RETAINED",
+                "UNIFIED LIVE CONTROL DECK • V233\nCOLOR • DIRECTOR • BRAND • QC • ALL RETAINED",
                 9f,
                 white,
                 true
@@ -310,7 +310,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             compactStatus(
-                "V232 • LIVE GRADE MONITOR",
+                "V233 • UNIFIED LIVE CONTROL DECK",
                 "ORIGINAL VIDEO ALWAYS PRESERVED • REAL MEDIA3 SingleColorLut 17³ COLOR MASTER • AUTO BY CAMERA/SCENE • 13 ORIGINAL DU COLOR PROFILES • OPTIONAL MONITOR APPROXIMATION • STORY PACKAGE COLOR_PROFILE.json",
                 0xFFA793D8.toInt()
             )
@@ -318,7 +318,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "V232 • PROFESSIONAL COLOR",
+                "V233 • COLOR + LIVE CONTROL",
                 "Professional color without pretending a phone sensor is an ARRI / RED / Sony cinema sensor",
                 "DU CINEMA NATURAL • COOL CINEMA • FILM BIAS • EXTENDED VIDEO • SOFT FILM • WARM 709 • NIGHT CINEMA • BLEACH DRAMA • GOLDEN HOUR • CLEAN SOCIAL • CONSTRUCTION • PEOPLE • MONO CINEMA • real separate COLOR_MASTER.mp4",
                 0xFFA793D8.toInt(),

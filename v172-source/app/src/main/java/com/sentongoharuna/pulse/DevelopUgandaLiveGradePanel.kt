@@ -20,7 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 
 /**
- * V232 Live Grade Monitor.
+ * V233 Live Grade Monitor.
  *
  * This is an operator-only camera-screen control surface. It applies the
  * selected Uganda Scene LUT and palette tuning to the PreviewView immediately,
@@ -305,7 +305,7 @@ object DevelopUgandaLiveGradePanel {
                 )
 
             AlertDialog.Builder(activity)
-                .setTitle("V232 • LIVE UGANDA LOOK")
+                .setTitle("V233 • LIVE UGANDA LOOK")
                 .setSingleChoiceItems(
                     labels,
                     selected

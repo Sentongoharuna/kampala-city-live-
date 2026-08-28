@@ -68,7 +68,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
             setPadding(dp(12), dp(18), dp(12), dp(12))
         }
 
-        root.addView(label("develop.uganda • V232", 20f, violet, true))
+        root.addView(label("develop.uganda • V233", 20f, violet, true))
         root.addView(
             label(
                 "UGANDA SCENE COLOR LAB + LIVE GRADE • 5-COLOR LUT TUNER • REAL 17³ MASTER",
@@ -98,7 +98,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
             addView(label("OUTPUT ARCHITECTURE", 11f, white, true))
             addView(
                 label(
-                    "ORIGINAL MP4 • NEVER REPLACED\nCOLOR_MASTER.mp4 • V232 tuned 17³ LUT + H.264/AAC re-encode\nEACH LUT • five independent palette amounts saved per camera scope\n100% • authored V230 color • 0% reduces it • 200% pushes it harder",
+                    "ORIGINAL MP4 • NEVER REPLACED\nCOLOR_MASTER.mp4 • V233 tuned 17³ LUT + H.264/AAC re-encode\nEACH LUT • five independent palette amounts saved per camera scope\n100% • authored V230 color • 0% reduces it • 200% pushes it harder",
                     8f,
                     muted,
                     false
@@ -174,7 +174,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
 
         page.addView(
             label(
-                "V232 names the looks after familiar Ugandan scenes. The numbers identify different color recipes, so KAMPALA NIGHT 01 and 02 can stay recognizably related while rendering differently.",
+                "V233 names the looks after familiar Ugandan scenes. The numbers identify different color recipes, so KAMPALA NIGHT 01 and 02 can stay recognizably related while rendering differently.",
                 8f,
                 amber,
                 true
@@ -386,7 +386,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
                     menuIndex
                 )
                 refresh()
-                toast("V232 COLOR • $name")
+                toast("V233 COLOR • $name")
             }
         }
 

@@ -202,12 +202,12 @@ object DevelopUgandaInstantReviewDialog {
                     play(
                         context,
                         color,
-                        "V232 COLOR MASTER"
+                        "V233 COLOR MASTER"
                     )
                 } else {
                     toast(
                         context,
-                        "V232 Color Master is still preparing, ORIGINAL was selected, or export was unavailable"
+                        "V233 Color Master is still preparing, ORIGINAL was selected, or export was unavailable"
                     )
                 }
             },
@@ -378,7 +378,7 @@ object DevelopUgandaInstantReviewDialog {
             context
         )
             .setTitle(
-                "develop.uganda • V232 REVIEW"
+                "develop.uganda • V233 REVIEW"
             )
             .setView(
                 scroll
@@ -437,7 +437,7 @@ object DevelopUgandaInstantReviewDialog {
                     "PRIVACY CHECK • EXACT GPS VISIBLE"
                 )
                 .setMessage(
-                    "Your current V232 burn-in profile includes exact latitude/longitude. If this is the clip you just recorded, those coordinates may be permanently visible in the video. Share anyway?"
+                    "Your current V233 burn-in profile includes exact latitude/longitude. If this is the clip you just recorded, those coordinates may be permanently visible in the video. Share anyway?"
                 )
                 .setNegativeButton(
                     "CANCEL",
