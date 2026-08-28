@@ -177,6 +177,67 @@ object DevelopUgandaInstantReviewDialog {
             row2
         )
 
+        val colorRow =
+            row(
+                context
+            )
+
+        colorRow.addView(
+            button(
+                context,
+                "COLOR MASTER"
+            ) {
+                val color =
+                    DevelopUgandaStoryPackager
+                        .findPackageFile(
+                            context,
+                            packageId,
+                            "COLOR_MASTER.mp4"
+                        )
+
+                if (
+                    color !=
+                        null
+                ) {
+                    play(
+                        context,
+                        color,
+                        "V229 COLOR MASTER"
+                    )
+                } else {
+                    toast(
+                        context,
+                        "V229 Color Master is still preparing, ORIGINAL was selected, or export was unavailable"
+                    )
+                }
+            },
+            weight()
+        )
+
+        colorRow.addView(
+            button(
+                context,
+                "COLOR STUDIO"
+            ) {
+                context.startActivity(
+                    Intent(
+                        context,
+                        DevelopUgandaColorStudioActivity::class.java
+                    )
+                )
+            },
+            weight(
+                dp(
+                    context,
+                    6
+                )
+            )
+        )
+
+        panel.addView(
+            colorRow
+        )
+
         if (
             onMatchLastShot !=
                 null
@@ -317,7 +378,7 @@ object DevelopUgandaInstantReviewDialog {
             context
         )
             .setTitle(
-                "develop.uganda • V228 REVIEW"
+                "develop.uganda • V229 REVIEW"
             )
             .setView(
                 scroll
@@ -376,7 +437,7 @@ object DevelopUgandaInstantReviewDialog {
                     "PRIVACY CHECK • EXACT GPS VISIBLE"
                 )
                 .setMessage(
-                    "Your current V228 burn-in profile includes exact latitude/longitude. If this is the clip you just recorded, those coordinates may be permanently visible in the video. Share anyway?"
+                    "Your current V229 burn-in profile includes exact latitude/longitude. If this is the clip you just recorded, those coordinates may be permanently visible in the video. Share anyway?"
                 )
                 .setNegativeButton(
                     "CANCEL",

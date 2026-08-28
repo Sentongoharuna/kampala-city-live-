@@ -138,6 +138,11 @@
             android:exported="false"/>
 
         <activity
+            android:name=".DevelopUgandaColorStudioActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
+
+        <activity
             android:name=".DevelopUgandaCameraActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>

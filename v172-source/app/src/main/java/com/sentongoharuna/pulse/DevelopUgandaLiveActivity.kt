@@ -108,6 +108,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var liveHudContrastButton: Button
     private lateinit var liveHudBackingButton: Button
     private lateinit var liveEffectButton: Button
+    private lateinit var liveColorButton: Button
     private lateinit var livePresetButton: Button
     private lateinit var liveSafeInfoButton: Button
     private lateinit var countdownView: TextView
@@ -243,6 +244,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var liveAutoViewLabeler: ImageLabeler
     private var liveAutoViewBusy = false
     private var liveAutoViewSummary = "AUTO VIEW • analysing scene"
+    private var lastV229LiveColorMonitorKey = ""
+    private var v229LiveColorOverlayLabel = "AUTO"
 
     private lateinit var livePowerManager: PowerManager
     @Volatile private var liveThermalStatus =
@@ -1307,6 +1310,16 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     true
             }
 
+        liveColorButton =
+            liveSettingButton(
+                "COLOR ▾\n${v229LiveColorDeckLabel()}",
+                0xFFA793D8.toInt()
+            ) {
+                showV229LiveColorDropdown(
+                    liveColorButton
+                )
+            }
+
         liveSafeInfoButton =
             liveSettingButton(
                 "OUTPUT\nSAFE",
@@ -1410,6 +1423,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         listOf(
             liveHudBackingButton,
             liveEffectButton,
+            liveColorButton,
             liveSafeInfoButton
         ).forEachIndexed { index, button ->
             outputRow.addView(
@@ -3171,6 +3185,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             statusParts.add(
                 "LOOK • ${liveEffectLabels[liveEffectIndex]}"
             )
+
+            statusParts.add(
+                "COLOR • $v229LiveColorOverlayLabel"
+            )
         }
 
         if (
@@ -3181,7 +3199,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             statusParts.add(
-                "V228"
+                "V229"
             )
         }
 
@@ -4709,6 +4727,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         if (
                             !event.hasError()
                         ) {
+                            scheduleV229LiveColorMaster(
+                                event.outputResults.outputUri,
+                                liveRecordingName.ifBlank {
+                                    "LIVE_${System.currentTimeMillis()}"
+                                }
+                            )
+
                             DevelopUgandaClipQc.inspect(
                                 this@DevelopUgandaLiveActivity,
                                 event.outputResults.outputUri,
@@ -5210,6 +5235,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     }
 
     private fun updateSignals() {
+        refreshV229LiveColorMonitor()
         updateLiveModePreviewTuning()
 
         netLamp.setTextColor(
@@ -5531,6 +5557,282 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             index %
                 palette.size
         ]
+    }
+
+    private fun v229LiveColorScope(): String =
+        "LIVE_STUDIO"
+
+    private fun v229LiveColorHint(): String {
+        return buildString {
+            append("LIVE • ")
+            append(profiles[profileIndex])
+            append(" • ")
+            append(liveQualityProfiles[liveQualityIndex])
+            append(" • ")
+            append(liveEffectLabels[liveEffectIndex])
+            append(" • ")
+            append(headline)
+        }
+    }
+
+    private fun v229LiveColorResolved(): DevelopUgandaColorEngine.ResolvedSelection =
+        DevelopUgandaColorEngine.resolve(
+            this,
+            v229LiveColorScope(),
+            v229LiveColorHint()
+        )
+
+    private fun v229LiveColorDeckLabel(): String {
+        val value = v229LiveColorResolved()
+        return when {
+            !value.enabled ->
+                "ORIGINAL"
+
+            value.autoResolved ->
+                "AUTO " +
+                    value.label
+                        .removePrefix("DU ")
+                        .take(10)
+
+            else ->
+                value.label
+                    .removePrefix("DU ")
+                    .take(12)
+        }
+    }
+
+    private fun refreshV229LiveColorMonitor() {
+        if (
+            !::previewView.isInitialized ||
+            !::liveColorButton.isInitialized
+        ) {
+            return
+        }
+
+        val value =
+            v229LiveColorResolved()
+
+        v229LiveColorOverlayLabel =
+            if (
+                value.enabled
+            ) {
+                value.label
+            } else {
+                "ORIGINAL"
+            }
+
+        liveColorButton.text =
+            "COLOR ▾\n${v229LiveColorDeckLabel()}"
+
+        liveColorButton.isSelected =
+            value.enabled
+
+        val key =
+            "${value.requestedId}:${value.label}:${value.strength}:${DevelopUgandaColorEngine.monitorEnabled(this)}"
+
+        if (
+            key !=
+                lastV229LiveColorMonitorKey
+        ) {
+            lastV229LiveColorMonitorKey =
+                key
+
+            DevelopUgandaColorEngine.applyPreviewMonitor(
+                previewView,
+                value
+            )
+        }
+    }
+
+    private fun showV229LiveColorDropdown(
+        anchor: View
+    ) {
+        if (
+            recording !=
+                null
+        ) {
+            toast(
+                "Choose the V229 color profile before recording"
+            )
+            return
+        }
+
+        val options =
+            DevelopUgandaColorEngine.menuLabels()
+                .toMutableList()
+
+        options.add(
+            "COLOR STUDIO • STRENGTH / MONITOR"
+        )
+
+        showLivePillDropdown(
+            anchor,
+            "V229 PROFESSIONAL COLOR",
+            options.toTypedArray(),
+            DevelopUgandaColorEngine.selectedMenuIndex(
+                this,
+                v229LiveColorScope()
+            )
+        ) {
+                picked ->
+            if (
+                picked >=
+                    options.lastIndex
+            ) {
+                openV229LiveColorStudio()
+                return@showLivePillDropdown
+            }
+
+            DevelopUgandaColorEngine.setSelectedMenuIndex(
+                this,
+                v229LiveColorScope(),
+                picked
+            )
+
+            lastV229LiveColorMonitorKey =
+                ""
+
+            refreshV229LiveColorMonitor()
+
+            toast(
+                "V229 COLOR • ${v229LiveColorResolved().statusLabel()}"
+            )
+        }
+    }
+
+    private fun openV229LiveColorStudio() {
+        startActivity(
+            android.content.Intent(
+                this,
+                DevelopUgandaColorStudioActivity::class.java
+            ).apply {
+                putExtra(
+                    DevelopUgandaColorStudioActivity.EXTRA_SCOPE,
+                    v229LiveColorScope()
+                )
+                putExtra(
+                    DevelopUgandaColorStudioActivity.EXTRA_HINT,
+                    v229LiveColorHint()
+                )
+            }
+        )
+    }
+
+    private fun scheduleV229LiveColorMaster(
+        sourceUri: android.net.Uri,
+        packageId: String
+    ) {
+        val selection =
+            v229LiveColorResolved()
+
+        if (
+            !selection.enabled
+        ) {
+            DevelopUgandaStoryPackager.markColorMasterSkipped(
+                applicationContext,
+                packageId,
+                "ORIGINAL selected • no V229 color master requested"
+            )
+            return
+        }
+
+        val scopeSnapshot =
+            v229LiveColorScope()
+        val hintSnapshot =
+            v229LiveColorHint()
+
+        fun waitForPackage(
+            attempt: Int
+        ) {
+            val entry =
+                DevelopUgandaStoryPackager.listRegistry(
+                    applicationContext
+                )
+                    .firstOrNull {
+                        it.packageId ==
+                            packageId
+                    }
+
+            val busy =
+                entry ==
+                    null ||
+                    entry.state.contains(
+                        "BUILDING",
+                        ignoreCase = true
+                    )
+
+            if (
+                busy &&
+                attempt <
+                    180
+            ) {
+                uiHandler.postDelayed(
+                    {
+                        waitForPackage(
+                            attempt +
+                                1
+                        )
+                    },
+                    1000L
+                )
+                return
+            }
+
+            DevelopUgandaStoryPackager.markColorMasterBuilding(
+                applicationContext,
+                packageId,
+                selection.label,
+                selection.strength
+            )
+
+            DevelopUgandaColorEngine.exportVideoMaster(
+                applicationContext,
+                sourceUri,
+                packageId,
+                scopeSnapshot,
+                hintSnapshot
+            ) {
+                    outcome ->
+                if (
+                    outcome.success &&
+                    outcome.uri !=
+                        null
+                ) {
+                    DevelopUgandaStoryPackager.attachColorMaster(
+                        applicationContext,
+                        packageId,
+                        outcome.uri,
+                        outcome.profileLabel,
+                        outcome.strength,
+                        outcome.width,
+                        outcome.height,
+                        outcome.durationMs,
+                        outcome.bitrate
+                    )
+
+                    runOnUiThread {
+                        toast(
+                            "V229 LIVE COLOR MASTER READY • ${outcome.profileLabel}"
+                        )
+                    }
+                } else {
+                    DevelopUgandaStoryPackager.markColorMasterFailed(
+                        applicationContext,
+                        packageId,
+                        outcome.message
+                    )
+                }
+            }
+        }
+
+        uiHandler.postDelayed(
+            {
+                waitForPackage(
+                    0
+                )
+            },
+            1000L
+        )
     }
 
     private fun showLivePillDropdown(

@@ -151,6 +151,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         const val ACTION_CONTINUITY = 25
         const val ACTION_HEALTH = 26
         const val ACTION_BRAND_METADATA = 27
+        const val ACTION_COLOR_ENGINE = 28
     }
 
 
@@ -201,6 +202,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var lookButton: Button
     private lateinit var qualityButton: Button
     private lateinit var captureModeButton: Button
+    private lateinit var colorButton: Button
     private lateinit var identityButton: Button
     private lateinit var viewModeButton: Button
     private lateinit var settingsButton: Button
@@ -413,6 +415,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var automaticSocialExportActive = false
     private var selectedCameraDeviceId: String? = null
     private var directorEnabled = true
+    private var lastV229ColorMonitorKey = ""
+    private var v229ColorOverlayLabel = "AUTO"
     private var useFront = false
     private var torchOn = false
 
@@ -1222,7 +1226,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             hud(
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V228"
+                    "V229"
                 ),
                 13.8f,
                 0xFFD8B85B.toInt(),
@@ -1531,12 +1535,17 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             "CAPTURE ▾\n${captureModes[captureModeIndex]}",
             0xFF83B995.toInt()
         )
+        colorButton = deckButton(
+            "COLOR ▾\n${v229ColorDeckLabel()}",
+            0xFFA793D8.toInt()
+        )
 
         listOf(
             sceneButton,
             lookButton,
             qualityButton,
-            captureModeButton
+            captureModeButton,
+            colorButton
         ).forEachIndexed { index, button ->
             modeRow.addView(
                 button,
@@ -2078,6 +2087,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         captureModeButton.setOnTouchListener(
             DeckTouchListener(ACTION_CAPTURE_MODE)
+        )
+
+        colorButton.setOnTouchListener(
+            DeckTouchListener(ACTION_COLOR_ENGINE)
         )
 
         identityButton.setOnTouchListener(
@@ -2639,6 +2652,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 qualityModes[
                     qualityIndex
                 ]
+            )
+            append(" • COLOR ")
+            append(
+                v229ColorResolved().statusLabel()
             )
             append("\n")
 
@@ -3626,6 +3643,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 lookIndex
             ]
 
+        val colorProfileSnapshot =
+            v229ColorResolved().statusLabel()
+
         val thermalSnapshot =
             thermalStateLabel()
 
@@ -3685,7 +3705,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V227"
+                            "V229"
                         )
                         put(
                             "camera_engine",
@@ -3750,6 +3770,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         put(
                             "look",
                             lookSnapshot
+                        )
+                        put(
+                            "color_profile",
+                            colorProfileSnapshot
                         )
                         put(
                             "latitude",
@@ -5184,6 +5208,303 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 )
             },
             500L
+        )
+    }
+
+    private fun v229ColorHint(): String {
+        return buildString {
+            append(cameraExperienceId)
+            append(" • ")
+            append(cameraExperienceDisplayName())
+            append(" • ")
+            append(sceneModes[sceneIndex])
+            append(" • ")
+            append(lookModes[lookIndex])
+            append(" • ")
+            append(qualityModes[qualityIndex])
+            append(" • ")
+            append(reportDisplayMode)
+        }
+    }
+
+    private fun v229ColorScope(): String =
+        cameraExperienceId.ifBlank {
+            "REPORT"
+        }
+
+    private fun v229ColorResolved(): DevelopUgandaColorEngine.ResolvedSelection =
+        DevelopUgandaColorEngine.resolve(
+            this,
+            v229ColorScope(),
+            v229ColorHint()
+        )
+
+    private fun v229ColorDeckLabel(): String {
+        val value = v229ColorResolved()
+        return when {
+            !value.enabled ->
+                "ORIGINAL"
+
+            value.autoResolved ->
+                "AUTO " +
+                    value.label
+                        .removePrefix("DU ")
+                        .take(10)
+
+            else ->
+                value.label
+                    .removePrefix("DU ")
+                    .take(12)
+        }
+    }
+
+    private fun refreshV229ColorMonitor() {
+        if (
+            !::previewView.isInitialized ||
+            !::colorButton.isInitialized
+        ) {
+            return
+        }
+
+        val value = v229ColorResolved()
+        v229ColorOverlayLabel =
+            if (value.enabled) {
+                value.label
+            } else {
+                "ORIGINAL"
+            }
+
+        val key =
+            "${value.requestedId}:${value.label}:${value.strength}:${DevelopUgandaColorEngine.monitorEnabled(this)}"
+
+        colorButton.text =
+            "COLOR ▾\n${v229ColorDeckLabel()}"
+
+        colorButton.isSelected =
+            value.enabled
+
+        if (
+            key !=
+                lastV229ColorMonitorKey
+        ) {
+            lastV229ColorMonitorKey =
+                key
+
+            DevelopUgandaColorEngine.applyPreviewMonitor(
+                previewView,
+                value
+            )
+        }
+    }
+
+    private fun showV229ColorDropdown(
+        anchor: View
+    ) {
+        if (
+            recording !=
+                null
+        ) {
+            toast(
+                "Choose the V229 color profile before recording"
+            )
+            return
+        }
+
+        val base =
+            DevelopUgandaColorEngine.menuLabels()
+                .toMutableList()
+
+        base.add(
+            "COLOR STUDIO • STRENGTH / MONITOR"
+        )
+
+        val selected =
+            DevelopUgandaColorEngine.selectedMenuIndex(
+                this,
+                v229ColorScope()
+            )
+
+        showReportPillDropdown(
+            anchor,
+            "V229 PROFESSIONAL COLOR",
+            base.toTypedArray(),
+            selected
+        ) {
+                picked ->
+            if (
+                picked >=
+                    base.lastIndex
+            ) {
+                openV229ColorStudio()
+                return@showReportPillDropdown
+            }
+
+            DevelopUgandaColorEngine.setSelectedMenuIndex(
+                this,
+                v229ColorScope(),
+                picked
+            )
+
+            lastV229ColorMonitorKey =
+                ""
+
+            refreshV229ColorMonitor()
+            refreshReportSettingsSummary()
+
+            toast(
+                "V229 COLOR • ${v229ColorResolved().statusLabel()}"
+            )
+        }
+    }
+
+    private fun openV229ColorStudio() {
+        startActivity(
+            android.content.Intent(
+                this,
+                DevelopUgandaColorStudioActivity::class.java
+            ).apply {
+                putExtra(
+                    DevelopUgandaColorStudioActivity.EXTRA_SCOPE,
+                    v229ColorScope()
+                )
+                putExtra(
+                    DevelopUgandaColorStudioActivity.EXTRA_HINT,
+                    v229ColorHint()
+                )
+            }
+        )
+    }
+
+    private fun scheduleV229ColorMaster(
+        sourceUri: Uri,
+        packageId: String
+    ) {
+        val selection =
+            v229ColorResolved()
+
+        if (
+            !selection.enabled
+        ) {
+            DevelopUgandaStoryPackager.markColorMasterSkipped(
+                applicationContext,
+                packageId,
+                "ORIGINAL selected • no V229 color master requested"
+            )
+            return
+        }
+
+        val scopeSnapshot =
+            v229ColorScope()
+        val hintSnapshot =
+            v229ColorHint()
+
+        fun waitForSafeStart(
+            attempt: Int
+        ) {
+            val packageEntry =
+                DevelopUgandaStoryPackager.listRegistry(
+                    applicationContext
+                )
+                    .firstOrNull {
+                        it.packageId ==
+                            packageId
+                    }
+
+            val packageBusy =
+                packageEntry ==
+                    null ||
+                    packageEntry.state.contains(
+                        "BUILDING",
+                        ignoreCase = true
+                    )
+
+            val socialBusy =
+                isSocialMediaCamera() &&
+                    automaticSocialExportActive
+
+            if (
+                (packageBusy || socialBusy) &&
+                attempt <
+                    180
+            ) {
+                uiHandler.postDelayed(
+                    {
+                        waitForSafeStart(
+                            attempt +
+                                1
+                        )
+                    },
+                    1000L
+                )
+                return
+            }
+
+            DevelopUgandaStoryPackager.markColorMasterBuilding(
+                applicationContext,
+                packageId,
+                selection.label,
+                selection.strength
+            )
+
+            DevelopUgandaColorEngine.exportVideoMaster(
+                applicationContext,
+                sourceUri,
+                packageId,
+                scopeSnapshot,
+                hintSnapshot
+            ) {
+                    outcome ->
+                if (
+                    outcome.success &&
+                    outcome.uri !=
+                        null
+                ) {
+                    DevelopUgandaStoryPackager.attachColorMaster(
+                        applicationContext,
+                        packageId,
+                        outcome.uri,
+                        outcome.profileLabel,
+                        outcome.strength,
+                        outcome.width,
+                        outcome.height,
+                        outcome.durationMs,
+                        outcome.bitrate
+                    )
+
+                    runOnUiThread {
+                        toast(
+                            "V229 COLOR MASTER READY • ${outcome.profileLabel}"
+                        )
+                    }
+                } else {
+                    DevelopUgandaStoryPackager.markColorMasterFailed(
+                        applicationContext,
+                        packageId,
+                        outcome.message
+                    )
+
+                    runOnUiThread {
+                        toast(
+                            "V229 color master not created • original video is safe"
+                        )
+                    }
+                }
+            }
+        }
+
+        uiHandler.postDelayed(
+            {
+                waitForSafeStart(
+                    0
+                )
+            },
+            if (
+                isSocialMediaCamera()
+            ) {
+                4500L
+            } else {
+                1000L
+            }
         )
     }
 
@@ -7165,7 +7486,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             drawFitText(
                 c,
-                "${sceneTag()} • V228",
+                "${sceneTag()} • V229",
                 safeLeft,
                 y,
                 maxWidth,
@@ -7286,7 +7607,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
         ) {
             stateParts.add(
-                "V228"
+                "V229"
             )
         }
 
@@ -7357,7 +7678,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             drawFitText(
                 c,
-                "MODE • ${qualityModes[qualityIndex]}   •   SCENE ${sceneModes[sceneIndex]}   •   LOOK ${lookModes[lookIndex]}",
+                "MODE • ${qualityModes[qualityIndex]}   •   SCENE ${sceneModes[sceneIndex]}   •   LOOK ${lookModes[lookIndex]}   •   COLOR $v229ColorOverlayLabel",
                 safeLeft,
                 y,
                 maxWidth,
@@ -8813,6 +9134,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         super.onResume()
 
         refreshV228BrandUi()
+        lastV229ColorMonitorKey = ""
+        refreshV229ColorMonitor()
 
         rotationVectorSensor?.let { sensor ->
             sensorManager.registerListener(
@@ -9824,6 +10147,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             )
                         }
 
+                        val v229ColorPackageId =
+                            reportId.ifBlank {
+                                baseName.ifBlank {
+                                    "DU_${System.currentTimeMillis()}"
+                                }
+                            }
+
+                        scheduleV229ColorMaster(
+                            event.outputResults.outputUri,
+                            v229ColorPackageId
+                        )
+
                         saveV227ContinuitySnapshot()
 
                         val reviewPackageId =
@@ -10037,6 +10372,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     }
 
     private fun refreshHud() {
+        refreshV229ColorMonitor()
         applyAutoDirectorIfNeeded()
         updateReportModePreviewTuning()
         applyIndependentCameraExperienceUi()
@@ -11870,6 +12206,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                         ACTION_BRAND_METADATA ->
                             openV228BrandMetadataStudio()
+
+                        ACTION_COLOR_ENGINE ->
+                            showV229ColorDropdown(
+                                colorButton
+                            )
 
                         ACTION_LENS ->
                             showReportLensDropdown(

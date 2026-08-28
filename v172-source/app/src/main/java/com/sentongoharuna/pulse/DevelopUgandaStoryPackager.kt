@@ -190,7 +190,7 @@ object DevelopUgandaStoryPackager {
                     relative,
                     "METADATA.json",
                     JSONObject()
-                        .put("app_version", "V228")
+                        .put("app_version", "V229")
                         .put("brand_display_name", brandSnapshot.displayName)
                         .put("brand_organization", brandSnapshot.organization)
                         .put("brand_overlay_preset", brandSnapshot.preset)
@@ -239,6 +239,13 @@ object DevelopUgandaStoryPackager {
                 writeText(
                     appContext,
                     relative,
+                    "COLOR_MASTER_STATUS.txt",
+                    "WAITING • V229 color engine will resolve the selected profile after the original Story Package is ready"
+                )
+
+                writeText(
+                    appContext,
+                    relative,
                     "TRANSCRIPT_STATUS.txt",
                     when {
                         !metadata.autoTranscribe ->
@@ -256,7 +263,7 @@ object DevelopUgandaStoryPackager {
                     "MANIFEST.json",
                     JSONObject()
                         .put("package_version", 1)
-                        .put("app_version", "V228")
+                        .put("app_version", "V229")
                         .put("package_id", packageId)
                         .put("created_utc", Instant.now().toString())
                         .put("source_uri", sourceUri.toString())
@@ -280,6 +287,9 @@ object DevelopUgandaStoryPackager {
                                     "INTEGRITY.json",
                                     "CAPTION_DRAFT.txt",
                                     "SOCIAL_MASTER_STATUS.txt",
+                                    "COLOR_MASTER.mp4",
+                                    "COLOR_MASTER_STATUS.txt",
+                                    "COLOR_PROFILE.json",
                                     "TRANSCRIPT_STATUS.txt"
                                 )
                             )
@@ -342,6 +352,157 @@ object DevelopUgandaStoryPackager {
                     appContext,
                     "Story Package error • original recording remains safe"
                 )
+            }
+        }
+    }
+
+    fun markColorMasterBuilding(
+        context: Context,
+        packageId: String,
+        profileLabel: String,
+        strength: Int
+    ) {
+        val appContext = context.applicationContext
+        executor.execute {
+            val safeId = safeSegment(packageId)
+            val relative = packageRelativePath(safeId)
+            try {
+                writeText(
+                    appContext,
+                    relative,
+                    "COLOR_MASTER_STATUS.txt",
+                    "BUILDING • $profileLabel • STRENGTH ${strength}% • ORIGINAL VIDEO REMAINS SAFE"
+                )
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun attachColorMaster(
+        context: Context,
+        packageId: String,
+        colorUri: Uri,
+        profileLabel: String,
+        strength: Int,
+        width: Int?,
+        height: Int?,
+        durationMs: Long?,
+        bitrate: Long?
+    ) {
+        val appContext = context.applicationContext
+        executor.execute {
+            val safeId = safeSegment(packageId)
+            val relative = packageRelativePath(safeId)
+
+            try {
+                val copy = copyUriToPackage(
+                    appContext,
+                    colorUri,
+                    relative,
+                    "COLOR_MASTER.mp4",
+                    "video/mp4"
+                )
+
+                val hash = sha256OfUri(
+                    appContext,
+                    copy
+                )
+
+                writeJson(
+                    appContext,
+                    relative,
+                    "COLOR_PROFILE.json",
+                    JSONObject()
+                        .put("engine", "develop.uganda V229 Professional Color Engine")
+                        .put("profile_label", profileLabel)
+                        .put("strength_percent", strength)
+                        .put("master_file", "COLOR_MASTER.mp4")
+                        .put("gallery_uri", colorUri.toString())
+                        .put("package_copy_uri", copy.toString())
+                        .put("width", width ?: JSONObject.NULL)
+                        .put("height", height ?: JSONObject.NULL)
+                        .put("duration_ms", durationMs ?: JSONObject.NULL)
+                        .put("bitrate", bitrate ?: JSONObject.NULL)
+                        .put("sha256", hash ?: JSONObject.NULL)
+                        .put("lut_pipeline", "Media3 SingleColorLut 17^3")
+                        .put("output_codec", "H.264/AAC")
+                        .put(
+                            "note",
+                            "The original CameraX recording is preserved unchanged. The Color Master is a separate rendered delivery copy."
+                        )
+                        .put("generated_utc", Instant.now().toString())
+                )
+
+                writeText(
+                    appContext,
+                    relative,
+                    "COLOR_MASTER_STATUS.txt",
+                    "READY • COLOR_MASTER.mp4 • $profileLabel • ${strength}% • SHA-256 ${hash ?: "unavailable"}"
+                )
+
+                updateRegistryState(
+                    appContext,
+                    safeId,
+                    "READY • COLOR MASTER"
+                )
+
+                showToast(
+                    appContext,
+                    "Story Package updated • V229 color master attached"
+                )
+            } catch (e: Exception) {
+                markColorMasterFailed(
+                    appContext,
+                    safeId,
+                    e.javaClass.simpleName
+                )
+            }
+        }
+    }
+
+    fun markColorMasterSkipped(
+        context: Context,
+        packageId: String,
+        reason: String
+    ) {
+        val appContext = context.applicationContext
+        executor.execute {
+            val safeId = safeSegment(packageId)
+            val relative = packageRelativePath(safeId)
+            try {
+                writeText(
+                    appContext,
+                    relative,
+                    "COLOR_MASTER_STATUS.txt",
+                    "NOT REQUESTED • $reason"
+                )
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun markColorMasterFailed(
+        context: Context,
+        packageId: String,
+        reason: String
+    ) {
+        val appContext = context.applicationContext
+        executor.execute {
+            val safeId = safeSegment(packageId)
+            val relative = packageRelativePath(safeId)
+            try {
+                writeText(
+                    appContext,
+                    relative,
+                    "COLOR_MASTER_STATUS.txt",
+                    "FAILED • $reason • ORIGINAL VIDEO REMAINS SAFE"
+                )
+                updateRegistryState(
+                    appContext,
+                    safeId,
+                    "READY • COLOR MASTER FAILED"
+                )
+            } catch (_: Exception) {
             }
         }
     }
@@ -645,7 +806,7 @@ object DevelopUgandaStoryPackager {
         packageId: String,
         metadata: StoryMetadata
     ): String = buildString {
-        append("develop.uganda AUTO STORY PACKAGE • V228\n\n")
+        append("develop.uganda AUTO STORY PACKAGE • V229\n\n")
         append("PACKAGE ID • $packageId\n")
         append("CAMERA • ${metadata.camera}\n")
         append("REPORTER • ${metadata.reporter}\n")
