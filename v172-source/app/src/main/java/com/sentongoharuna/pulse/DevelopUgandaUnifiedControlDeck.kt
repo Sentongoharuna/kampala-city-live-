@@ -161,7 +161,7 @@ object DevelopUgandaUnifiedControlDeck {
             }
 
             val title = TextView(activity).apply {
-                text = "● V233 • UNIFIED LIVE TOOLS\nADVANCED CAMERA CONTROLS • CAMERA SCREEN"
+                text = "● V235 • UNIFIED LIVE TOOLS\nADVANCED CAMERA CONTROLS • CAMERA SCREEN"
                 textSize = 8.6f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.WHITE)

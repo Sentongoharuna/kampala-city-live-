@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "UNIFIED LIVE CONTROL DECK • V233\nCOLOR • DIRECTOR • BRAND • QC • ALL RETAINED",
+                "UNIFIED LIVE CONTROL DECK • V235\nCOLOR • DIRECTOR • BRAND • QC • ALL RETAINED",
                 9f,
                 white,
                 true

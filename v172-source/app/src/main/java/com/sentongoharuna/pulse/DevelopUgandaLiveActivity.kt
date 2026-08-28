@@ -4551,7 +4551,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V233_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V235_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 

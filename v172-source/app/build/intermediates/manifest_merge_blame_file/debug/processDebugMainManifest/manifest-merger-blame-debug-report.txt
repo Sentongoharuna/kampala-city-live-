@@ -1,0 +1,480 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.sentongoharuna.pulse"
+4    android:versionCode="23500"
+5    android:versionName="235.0-uganda-lut-mixer-pro" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="23"
+9        android:targetSdkVersion="36" />
+10
+11    <uses-permission android:name="android.permission.CAMERA" />
+11-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:2:5-64
+11-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:2:22-62
+12    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+12-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:3:5-70
+12-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:3:22-68
+13    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+13-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:4:5-78
+13-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:4:22-76
+14    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+14-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:5:5-80
+14-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:5:22-78
+15    <uses-permission android:name="android.permission.INTERNET" />
+15-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:6:5-66
+15-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:6:22-64
+16    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+16-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:7:5-78
+16-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:7:22-76
+17    <uses-permission android:name="android.permission.WAKE_LOCK" />
+17-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:8:5-67
+17-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:8:22-65
+18
+19    <uses-feature
+19-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:10:5-87
+20        android:name="android.hardware.camera.any"
+20-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:10:19-61
+21        android:required="true" />
+21-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:10:62-85
+22    <uses-feature
+22-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:11:5-88
+23        android:name="android.hardware.microphone"
+23-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:11:19-61
+24        android:required="false" />
+24-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:11:62-86
+25
+26    <queries>
+26-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:13:5-17:15
+27        <intent>
+27-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:14:9-16:18
+28            <action android:name="android.speech.RecognitionService" />
+28-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:15:13-71
+28-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:15:21-69
+29        </intent>
+30    </queries>
+31
+32    <permission
+32-->[androidx.core:core:1.17.0] /home/runner/.gradle/caches/8.11.1/transforms/70d6569f186da179f609fbeeb33aa1cf/transformed/core-1.17.0/AndroidManifest.xml:22:5-24:47
+33        android:name="com.sentongoharuna.pulse.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+33-->[androidx.core:core:1.17.0] /home/runner/.gradle/caches/8.11.1/transforms/70d6569f186da179f609fbeeb33aa1cf/transformed/core-1.17.0/AndroidManifest.xml:23:9-81
+34        android:protectionLevel="signature" />
+34-->[androidx.core:core:1.17.0] /home/runner/.gradle/caches/8.11.1/transforms/70d6569f186da179f609fbeeb33aa1cf/transformed/core-1.17.0/AndroidManifest.xml:24:9-44
+35
+36    <uses-permission android:name="com.sentongoharuna.pulse.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+36-->[androidx.core:core:1.17.0] /home/runner/.gradle/caches/8.11.1/transforms/70d6569f186da179f609fbeeb33aa1cf/transformed/core-1.17.0/AndroidManifest.xml:26:5-97
+36-->[androidx.core:core:1.17.0] /home/runner/.gradle/caches/8.11.1/transforms/70d6569f186da179f609fbeeb33aa1cf/transformed/core-1.17.0/AndroidManifest.xml:26:22-94
+37
+38    <application
+38-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:19:5-161:19
+39        android:allowBackup="true"
+39-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:22:9-35
+40        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+40-->[androidx.core:core:1.17.0] /home/runner/.gradle/caches/8.11.1/transforms/70d6569f186da179f609fbeeb33aa1cf/transformed/core-1.17.0/AndroidManifest.xml:28:18-86
+41        android:debuggable="true"
+42        android:extractNativeLibs="false"
+43        android:label="develop.uganda"
+43-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:21:9-39
+44        android:supportsRtl="true"
+44-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:23:9-35
+45        android:theme="@style/AppTheme" >
+45-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:20:9-40
+46        <activity
+46-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:25:9-28:39
+47            android:name="com.sentongoharuna.pulse.DevelopUgandaEditorActivity"
+47-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:26:13-56
+48            android:exported="false"
+48-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:28:13-37
+49            android:screenOrientation="portrait" />
+49-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:27:13-49
+50        <activity
+50-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:30:9-33:39
+51            android:name="com.sentongoharuna.pulse.DevelopUgandaLiveActivity"
+51-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:31:13-54
+52            android:exported="false"
+52-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:33:13-37
+53            android:screenOrientation="portrait" />
+53-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:32:13-49
+54        <activity
+54-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:35:9-38:39
+55            android:name="com.sentongoharuna.pulse.DevelopUgandaFocusAssistCameraActivity"
+55-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:36:13-67
+56            android:exported="false"
+56-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:38:13-37
+57            android:screenOrientation="portrait" />
+57-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:37:13-49
+58        <activity
+58-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:40:9-43:39
+59            android:name="com.sentongoharuna.pulse.DevelopUgandaMeteringLockCameraActivity"
+59-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:41:13-68
+60            android:exported="false"
+60-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:43:13-37
+61            android:screenOrientation="portrait" />
+61-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:42:13-49
+62        <activity
+62-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:45:9-48:39
+63            android:name="com.sentongoharuna.pulse.DevelopUgandaHorizonCameraActivity"
+63-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:46:13-63
+64            android:exported="false"
+64-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:48:13-37
+65            android:screenOrientation="portrait" />
+65-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:47:13-49
+66        <activity
+66-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:50:9-53:39
+67            android:name="com.sentongoharuna.pulse.DevelopUgandaSteadyShotCameraActivity"
+67-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:51:13-66
+68            android:exported="false"
+68-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:53:13-37
+69            android:screenOrientation="portrait" />
+69-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:52:13-49
+70        <activity
+70-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:55:9-58:39
+71            android:name="com.sentongoharuna.pulse.DevelopUgandaNightIntelligenceCameraActivity"
+71-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:56:13-73
+72            android:exported="false"
+72-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:58:13-37
+73            android:screenOrientation="portrait" />
+73-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:57:13-49
+74        <activity
+74-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:60:9-63:39
+75            android:name="com.sentongoharuna.pulse.DevelopUgandaAllProCameraActivity"
+75-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:61:13-62
+76            android:exported="false"
+76-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:63:13-37
+77            android:screenOrientation="portrait" />
+77-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:62:13-49
+78        <activity
+78-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:65:9-68:39
+79            android:name="com.sentongoharuna.pulse.DevelopUgandaAudioGuardCameraActivity"
+79-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:66:13-66
+80            android:exported="false"
+80-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:68:13-37
+81            android:screenOrientation="portrait" />
+81-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:67:13-49
+82        <activity
+82-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:70:9-73:39
+83            android:name="com.sentongoharuna.pulse.DevelopUgandaVerifiedCameraActivity"
+83-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:71:13-64
+84            android:exported="false"
+84-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:73:13-37
+85            android:screenOrientation="portrait" />
+85-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:72:13-49
+86        <activity
+86-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:75:9-78:39
+87            android:name="com.sentongoharuna.pulse.DevelopUgandaThermalSafeCameraActivity"
+87-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:76:13-67
+88            android:exported="false"
+88-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:78:13-37
+89            android:screenOrientation="portrait" />
+89-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:77:13-49
+90        <activity
+90-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:80:9-83:39
+91            android:name="com.sentongoharuna.pulse.DevelopUgandaModeSignatureCameraActivity"
+91-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:81:13-69
+92            android:exported="false"
+92-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:83:13-37
+93            android:screenOrientation="portrait" />
+93-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:82:13-49
+94        <activity
+94-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:85:9-88:39
+95            android:name="com.sentongoharuna.pulse.DevelopUgandaAutoDirectorCameraActivity"
+95-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:86:13-68
+96            android:exported="false"
+96-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:88:13-37
+97            android:screenOrientation="portrait" />
+97-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:87:13-49
+98        <activity
+98-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:90:9-93:39
+99            android:name="com.sentongoharuna.pulse.DevelopUgandaSocialMediaCameraActivity"
+99-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:91:13-67
+100            android:exported="false"
+100-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:93:13-37
+101            android:screenOrientation="portrait" />
+101-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:92:13-49
+102        <activity
+102-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:95:9-98:39
+103            android:name="com.sentongoharuna.pulse.DevelopUgandaPhotoProCameraActivity"
+103-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:96:13-64
+104            android:exported="false"
+104-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:98:13-37
+105            android:screenOrientation="portrait" />
+105-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:97:13-49
+106        <activity
+106-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:100:9-103:39
+107            android:name="com.sentongoharuna.pulse.DevelopUgandaBuildingPhotoCameraActivity"
+107-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:101:13-69
+108            android:exported="false"
+108-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:103:13-37
+109            android:screenOrientation="portrait" />
+109-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:102:13-49
+110        <activity
+110-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:105:9-108:39
+111            android:name="com.sentongoharuna.pulse.DevelopUgandaPeoplePhotoCameraActivity"
+111-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:106:13-67
+112            android:exported="false"
+112-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:108:13-37
+113            android:screenOrientation="portrait" />
+113-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:107:13-49
+114        <activity
+114-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:110:9-113:39
+115            android:name="com.sentongoharuna.pulse.DevelopUgandaNightPhotoCameraActivity"
+115-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:111:13-66
+116            android:exported="false"
+116-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:113:13-37
+117            android:screenOrientation="portrait" />
+117-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:112:13-49
+118        <activity
+118-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:115:9-118:39
+119            android:name="com.sentongoharuna.pulse.DevelopUgandaVerifiedPhotoCameraActivity"
+119-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:116:13-69
+120            android:exported="false"
+120-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:118:13-37
+121            android:screenOrientation="portrait" />
+121-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:117:13-49
+122        <activity
+122-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:120:9-123:39
+123            android:name="com.sentongoharuna.pulse.DevelopUgandaStoryPackagesActivity"
+123-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:121:13-63
+124            android:exported="false"
+124-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:123:13-37
+125            android:screenOrientation="portrait" />
+125-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:122:13-49
+126        <activity
+126-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:125:9-128:39
+127            android:name="com.sentongoharuna.pulse.DevelopUgandaStoryPlayerActivity"
+127-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:126:13-61
+128            android:exported="false"
+128-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:128:13-37
+129            android:screenOrientation="portrait" />
+129-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:127:13-49
+130        <activity
+130-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:130:9-133:39
+131            android:name="com.sentongoharuna.pulse.DevelopUgandaCameraHealthActivity"
+131-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:131:13-62
+132            android:exported="false"
+132-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:133:13-37
+133            android:screenOrientation="portrait" />
+133-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:132:13-49
+134        <activity
+134-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:135:9-138:39
+135            android:name="com.sentongoharuna.pulse.DevelopUgandaBrandMetadataActivity"
+135-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:136:13-63
+136            android:exported="false"
+136-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:138:13-37
+137            android:screenOrientation="portrait" />
+137-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:137:13-49
+138        <activity
+138-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:140:9-143:39
+139            android:name="com.sentongoharuna.pulse.DevelopUgandaColorStudioActivity"
+139-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:141:13-61
+140            android:exported="false"
+140-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:143:13-37
+141            android:screenOrientation="portrait" />
+141-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:142:13-49
+142        <activity
+142-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:145:9-148:39
+143            android:name="com.sentongoharuna.pulse.DevelopUgandaCameraActivity"
+143-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:146:13-56
+144            android:exported="false"
+144-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:148:13-37
+145            android:screenOrientation="portrait" />
+145-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:147:13-49
+146        <activity
+146-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:150:9-160:20
+147            android:name="com.sentongoharuna.pulse.DevelopUgandaNewsroomActivity"
+147-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:151:13-58
+148            android:exported="true"
+148-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:153:13-36
+149            android:screenOrientation="portrait" >
+149-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:152:13-49
+150            <intent-filter>
+150-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:155:13-158:29
+151                <action android:name="android.intent.action.MAIN" />
+151-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:156:17-68
+151-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:156:25-66
+152
+153                <category android:name="android.intent.category.LAUNCHER" />
+153-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:157:17-76
+153-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:157:27-74
+154            </intent-filter>
+155        </activity>
+156
+157        <service
+157-->[androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:24:9-33:19
+158            android:name="androidx.camera.core.impl.MetadataHolderService"
+158-->[androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:25:13-75
+159            android:enabled="false"
+159-->[androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:26:13-36
+160            android:exported="false" >
+160-->[androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:27:13-37
+161            <meta-data
+161-->[androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:30:13-32:89
+162                android:name="androidx.camera.core.impl.MetadataHolderService.DEFAULT_CONFIG_PROVIDER"
+162-->[androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:31:17-103
+163                android:value="androidx.camera.camera2.Camera2Config$DefaultProvider" />
+163-->[androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:32:17-86
+164        </service>
+165        <service
+165-->[com.google.mlkit:image-labeling:17.0.9] /home/runner/.gradle/caches/8.11.1/transforms/685cb78d1f7ea048d736cb0ad5fa4261/transformed/jetified-image-labeling-17.0.9/AndroidManifest.xml:8:9-14:19
+166            android:name="com.google.mlkit.common.internal.MlKitComponentDiscoveryService"
+166-->[com.google.mlkit:image-labeling:17.0.9] /home/runner/.gradle/caches/8.11.1/transforms/685cb78d1f7ea048d736cb0ad5fa4261/transformed/jetified-image-labeling-17.0.9/AndroidManifest.xml:9:13-91
+167            android:directBootAware="true"
+167-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:17:13-43
+168            android:exported="false" >
+168-->[com.google.mlkit:image-labeling:17.0.9] /home/runner/.gradle/caches/8.11.1/transforms/685cb78d1f7ea048d736cb0ad5fa4261/transformed/jetified-image-labeling-17.0.9/AndroidManifest.xml:10:13-37
+169            <meta-data
+169-->[com.google.mlkit:image-labeling:17.0.9] /home/runner/.gradle/caches/8.11.1/transforms/685cb78d1f7ea048d736cb0ad5fa4261/transformed/jetified-image-labeling-17.0.9/AndroidManifest.xml:11:13-13:85
+170                android:name="com.google.firebase.components:com.google.mlkit.vision.label.defaults.internal.BundledLabelRegistrar"
+170-->[com.google.mlkit:image-labeling:17.0.9] /home/runner/.gradle/caches/8.11.1/transforms/685cb78d1f7ea048d736cb0ad5fa4261/transformed/jetified-image-labeling-17.0.9/AndroidManifest.xml:12:17-132
+171                android:value="com.google.firebase.components.ComponentRegistrar" />
+171-->[com.google.mlkit:image-labeling:17.0.9] /home/runner/.gradle/caches/8.11.1/transforms/685cb78d1f7ea048d736cb0ad5fa4261/transformed/jetified-image-labeling-17.0.9/AndroidManifest.xml:13:17-82
+172            <meta-data
+172-->[com.google.mlkit:vision-internal-vkp:18.2.3] /home/runner/.gradle/caches/8.11.1/transforms/6c7ebc7830f32a7f9c85e080327ffa47/transformed/jetified-vision-internal-vkp-18.2.3/AndroidManifest.xml:14:13-16:85
+173                android:name="com.google.firebase.components:com.google.mlkit.vision.vkp.VkpRegistrar"
+173-->[com.google.mlkit:vision-internal-vkp:18.2.3] /home/runner/.gradle/caches/8.11.1/transforms/6c7ebc7830f32a7f9c85e080327ffa47/transformed/jetified-vision-internal-vkp-18.2.3/AndroidManifest.xml:15:17-103
+174                android:value="com.google.firebase.components.ComponentRegistrar" />
+174-->[com.google.mlkit:vision-internal-vkp:18.2.3] /home/runner/.gradle/caches/8.11.1/transforms/6c7ebc7830f32a7f9c85e080327ffa47/transformed/jetified-vision-internal-vkp-18.2.3/AndroidManifest.xml:16:17-82
+175            <meta-data
+175-->[com.google.android.gms:play-services-mlkit-face-detection:17.1.0] /home/runner/.gradle/caches/8.11.1/transforms/6629dafd66321909cd8ca2b41ad8ac85/transformed/jetified-play-services-mlkit-face-detection-17.1.0/AndroidManifest.xml:12:13-14:85
+176                android:name="com.google.firebase.components:com.google.mlkit.vision.face.internal.FaceRegistrar"
+176-->[com.google.android.gms:play-services-mlkit-face-detection:17.1.0] /home/runner/.gradle/caches/8.11.1/transforms/6629dafd66321909cd8ca2b41ad8ac85/transformed/jetified-play-services-mlkit-face-detection-17.1.0/AndroidManifest.xml:13:17-114
+177                android:value="com.google.firebase.components.ComponentRegistrar" />
+177-->[com.google.android.gms:play-services-mlkit-face-detection:17.1.0] /home/runner/.gradle/caches/8.11.1/transforms/6629dafd66321909cd8ca2b41ad8ac85/transformed/jetified-play-services-mlkit-face-detection-17.1.0/AndroidManifest.xml:14:17-82
+178            <meta-data
+178-->[com.google.mlkit:vision-common:17.3.0] /home/runner/.gradle/caches/8.11.1/transforms/a5e72cdcb460a7e0f26a52e17980a0f2/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:12:13-14:85
+179                android:name="com.google.firebase.components:com.google.mlkit.vision.common.internal.VisionCommonRegistrar"
+179-->[com.google.mlkit:vision-common:17.3.0] /home/runner/.gradle/caches/8.11.1/transforms/a5e72cdcb460a7e0f26a52e17980a0f2/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:13:17-124
+180                android:value="com.google.firebase.components.ComponentRegistrar" />
+180-->[com.google.mlkit:vision-common:17.3.0] /home/runner/.gradle/caches/8.11.1/transforms/a5e72cdcb460a7e0f26a52e17980a0f2/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:14:17-82
+181            <meta-data
+181-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:20:13-22:85
+182                android:name="com.google.firebase.components:com.google.mlkit.common.internal.CommonComponentRegistrar"
+182-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:21:17-120
+183                android:value="com.google.firebase.components.ComponentRegistrar" />
+183-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:22:17-82
+184        </service>
+185
+186        <provider
+186-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:9:9-13:38
+187            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+187-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:10:13-78
+188            android:authorities="com.sentongoharuna.pulse.mlkitinitprovider"
+188-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:11:13-69
+189            android:exported="false"
+189-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:12:13-37
+190            android:initOrder="99" />
+190-->[com.google.mlkit:common:18.11.0] /home/runner/.gradle/caches/8.11.1/transforms/4c24dc66a623d9a039e57fe6a4d98b71/transformed/jetified-common-18.11.0/AndroidManifest.xml:13:13-35
+191
+192        <activity
+192-->[com.google.android.gms:play-services-base:18.9.0] /home/runner/.gradle/caches/8.11.1/transforms/9d6eb3b663f969ade20c7c7c218f4624/transformed/jetified-play-services-base-18.9.0/AndroidManifest.xml:20:9-22:45
+193            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+193-->[com.google.android.gms:play-services-base:18.9.0] /home/runner/.gradle/caches/8.11.1/transforms/9d6eb3b663f969ade20c7c7c218f4624/transformed/jetified-play-services-base-18.9.0/AndroidManifest.xml:20:19-85
+194            android:exported="false"
+194-->[com.google.android.gms:play-services-base:18.9.0] /home/runner/.gradle/caches/8.11.1/transforms/9d6eb3b663f969ade20c7c7c218f4624/transformed/jetified-play-services-base-18.9.0/AndroidManifest.xml:22:19-43
+195            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+195-->[com.google.android.gms:play-services-base:18.9.0] /home/runner/.gradle/caches/8.11.1/transforms/9d6eb3b663f969ade20c7c7c218f4624/transformed/jetified-play-services-base-18.9.0/AndroidManifest.xml:21:19-78
+196
+197        <meta-data
+197-->[com.google.android.gms:play-services-basement:18.9.0] /home/runner/.gradle/caches/8.11.1/transforms/6cd123e31e0a350f7aa604816fb85efe/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:21:9-23:69
+198            android:name="com.google.android.gms.version"
+198-->[com.google.android.gms:play-services-basement:18.9.0] /home/runner/.gradle/caches/8.11.1/transforms/6cd123e31e0a350f7aa604816fb85efe/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:22:13-58
+199            android:value="@integer/google_play_services_version" />
+199-->[com.google.android.gms:play-services-basement:18.9.0] /home/runner/.gradle/caches/8.11.1/transforms/6cd123e31e0a350f7aa604816fb85efe/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:23:13-66
+200
+201        <provider
+201-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.11.1/transforms/d0e60d20095eef167153e18bd1443749/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+202            android:name="androidx.startup.InitializationProvider"
+202-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.11.1/transforms/d0e60d20095eef167153e18bd1443749/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:25:13-67
+203            android:authorities="com.sentongoharuna.pulse.androidx-startup"
+203-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.11.1/transforms/d0e60d20095eef167153e18bd1443749/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:26:13-68
+204            android:exported="false" >
+204-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.11.1/transforms/d0e60d20095eef167153e18bd1443749/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:27:13-37
+205            <meta-data
+205-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.11.1/transforms/d0e60d20095eef167153e18bd1443749/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+206                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+206-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.11.1/transforms/d0e60d20095eef167153e18bd1443749/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:30:17-75
+207                android:value="androidx.startup" />
+207-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.11.1/transforms/d0e60d20095eef167153e18bd1443749/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:31:17-49
+208            <meta-data
+208-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/runner/.gradle/caches/8.11.1/transforms/23993cc2acd8bcee452c3547cc13f121/transformed/jetified-lifecycle-process-2.6.2/AndroidManifest.xml:29:13-31:52
+209                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+209-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/runner/.gradle/caches/8.11.1/transforms/23993cc2acd8bcee452c3547cc13f121/transformed/jetified-lifecycle-process-2.6.2/AndroidManifest.xml:30:17-78
+210                android:value="androidx.startup" />
+210-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/runner/.gradle/caches/8.11.1/transforms/23993cc2acd8bcee452c3547cc13f121/transformed/jetified-lifecycle-process-2.6.2/AndroidManifest.xml:31:17-49
+211            <meta-data
+211-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+212                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+212-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+213                android:value="androidx.startup" />
+213-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+214        </provider>
+215
+216        <receiver
+216-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+217            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+217-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+218            android:directBootAware="false"
+218-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+219            android:enabled="true"
+219-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+220            android:exported="true"
+220-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+221            android:permission="android.permission.DUMP" >
+221-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+222            <intent-filter>
+222-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+223                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+223-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+223-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+224            </intent-filter>
+225            <intent-filter>
+225-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+226                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+226-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+226-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+227            </intent-filter>
+228            <intent-filter>
+228-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+229                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+229-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+229-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+230            </intent-filter>
+231            <intent-filter>
+231-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+232                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+232-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+232-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/runner/.gradle/caches/8.11.1/transforms/16e7eb8fc17de4c209bf556481d43ba6/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:50:25-92
+233            </intent-filter>
+234        </receiver>
+235
+236        <service
+236-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /home/runner/.gradle/caches/8.11.1/transforms/253d68821cbe1ce20637b96793d2a64f/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:29:9-35:19
+237            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+237-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /home/runner/.gradle/caches/8.11.1/transforms/253d68821cbe1ce20637b96793d2a64f/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:30:13-103
+238            android:exported="false" >
+238-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /home/runner/.gradle/caches/8.11.1/transforms/253d68821cbe1ce20637b96793d2a64f/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:31:13-37
+239            <meta-data
+239-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /home/runner/.gradle/caches/8.11.1/transforms/253d68821cbe1ce20637b96793d2a64f/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:32:13-34:39
+240                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+240-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /home/runner/.gradle/caches/8.11.1/transforms/253d68821cbe1ce20637b96793d2a64f/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:33:17-94
+241                android:value="cct" />
+241-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /home/runner/.gradle/caches/8.11.1/transforms/253d68821cbe1ce20637b96793d2a64f/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:34:17-36
+242        </service>
+243        <service
+243-->[com.google.android.datatransport:transport-runtime:2.2.6] /home/runner/.gradle/caches/8.11.1/transforms/8d83c05bb47469d5589e4bbc35c4af71/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:26:9-30:19
+244            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+244-->[com.google.android.datatransport:transport-runtime:2.2.6] /home/runner/.gradle/caches/8.11.1/transforms/8d83c05bb47469d5589e4bbc35c4af71/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:27:13-117
+245            android:exported="false"
+245-->[com.google.android.datatransport:transport-runtime:2.2.6] /home/runner/.gradle/caches/8.11.1/transforms/8d83c05bb47469d5589e4bbc35c4af71/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:28:13-37
+246            android:permission="android.permission.BIND_JOB_SERVICE" >
+246-->[com.google.android.datatransport:transport-runtime:2.2.6] /home/runner/.gradle/caches/8.11.1/transforms/8d83c05bb47469d5589e4bbc35c4af71/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:29:13-69
+247        </service>
+248
+249        <receiver
+249-->[com.google.android.datatransport:transport-runtime:2.2.6] /home/runner/.gradle/caches/8.11.1/transforms/8d83c05bb47469d5589e4bbc35c4af71/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:32:9-34:40
+250            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+250-->[com.google.android.datatransport:transport-runtime:2.2.6] /home/runner/.gradle/caches/8.11.1/transforms/8d83c05bb47469d5589e4bbc35c4af71/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:33:13-132
+251            android:exported="false" />
+251-->[com.google.android.datatransport:transport-runtime:2.2.6] /home/runner/.gradle/caches/8.11.1/transforms/8d83c05bb47469d5589e4bbc35c4af71/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:34:13-37
+252    </application>
+253
+254</manifest>

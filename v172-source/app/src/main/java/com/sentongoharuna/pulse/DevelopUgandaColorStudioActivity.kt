@@ -68,7 +68,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
             setPadding(dp(12), dp(18), dp(12), dp(12))
         }
 
-        root.addView(label("develop.uganda • V233", 20f, violet, true))
+        root.addView(label("develop.uganda • V235", 20f, violet, true))
         root.addView(
             label(
                 "UGANDA SCENE COLOR LAB + LIVE GRADE • 5-COLOR LUT TUNER • REAL 17³ MASTER",

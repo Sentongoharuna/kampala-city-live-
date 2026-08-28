@@ -36,7 +36,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * V232 Uganda Scene Color Lab.
+ * V235 Uganda LUT Mixer Pro.
  *
  * ORIGINAL is always preserved. The operator monitor is an optional matrix
  * approximation. COLOR_MASTER.mp4 is the real 17^3 Media3 SingleColorLut
@@ -457,7 +457,7 @@ object DevelopUgandaColorEngine {
 
     /**
      * Optional operator monitor approximation only. It is deliberately OFF by
-     * default so V232 keeps the live operator preview graded while the original camera master stays untouched an already proven CameraX preview.
+     * default so V235 keeps the live operator preview graded while the original camera master stays untouched an already proven CameraX preview.
      */
     fun applyPreviewMonitor(
         previewView: PreviewView,
@@ -471,9 +471,9 @@ object DevelopUgandaColorEngine {
     }
 
     /**
-     * V232 live grade monitor. The monitor remains an operator preview and is
+     * V235 live grade monitor. The monitor remains an operator preview and is
      * never burned into the original CameraX master. The selected scene LUT,
-     * master strength and the five V231/V232 palette controls are applied to
+     * master strength and the five scene palette controls plus six everyday colors are applied to
      * the camera preview immediately. COLOR_MASTER.mp4 still uses the real
      * tuned 17^3 Media3 LUT render.
      */
@@ -494,12 +494,20 @@ object DevelopUgandaColorEngine {
                 selection.profile.id
             )
 
+        val everyday =
+            DevelopUgandaEverydayColorMixer.load(
+                previewView.context,
+                scope,
+                selection.profile.id
+            )
+
         val paint = Paint().apply {
             colorFilter = ColorMatrixColorFilter(
                 previewMatrix(
                     selection.profile,
                     selection.strength / 100f,
-                    tuning
+                    tuning,
+                    everyday
                 )
             )
         }
@@ -518,7 +526,8 @@ object DevelopUgandaColorEngine {
                 profile,
                 selection.strength,
                 17,
-                DevelopUgandaColorTuner.neutral(profile.id)
+                DevelopUgandaColorTuner.neutral(profile.id),
+                DevelopUgandaEverydayColorMixer.neutral()
             )
         )
     }
@@ -530,12 +539,19 @@ object DevelopUgandaColorEngine {
     ): SingleColorLut? {
         val profile = selection.profile ?: return null
         val tuning = DevelopUgandaColorTuner.load(context, scope, profile.id)
+        val everyday =
+            DevelopUgandaEverydayColorMixer.load(
+                context,
+                scope,
+                profile.id
+            )
         return SingleColorLut.createFromCube(
             buildCube(
                 profile,
                 selection.strength,
                 17,
-                tuning
+                tuning,
+                everyday
             )
         )
     }
@@ -569,7 +585,7 @@ object DevelopUgandaColorEngine {
         }
 
         val inputInfo = readVideoInfo(context, inputUri)
-        val tempDir = File(context.cacheDir, "v231_color_exports").apply { mkdirs() }
+        val tempDir = File(context.cacheDir, "v235_color_exports").apply { mkdirs() }
         val temp = File(tempDir, "color_${System.currentTimeMillis()}.mp4")
         if (temp.exists()) temp.delete()
 
@@ -659,7 +675,7 @@ object DevelopUgandaColorEngine {
                                     outputInfo.height,
                                     outputInfo.durationMs,
                                     outputInfo.bitrate,
-                                    "V232 Uganda Scene Color Lab • 17³ 3D LUT + palette tuning master ready"
+                                    "V235 Uganda LUT Mixer Pro • 17³ 3D LUT + palette tuning master ready"
                                 )
                             )
                         }
@@ -755,13 +771,23 @@ object DevelopUgandaColorEngine {
                     DevelopUgandaColorTuner.tuningJson(context, scope, it.id)
                 } ?: org.json.JSONArray()
             )
+            .put(
+                "everyday_color_controls",
+                value.profile?.let {
+                    DevelopUgandaEverydayColorMixer.tuningJson(
+                        context,
+                        scope,
+                        it.id
+                    )
+                } ?: org.json.JSONArray()
+            )
             .put("strength_percent", value.strength)
             .put("auto_resolved", value.autoResolved)
             .put("monitor_enabled", monitorEnabled(context))
             .put(
                 "master_pipeline",
                 if (value.enabled) {
-                    "Media3 SingleColorLut 17^3 + V232 Uganda palette tuner + H.264/AAC re-encode"
+                    "Media3 SingleColorLut 17^3 + Uganda scene palette + V235 everyday color mixer + H.264/AAC re-encode"
                 } else {
                     "Original only"
                 }
@@ -838,7 +864,7 @@ object DevelopUgandaColorEngine {
             .replace(Regex("[^A-Z0-9_-]+"), "_")
             .take(42)
 
-        val name = "DEVELOP_UGANDA_V232_${safeProfile}_${safePackage}.mp4"
+        val name = "DEVELOP_UGANDA_V235_${safeProfile}_${safePackage}.mp4"
 
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, name)
@@ -916,7 +942,8 @@ object DevelopUgandaColorEngine {
     private fun previewMatrix(
         profile: Profile,
         strength: Float,
-        tuning: DevelopUgandaColorTuner.Tuning
+        tuning: DevelopUgandaColorTuner.Tuning,
+        everyday: DevelopUgandaEverydayColorMixer.Tuning
     ): ColorMatrix {
         val sat = 1f + (profile.saturation - 1f) * strength
         val contrast = 1f + (profile.contrast - 1f) * strength
@@ -925,6 +952,10 @@ object DevelopUgandaColorEngine {
                 profile.id,
                 tuning
             )
+        val everydayBias =
+            DevelopUgandaEverydayColorMixer.previewBias(
+                everyday
+            )
 
         val creativeRed =
             profile.midtoneRed * 0.55f +
@@ -932,7 +963,8 @@ object DevelopUgandaColorEngine {
                 profile.shadowRed * 0.20f +
                 profile.orangePush * 0.20f -
                 profile.cyanPush * 0.16f +
-                paletteBias[0]
+                paletteBias[0] +
+                everydayBias[0]
 
         val creativeGreen =
             profile.midtoneGreen * 0.55f +
@@ -940,7 +972,8 @@ object DevelopUgandaColorEngine {
                 profile.shadowGreen * 0.20f +
                 profile.cyanPush * 0.06f +
                 profile.greenPush * 0.12f +
-                paletteBias[1]
+                paletteBias[1] +
+                everydayBias[1]
 
         val creativeBlue =
             profile.midtoneBlue * 0.55f +
@@ -948,7 +981,8 @@ object DevelopUgandaColorEngine {
                 profile.shadowBlue * 0.20f +
                 profile.cyanPush * 0.16f -
                 profile.orangePush * 0.12f +
-                paletteBias[2]
+                paletteBias[2] +
+                everydayBias[2]
 
         val redGain =
             (1f + (profile.redGain - 1f) * strength) *
@@ -997,7 +1031,8 @@ object DevelopUgandaColorEngine {
         profile: Profile,
         strengthPercent: Int,
         size: Int,
-        tuning: DevelopUgandaColorTuner.Tuning
+        tuning: DevelopUgandaColorTuner.Tuning,
+        everyday: DevelopUgandaEverydayColorMixer.Tuning
     ): Array<Array<IntArray>> {
         val strength = strengthPercent.coerceIn(0, 100) / 100f
 
@@ -1007,7 +1042,16 @@ object DevelopUgandaColorEngine {
                     val r = rIndex.toFloat() / (size - 1).toFloat()
                     val g = gIndex.toFloat() / (size - 1).toFloat()
                     val b = bIndex.toFloat() / (size - 1).toFloat()
-                    val transformed = transform(profile, r, g, b, strength, tuning)
+                    val transformed =
+                        transform(
+                            profile,
+                            r,
+                            g,
+                            b,
+                            strength,
+                            tuning,
+                            everyday
+                        )
 
                     Color.argb(
                         255,
@@ -1026,7 +1070,8 @@ object DevelopUgandaColorEngine {
         inputG: Float,
         inputB: Float,
         strength: Float,
-        tuning: DevelopUgandaColorTuner.Tuning
+        tuning: DevelopUgandaColorTuner.Tuning,
+        everyday: DevelopUgandaEverydayColorMixer.Tuning
     ): FloatArray {
         val original = floatArrayOf(inputR, inputG, inputB)
 
@@ -1114,7 +1159,7 @@ object DevelopUgandaColorEngine {
             b.coerceIn(0f, 1f)
         )
 
-        // V232 keeps the authored V230 LUT at 100% per swatch, then lets the
+        // V235 keeps the authored V230 LUT at 100% per swatch, then lets the
         // operator independently subtract/add each palette family from 0–200%.
         val tuned = DevelopUgandaColorTuner.applyPalette(
             profile.id,
@@ -1124,10 +1169,18 @@ object DevelopUgandaColorEngine {
             tuning
         )
 
+        val everydayTuned =
+            DevelopUgandaEverydayColorMixer.apply(
+                tuned[0],
+                tuned[1],
+                tuned[2],
+                everyday
+            )
+
         return floatArrayOf(
-            mix(original[0], tuned[0], strength),
-            mix(original[1], tuned[1], strength),
-            mix(original[2], tuned[2], strength)
+            mix(original[0], everydayTuned[0], strength),
+            mix(original[1], everydayTuned[1], strength),
+            mix(original[2], everydayTuned[2], strength)
         )
     }
 

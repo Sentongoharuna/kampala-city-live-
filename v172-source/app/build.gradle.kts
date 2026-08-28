@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 23300
-        versionName = "233.0-unified-live-control-deck"
+        versionCode = 23500
+        versionName = "235.0-uganda-lut-mixer-pro"
     }
 
     buildTypes {

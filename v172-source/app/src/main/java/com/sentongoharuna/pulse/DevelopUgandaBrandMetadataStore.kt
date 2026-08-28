@@ -57,7 +57,7 @@ object DevelopUgandaBrandMetadataStore {
                     ignoreCase = true
                 )
             ) {
-                "Recorded with develop.uganda • V233"
+                "Recorded with develop.uganda • V235"
             } else {
                 ""
             }
