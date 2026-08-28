@@ -1,0 +1,399 @@
+name: Build develop.uganda V232 Live Grade Monitor
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V230 or V231 working base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR-PATCH.zip
+
+          GRADLE="v172-source/app/build.gradle.kts"
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+
+          test -f "$GRADLE"
+          test -f "$SRC/DevelopUgandaCameraActivity.kt"
+          test -f "$SRC/DevelopUgandaLiveActivity.kt"
+          test -f "$SRC/DevelopUgandaColorEngine.kt"
+          test -f "$SRC/DevelopUgandaColorStudioActivity.kt"
+
+          if grep -q 'versionCode = 23000' "$GRADLE" && grep -q 'versionName = "230.0-cinema-color-engine-2"' "$GRADLE"; then
+            echo "PASS: V230 base detected. V232 will include the V231 five-color system automatically."
+          elif grep -q 'versionCode = 23100' "$GRADLE" && grep -q 'versionName = "231.0-uganda-scene-color-lab"' "$GRADLE"; then
+            echo "PASS: V231 base detected."
+          else
+            echo "ERROR: V232 requires V230 or V231 base."
+            grep -E 'versionCode|versionName' "$GRADLE" || true
+            exit 1
+          fi
+
+          grep -q 'DU URBAN TEAL' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'DU GOLDEN CITY' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'SingleColorLut.createFromCube' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'COLOR_MASTER.mp4' "$SRC/DevelopUgandaStoryPackager.kt"
+          grep -q 'ACTION_COLOR_ENGINE' "$SRC/DevelopUgandaCameraActivity.kt"
+          grep -q 'liveColorButton' "$SRC/DevelopUgandaLiveActivity.kt"
+
+      - name: Unpack and syntax-check V232 patch
+        run: |
+          set -e
+          rm -rf /tmp/v232
+          mkdir -p /tmp/v232
+          unzip -q DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR-PATCH.zip -d /tmp/v232
+          python3 -m py_compile /tmp/v232/v232_patch.py
+          test -f /tmp/v232/DevelopUgandaColorEngine.kt
+          test -f /tmp/v232/DevelopUgandaColorStudioActivity.kt
+          test -f /tmp/v232/DevelopUgandaColorTuner.kt
+          test -f /tmp/v232/DevelopUgandaLiveGradePanel.kt
+          test -f /tmp/v232/README-V232.txt
+          echo "PASS: V232 patch package complete."
+
+      - name: Lock protected camera and retained systems
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, re
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          protected = [
+              "DevelopUgandaDirectorOverlayView.kt",
+              "DevelopUgandaClipQc.kt",
+              "DevelopUgandaContinuityMemory.kt",
+              "DevelopUgandaLensIntelligence.kt",
+              "DevelopUgandaCameraHealthActivity.kt",
+              "DevelopUgandaMediaInbox.kt",
+              "DevelopUgandaStoryPlayerActivity.kt",
+              "DevelopUgandaPhotoSuiteActivity.kt",
+          ]
+
+          for name in protected:
+              if not (SRC / name).exists():
+                  raise SystemExit(f"Protected base file missing: {name}")
+
+          def function_block(path, function_name):
+              text = path.read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+              depth = 0
+              quote = None
+              escaped = False
+              for i in range(brace, len(text)):
+                  ch = text[i]
+                  if quote is not None:
+                      if escaped:
+                          escaped = False
+                      elif ch == "\\":
+                          escaped = True
+                      elif ch == quote:
+                          quote = None
+                      continue
+                  if ch in ('"', "'"):
+                      quote = ch
+                      continue
+                  if ch == "{":
+                      depth += 1
+                  elif ch == "}":
+                      depth -= 1
+                      if depth == 0:
+                          return text[line_start:i+1]
+              raise RuntimeError(function_name)
+
+          def normalized_hash(text):
+              # V232 may update visible V229/V230/V231 version labels inside a
+              # retained function. Ignore version-only text while protecting
+              # the actual function structure and logic.
+              text = re.sub(r'V(?:229|230|231|232)', 'VXXX', text)
+              return hashlib.sha256(text.encode()).hexdigest()
+
+          saved = {
+              name: hashlib.sha256((SRC / name).read_bytes()).hexdigest()
+              for name in protected
+          }
+
+          for key, filename, fn in [
+              ("report_bind", "DevelopUgandaCameraActivity.kt", "bindCamera"),
+              ("live_bind", "DevelopUgandaLiveActivity.kt", "bindCamera"),
+              ("photo_bind", "DevelopUgandaPhotoSuiteActivity.kt", "bindCamera"),
+              ("social_export", "DevelopUgandaCameraActivity.kt", "exportAutomaticSocialMaster"),
+              ("social_verify", "DevelopUgandaCameraActivity.kt", "verifyAutomaticSocialMaster"),
+          ]:
+              saved[key] = normalized_hash(function_block(SRC / filename, fn))
+
+          Path("/tmp/v232-protected.json").write_text(json.dumps(saved), encoding="utf-8")
+          print("PASS: protected fingerprints saved.")
+          PY
+
+      - name: Apply V232 Live Grade Monitor
+        run: |
+          set -e
+          python3 /tmp/v232/v232_patch.py
+
+      - name: Prove protected systems were not changed
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, re
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          before = json.loads(Path("/tmp/v232-protected.json").read_text(encoding="utf-8"))
+          protected = [
+              "DevelopUgandaDirectorOverlayView.kt",
+              "DevelopUgandaClipQc.kt",
+              "DevelopUgandaContinuityMemory.kt",
+              "DevelopUgandaLensIntelligence.kt",
+              "DevelopUgandaCameraHealthActivity.kt",
+              "DevelopUgandaMediaInbox.kt",
+              "DevelopUgandaStoryPlayerActivity.kt",
+              "DevelopUgandaPhotoSuiteActivity.kt",
+          ]
+
+          def function_block(path, function_name):
+              text = path.read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+              depth = 0
+              quote = None
+              escaped = False
+              for i in range(brace, len(text)):
+                  ch = text[i]
+                  if quote is not None:
+                      if escaped:
+                          escaped = False
+                      elif ch == "\\":
+                          escaped = True
+                      elif ch == quote:
+                          quote = None
+                      continue
+                  if ch in ('"', "'"):
+                      quote = ch
+                      continue
+                  if ch == "{":
+                      depth += 1
+                  elif ch == "}":
+                      depth -= 1
+                      if depth == 0:
+                          return text[line_start:i+1]
+              raise RuntimeError(function_name)
+
+          def normalized_hash(text):
+              text = re.sub(r'V(?:229|230|231|232)', 'VXXX', text)
+              return hashlib.sha256(text.encode()).hexdigest()
+
+          current = {
+              name: hashlib.sha256((SRC / name).read_bytes()).hexdigest()
+              for name in protected
+          }
+
+          for key, filename, fn in [
+              ("report_bind", "DevelopUgandaCameraActivity.kt", "bindCamera"),
+              ("live_bind", "DevelopUgandaLiveActivity.kt", "bindCamera"),
+              ("photo_bind", "DevelopUgandaPhotoSuiteActivity.kt", "bindCamera"),
+              ("social_export", "DevelopUgandaCameraActivity.kt", "exportAutomaticSocialMaster"),
+              ("social_verify", "DevelopUgandaCameraActivity.kt", "verifyAutomaticSocialMaster"),
+          ]:
+              current[key] = normalized_hash(function_block(SRC / filename, fn))
+
+          failures = [key for key, old in before.items() if current.get(key) != old]
+          if failures:
+              raise SystemExit("Protected system changed unexpectedly: " + ", ".join(failures))
+
+          print("PASS: CameraX bind engines unchanged.")
+          print("PASS: Social Master export/verification unchanged.")
+          print("PASS: Photo, Director/QC, Media and camera health systems retained.")
+          PY
+
+      - name: Verify V232 practical live grade implementation
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          engine = (SRC / "DevelopUgandaColorEngine.kt").read_text(encoding="utf-8")
+          tuner = (SRC / "DevelopUgandaColorTuner.kt").read_text(encoding="utf-8")
+          panel = (SRC / "DevelopUgandaLiveGradePanel.kt").read_text(encoding="utf-8")
+          studio = (SRC / "DevelopUgandaColorStudioActivity.kt").read_text(encoding="utf-8")
+          report = (SRC / "DevelopUgandaCameraActivity.kt").read_text(encoding="utf-8")
+          live = (SRC / "DevelopUgandaLiveActivity.kt").read_text(encoding="utf-8")
+          packager = (SRC / "DevelopUgandaStoryPackager.kt").read_text(encoding="utf-8")
+          gradle = Path("v172-source/app/build.gradle.kts").read_text(encoding="utf-8")
+
+          checks = [
+              ("real-lut", engine, "SingleColorLut.createFromCube"),
+              ("tuned-preview", engine, "DevelopUgandaColorTuner.previewBias"),
+              ("scope-preview", engine, "scope: String"),
+              ("clear-preview", engine, "fun clearPreviewMonitor"),
+              ("monitor-default", engine, ".getBoolean(KEY_MONITOR, true)"),
+              ("five-color-export", engine, "DevelopUgandaColorTuner.load"),
+              ("palette-preview-bias", tuner, "fun previewBias"),
+              ("uganda-scenes", tuner, "KAMPALA CONCRETE 01"),
+              ("uganda-night", tuner, "KAMPALA NIGHT 02"),
+              ("five-colors-200", tuner, "coerceIn(0, 200)"),
+              ("panel-compatible", panel, "PreviewView.ImplementationMode.COMPATIBLE"),
+              ("panel-live", panel, "LIVE GRADE"),
+              ("panel-hold-compare", panel, "HOLD ORIGINAL"),
+              ("panel-palette", panel, "max = 200"),
+              ("panel-master", panel, "MASTER LUT STRENGTH"),
+              ("report-attach", report, "DevelopUgandaLiveGradePanel.attach"),
+              ("report-scope", report, "v229ColorScope"),
+              ("live-attach", live, "DevelopUgandaLiveGradePanel.attach"),
+              ("live-scope", live, "v229LiveColorScope"),
+              ("studio-v232", studio, "V232"),
+              ("color-master", packager, "COLOR_MASTER.mp4"),
+              ("version-code", gradle, "versionCode = 23200"),
+              ("version-name", gradle, 'versionName = "232.0-live-grade-monitor"'),
+          ]
+
+          failed = []
+          for label, source, needle in checks:
+              if needle in source:
+                  print(f"PASS [{label}]")
+              else:
+                  print(f"FAIL [{label}] missing {needle}")
+                  failed.append(label)
+
+          if failed:
+              raise SystemExit("V232 verification failed: " + ", ".join(failed))
+
+          print("PASS: V232 practical live grade monitor implementation verified.")
+          PY
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V232 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v232-build.log
+
+      - name: Print exact compiler errors and context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v232-build.log ]; then
+            echo "Gradle did not start. Check failed step above."
+            exit 0
+          fi
+
+          echo "===== V232 IMPORTANT ERRORS ====="
+          grep -Ein "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|no value passed|too many arguments|FAILURE:)" v232-build.log | head -6000 || true
+
+          echo "===== SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          log = Path("v232-build.log").read_text(encoding="utf-8", errors="ignore")
+          seen = set()
+          for filename, line_text, col in re.findall(r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)', log):
+              key = (filename, line_text)
+              if key in seen:
+                  continue
+              seen.add(key)
+              if len(seen) > 60:
+                  break
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files:
+                  continue
+              path = files[0]
+              lines = path.read_text(encoding="utf-8").splitlines()
+              print(f"\nFILE: {path} LINE: {line_no}")
+              for n in range(max(1, line_no-50), min(len(lines), line_no+90)+1):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V232 only after successful APK build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaInstantReviewDialog.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaBrandMetadataStore.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorEngine.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorStudioActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorTuner.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveGradePanel.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V232 source already committed."
+          else
+            git commit -m "Add develop.uganda V232 Live Grade Monitor"
+            git push
+          fi
+
+      - name: Package successful V232 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V232 APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR.apk
+
+      - name: Upload V232 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR
+          path: DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V232 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR-SOURCE
+          path: DEVELOP-UGANDA-V232-LIVE-GRADE-MONITOR-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V232 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V232-BUILD-LOG
+          path: v172-source/v232-build.log
+          if-no-files-found: warn
+          retention-days: 7
