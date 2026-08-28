@@ -36,7 +36,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * V230 Cinema Color Engine 2.0.
+ * V231 Uganda Scene Color Lab.
  *
  * ORIGINAL is always preserved. The operator monitor is an optional matrix
  * approximation. COLOR_MASTER.mp4 is the real 17^3 Media3 SingleColorLut
@@ -88,11 +88,11 @@ object DevelopUgandaColorEngine {
             get() = profile != null
 
         val label: String
-            get() = profile?.label ?: "ORIGINAL"
+            get() = profile?.let { DevelopUgandaColorTuner.displayName(it.id, it.label) } ?: "ORIGINAL"
 
         fun statusLabel(): String =
             if (autoResolved && profile != null) {
-                "AUTO → ${profile.label}"
+                "AUTO → $label"
             } else {
                 label
             }
@@ -357,7 +357,7 @@ object DevelopUgandaColorEngine {
         buildList {
             add("AUTO • CAMERA / SCENE")
             add("ORIGINAL • NO COLOR MASTER")
-            profiles.forEach { add(it.label) }
+            profiles.forEach { add(DevelopUgandaColorTuner.displayName(it.id, it.label)) }
         }.toTypedArray()
 
     fun selectedMenuIndex(
@@ -402,7 +402,7 @@ object DevelopUgandaColorEngine {
         val key = strengthKey(scope)
 
         if (prefs.contains(key)) {
-            return prefs.getInt(key, 85).coerceIn(25, 100)
+            return prefs.getInt(key, 85).coerceIn(0, 100)
         }
 
         return resolvedProfile?.defaultStrength ?: 85
@@ -415,7 +415,7 @@ object DevelopUgandaColorEngine {
     ) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
-            .putInt(strengthKey(scope), strength.coerceIn(25, 100))
+            .putInt(strengthKey(scope), strength.coerceIn(0, 100))
             .apply()
     }
 
@@ -457,7 +457,7 @@ object DevelopUgandaColorEngine {
 
     /**
      * Optional operator monitor approximation only. It is deliberately OFF by
-     * default so V230 cannot destabilize an already proven CameraX preview.
+     * default so V231 cannot destabilize an already proven CameraX preview.
      */
     fun applyPreviewMonitor(
         previewView: PreviewView,
@@ -486,7 +486,25 @@ object DevelopUgandaColorEngine {
             buildCube(
                 profile,
                 selection.strength,
-                17
+                17,
+                DevelopUgandaColorTuner.neutral(profile.id)
+            )
+        )
+    }
+
+    private fun createLutEffect(
+        context: Context,
+        scope: String,
+        selection: ResolvedSelection
+    ): SingleColorLut? {
+        val profile = selection.profile ?: return null
+        val tuning = DevelopUgandaColorTuner.load(context, scope, profile.id)
+        return SingleColorLut.createFromCube(
+            buildCube(
+                profile,
+                selection.strength,
+                17,
+                tuning
             )
         )
     }
@@ -520,17 +538,17 @@ object DevelopUgandaColorEngine {
         }
 
         val inputInfo = readVideoInfo(context, inputUri)
-        val tempDir = File(context.cacheDir, "v230_color_exports").apply { mkdirs() }
+        val tempDir = File(context.cacheDir, "v231_color_exports").apply { mkdirs() }
         val temp = File(tempDir, "color_${System.currentTimeMillis()}.mp4")
         if (temp.exists()) temp.delete()
 
-        val lut = createLutEffect(selection)
+        val lut = createLutEffect(context, scope, selection)
         if (lut == null) {
             callback(
                 ExportOutcome(
                     false,
                     null,
-                    profile.label,
+                    selection.label,
                     selection.strength,
                     inputInfo.width,
                     inputInfo.height,
@@ -595,7 +613,7 @@ object DevelopUgandaColorEngine {
                             context,
                             temp,
                             packageId,
-                            profile.label
+                            selection.label
                         )
                         temp.delete()
 
@@ -604,13 +622,13 @@ object DevelopUgandaColorEngine {
                                 ExportOutcome(
                                     true,
                                     published,
-                                    profile.label,
+                                    selection.label,
                                     selection.strength,
                                     outputInfo.width,
                                     outputInfo.height,
                                     outputInfo.durationMs,
                                     outputInfo.bitrate,
-                                    "V230 Cinema Color Engine 2.0 • 17³ 3D LUT master ready"
+                                    "V231 Uganda Scene Color Lab • 17³ 3D LUT + palette tuning master ready"
                                 )
                             )
                         }
@@ -621,7 +639,7 @@ object DevelopUgandaColorEngine {
                                 ExportOutcome(
                                     false,
                                     null,
-                                    profile.label,
+                                    selection.label,
                                     selection.strength,
                                     inputInfo.width,
                                     inputInfo.height,
@@ -653,7 +671,7 @@ object DevelopUgandaColorEngine {
                     ExportOutcome(
                         false,
                         null,
-                        profile.label,
+                        selection.label,
                         selection.strength,
                         inputInfo.width,
                         inputInfo.height,
@@ -694,13 +712,25 @@ object DevelopUgandaColorEngine {
             .put("resolved_label", value.label)
             .put("profile_family", value.profile?.family ?: "ORIGINAL")
             .put("profile_palette", value.profile?.palette ?: "ORIGINAL")
+            .put(
+                "uganda_scene_name",
+                value.profile?.let {
+                    DevelopUgandaColorTuner.displayName(it.id, it.label)
+                } ?: "ORIGINAL"
+            )
+            .put(
+                "palette_controls",
+                value.profile?.let {
+                    DevelopUgandaColorTuner.tuningJson(context, scope, it.id)
+                } ?: org.json.JSONArray()
+            )
             .put("strength_percent", value.strength)
             .put("auto_resolved", value.autoResolved)
             .put("monitor_enabled", monitorEnabled(context))
             .put(
                 "master_pipeline",
                 if (value.enabled) {
-                    "Media3 SingleColorLut 17^3 + V230 selective split-tone + H.264/AAC re-encode"
+                    "Media3 SingleColorLut 17^3 + V231 Uganda palette tuner + H.264/AAC re-encode"
                 } else {
                     "Original only"
                 }
@@ -777,7 +807,7 @@ object DevelopUgandaColorEngine {
             .replace(Regex("[^A-Z0-9_-]+"), "_")
             .take(42)
 
-        val name = "DEVELOP_UGANDA_V230_${safeProfile}_${safePackage}.mp4"
+        val name = "DEVELOP_UGANDA_V231_${safeProfile}_${safePackage}.mp4"
 
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, name)
@@ -923,7 +953,8 @@ object DevelopUgandaColorEngine {
     private fun buildCube(
         profile: Profile,
         strengthPercent: Int,
-        size: Int
+        size: Int,
+        tuning: DevelopUgandaColorTuner.Tuning
     ): Array<Array<IntArray>> {
         val strength = strengthPercent.coerceIn(0, 100) / 100f
 
@@ -933,7 +964,7 @@ object DevelopUgandaColorEngine {
                     val r = rIndex.toFloat() / (size - 1).toFloat()
                     val g = gIndex.toFloat() / (size - 1).toFloat()
                     val b = bIndex.toFloat() / (size - 1).toFloat()
-                    val transformed = transform(profile, r, g, b, strength)
+                    val transformed = transform(profile, r, g, b, strength, tuning)
 
                     Color.argb(
                         255,
@@ -951,7 +982,8 @@ object DevelopUgandaColorEngine {
         inputR: Float,
         inputG: Float,
         inputB: Float,
-        strength: Float
+        strength: Float,
+        tuning: DevelopUgandaColorTuner.Tuning
     ): FloatArray {
         val original = floatArrayOf(inputR, inputG, inputB)
 
@@ -1033,16 +1065,26 @@ object DevelopUgandaColorEngine {
         g += profile.greenPush * greenWeight
         b -= profile.greenPush * 0.24f * greenWeight
 
-        val graded = floatArrayOf(
+        val baseline = floatArrayOf(
             r.coerceIn(0f, 1f),
             g.coerceIn(0f, 1f),
             b.coerceIn(0f, 1f)
         )
 
+        // V231 keeps the authored V230 LUT at 100% per swatch, then lets the
+        // operator independently subtract/add each palette family from 0–200%.
+        val tuned = DevelopUgandaColorTuner.applyPalette(
+            profile.id,
+            baseline[0],
+            baseline[1],
+            baseline[2],
+            tuning
+        )
+
         return floatArrayOf(
-            mix(original[0], graded[0], strength),
-            mix(original[1], graded[1], strength),
-            mix(original[2], graded[2], strength)
+            mix(original[0], tuned[0], strength),
+            mix(original[1], tuned[1], strength),
+            mix(original[2], tuned[2], strength)
         )
     }
 
