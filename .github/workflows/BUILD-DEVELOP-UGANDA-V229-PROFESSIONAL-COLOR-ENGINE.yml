@@ -1,0 +1,524 @@
+name: Build develop.uganda V229 Professional Color Engine
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V228 working base
+        run: |
+          set -e
+
+          test -f DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE-PATCH.zip
+
+          GRADLE="v172-source/app/build.gradle.kts"
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+
+          grep -q 'versionCode = 22800' "$GRADLE"
+          grep -q 'versionName = "228.0-brand-metadata-studio"' "$GRADLE"
+
+          # V228
+          test -f "$SRC/DevelopUgandaBrandMetadataStore.kt"
+          test -f "$SRC/DevelopUgandaBrandMetadataActivity.kt"
+          grep -q 'BRAND_METADATA.json' "$SRC/DevelopUgandaStoryPackager.kt"
+          grep -q 'PRIVACY CHECK • EXACT GPS VISIBLE' "$SRC/DevelopUgandaInstantReviewDialog.kt"
+
+          # V227
+          test -f "$SRC/DevelopUgandaDirectorOverlayView.kt"
+          test -f "$SRC/DevelopUgandaClipQc.kt"
+          test -f "$SRC/DevelopUgandaContinuityMemory.kt"
+          test -f "$SRC/DevelopUgandaLensIntelligence.kt"
+          test -f "$SRC/DevelopUgandaCameraHealthActivity.kt"
+          grep -q 'FaceDetection.getClient' "$SRC/DevelopUgandaDirectorOverlayView.kt"
+          grep -q 'PREVIEW HISTOGRAM' "$SRC/DevelopUgandaDirectorOverlayView.kt"
+
+          # V226 FIX2
+          test -f "$SRC/DevelopUgandaMediaInbox.kt"
+          test -f "$SRC/DevelopUgandaStoryPlayerActivity.kt"
+          grep -q 'MediaStore.Video.Media.EXTERNAL_CONTENT_URI' "$SRC/DevelopUgandaMediaInbox.kt"
+          grep -q 'ExoPlayer.Builder' "$SRC/DevelopUgandaStoryPlayerActivity.kt"
+
+          # Existing proven color/social dependencies already present.
+          grep -q 'androidx.media3:media3-transformer:1.11.0' "$GRADLE"
+          grep -q 'androidx.media3:media3-effect:1.11.0' "$GRADLE"
+
+          echo "PASS: V228 + V227 + V226 FIX2 working base confirmed."
+
+      - name: Unpack and syntax-check V229 patch
+        run: |
+          set -e
+
+          rm -rf /tmp/v229
+          mkdir -p /tmp/v229
+
+          unzip -q DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE-PATCH.zip -d /tmp/v229
+
+          python3 -m py_compile /tmp/v229/v229_patch.py
+
+          test -f /tmp/v229/DevelopUgandaColorEngine.kt
+          test -f /tmp/v229/DevelopUgandaColorStudioActivity.kt
+          test -f /tmp/v229/report_v229_helpers.txt
+          test -f /tmp/v229/live_v229_helpers.txt
+
+          echo "PASS: V229 patch package complete."
+
+      - name: Lock protected V228 V227 V226 and camera engines
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+
+          protected_files = {
+              "director": SRC / "DevelopUgandaDirectorOverlayView.kt",
+              "clip_qc": SRC / "DevelopUgandaClipQc.kt",
+              "continuity": SRC / "DevelopUgandaContinuityMemory.kt",
+              "lens": SRC / "DevelopUgandaLensIntelligence.kt",
+              "health": SRC / "DevelopUgandaCameraHealthActivity.kt",
+              "media_inbox": SRC / "DevelopUgandaMediaInbox.kt",
+              "story_player": SRC / "DevelopUgandaStoryPlayerActivity.kt",
+              "brand_studio": SRC / "DevelopUgandaBrandMetadataActivity.kt",
+          }
+
+          def function_block(path, function_name):
+              text = path.read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+
+              depth = 0
+              quote = None
+              escaped = False
+
+              for i in range(brace, len(text)):
+                  ch = text[i]
+
+                  if quote is not None:
+                      if escaped:
+                          escaped = False
+                      elif ch == "\\":
+                          escaped = True
+                      elif ch == quote:
+                          quote = None
+                      continue
+
+                  if ch in ('"', "'"):
+                      quote = ch
+                      continue
+
+                  if ch == "{":
+                      depth += 1
+                  elif ch == "}":
+                      depth -= 1
+                      if depth == 0:
+                          return text[line_start:i + 1]
+
+              raise RuntimeError(f"Function not closed: {function_name}")
+
+          saved = {}
+
+          for name, path in protected_files.items():
+              saved[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+          function_checks = [
+              ("report_bind", "DevelopUgandaCameraActivity.kt", "bindCamera"),
+              ("live_bind", "DevelopUgandaLiveActivity.kt", "bindCamera"),
+              ("photo_bind", "DevelopUgandaPhotoSuiteActivity.kt", "bindCamera"),
+              ("social_export", "DevelopUgandaCameraActivity.kt", "exportAutomaticSocialMaster"),
+              ("social_verify", "DevelopUgandaCameraActivity.kt", "verifyAutomaticSocialMaster"),
+          ]
+
+          for key, filename, function_name in function_checks:
+              saved[key] = hashlib.sha256(
+                  function_block(SRC / filename, function_name).encode()
+              ).hexdigest()
+
+          Path("/tmp/v229-protected.json").write_text(
+              json.dumps(saved),
+              encoding="utf-8"
+          )
+
+          print("PASS: protected fingerprints saved.")
+          PY
+
+      - name: Apply V229 Professional Color Engine
+        run: |
+          set -e
+          python3 /tmp/v229/v229_patch.py
+
+      - name: Prove protected systems were not dropped
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          before = json.loads(
+              Path("/tmp/v229-protected.json").read_text(encoding="utf-8")
+          )
+
+          protected_files = {
+              "director": SRC / "DevelopUgandaDirectorOverlayView.kt",
+              "clip_qc": SRC / "DevelopUgandaClipQc.kt",
+              "continuity": SRC / "DevelopUgandaContinuityMemory.kt",
+              "lens": SRC / "DevelopUgandaLensIntelligence.kt",
+              "health": SRC / "DevelopUgandaCameraHealthActivity.kt",
+              "media_inbox": SRC / "DevelopUgandaMediaInbox.kt",
+              "story_player": SRC / "DevelopUgandaStoryPlayerActivity.kt",
+              "brand_studio": SRC / "DevelopUgandaBrandMetadataActivity.kt",
+          }
+
+          def function_block(path, function_name):
+              text = path.read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+
+              depth = 0
+              quote = None
+              escaped = False
+
+              for i in range(brace, len(text)):
+                  ch = text[i]
+
+                  if quote is not None:
+                      if escaped:
+                          escaped = False
+                      elif ch == "\\":
+                          escaped = True
+                      elif ch == quote:
+                          quote = None
+                      continue
+
+                  if ch in ('"', "'"):
+                      quote = ch
+                      continue
+
+                  if ch == "{":
+                      depth += 1
+                  elif ch == "}":
+                      depth -= 1
+                      if depth == 0:
+                          return text[line_start:i + 1]
+
+              raise RuntimeError(f"Function not closed: {function_name}")
+
+          current = {}
+
+          for name, path in protected_files.items():
+              current[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+          function_checks = [
+              ("report_bind", "DevelopUgandaCameraActivity.kt", "bindCamera"),
+              ("live_bind", "DevelopUgandaLiveActivity.kt", "bindCamera"),
+              ("photo_bind", "DevelopUgandaPhotoSuiteActivity.kt", "bindCamera"),
+              ("social_export", "DevelopUgandaCameraActivity.kt", "exportAutomaticSocialMaster"),
+              ("social_verify", "DevelopUgandaCameraActivity.kt", "verifyAutomaticSocialMaster"),
+          ]
+
+          for key, filename, function_name in function_checks:
+              current[key] = hashlib.sha256(
+                  function_block(SRC / filename, function_name).encode()
+              ).hexdigest()
+
+          failures = [
+              name
+              for name, old_hash in before.items()
+              if current.get(name) != old_hash
+          ]
+
+          if failures:
+              raise SystemExit(
+                  "Protected system changed unexpectedly: " +
+                  ", ".join(failures)
+              )
+
+          print("PASS: REPORT/LIVE/PHOTO CameraX bind engines unchanged.")
+          print("PASS: V222 Social Master export/verification unchanged.")
+          print("PASS: V228 Brand Studio retained.")
+          print("PASS: V227 Director/QC/continuity/lens/health retained.")
+          print("PASS: V226 FIX2 MediaStore inbox/player retained.")
+          PY
+
+      - name: Verify V229 real color implementation
+        run: |
+          set -e
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+
+          paths = {
+              "engine": SRC / "DevelopUgandaColorEngine.kt",
+              "studio": SRC / "DevelopUgandaColorStudioActivity.kt",
+              "report": SRC / "DevelopUgandaCameraActivity.kt",
+              "live": SRC / "DevelopUgandaLiveActivity.kt",
+              "packager": SRC / "DevelopUgandaStoryPackager.kt",
+              "review": SRC / "DevelopUgandaInstantReviewDialog.kt",
+              "home": SRC / "DevelopUgandaNewsroomActivity.kt",
+              "brand": SRC / "DevelopUgandaBrandMetadataStore.kt",
+              "manifest": Path("v172-source/app/src/main/AndroidManifest.xml"),
+              "gradle": Path("v172-source/app/build.gradle.kts"),
+          }
+
+          text = {}
+          for key, path in paths.items():
+              if not path.exists():
+                  raise SystemExit(f"FAIL [{key}] missing {path}")
+              text[key] = path.read_text(encoding="utf-8")
+
+          checks = [
+              # Real 3D LUT + real re-encode.
+              ("single-color-lut", "engine", "SingleColorLut.createFromCube"),
+              ("17-cube", "engine", "17"),
+              ("transformer", "engine", "Transformer.Builder"),
+              ("h264", "engine", "MimeTypes.VIDEO_H264"),
+              ("aac", "engine", "MimeTypes.AUDIO_AAC"),
+              ("hdr-sdr", "engine", "HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL"),
+              ("color-folder", "engine", "Movies/develop.uganda/Color Masters"),
+              ("original-safe", "engine", "ORIGINAL is always preserved"),
+              ("monitor-default-off", "engine", 'getBoolean(KEY_MONITOR, false)'),
+
+              # DU original profiles.
+              ("cinema-natural", "engine", "DU CINEMA NATURAL"),
+              ("cool-cinema", "engine", "DU COOL CINEMA"),
+              ("film-bias", "engine", "DU FILM BIAS"),
+              ("extended-video", "engine", "DU EXTENDED VIDEO"),
+              ("soft-film", "engine", "DU SOFT FILM"),
+              ("warm-709", "engine", "DU WARM 709"),
+              ("night-cinema", "engine", "DU NIGHT CINEMA"),
+              ("bleach", "engine", "DU BLEACH DRAMA"),
+              ("golden", "engine", "DU GOLDEN HOUR"),
+              ("social", "engine", "DU CLEAN SOCIAL"),
+              ("construction", "engine", "DU CONSTRUCTION"),
+              ("people", "engine", "DU PEOPLE"),
+              ("mono", "engine", "DU MONO CINEMA"),
+
+              # REPORT keeps old LOOK and adds separate COLOR.
+              ("report-color-button", "report", "ACTION_COLOR_ENGINE"),
+              ("report-color-dropdown", "report", "showV229ColorDropdown"),
+              ("report-color-master", "report", "scheduleV229ColorMaster"),
+              ("report-old-look-clean", "report", '"CLEAN"'),
+              ("report-old-look-natural", "report", '"NATURAL"'),
+              ("report-old-look-warm", "report", '"WARM"'),
+              ("report-old-look-mono", "report", '"MONO"'),
+
+              # LIVE keeps existing VIDEO FX and adds COLOR.
+              ("live-color-button", "live", "liveColorButton"),
+              ("live-color-dropdown", "live", "showV229LiveColorDropdown"),
+              ("live-color-master", "live", "scheduleV229LiveColorMaster"),
+              ("live-old-video-fx", "live", "VIDEO FX"),
+
+              # Newsroom + package + review integration.
+              ("color-master-file", "packager", "COLOR_MASTER.mp4"),
+              ("color-status", "packager", "COLOR_MASTER_STATUS.txt"),
+              ("color-profile-json", "packager", "COLOR_PROFILE.json"),
+              ("color-attach", "packager", "fun attachColorMaster"),
+              ("review-color-master", "review", '"COLOR MASTER"'),
+              ("review-color-studio", "review", '"COLOR STUDIO"'),
+              ("home-v229", "home", "V229 • PROFESSIONAL COLOR ENGINE"),
+              ("manifest-color-studio", "manifest", ".DevelopUgandaColorStudioActivity"),
+              ("brand-credit-v229", "brand", "Recorded with develop.uganda • V229"),
+              ("version-code", "gradle", "versionCode = 22900"),
+              ("version-name", "gradle", 'versionName = "229.0-professional-color-engine"'),
+          ]
+
+          failed = []
+          for label, file_key, needle in checks:
+              if needle in text[file_key]:
+                  print(f"PASS [{label}]")
+              else:
+                  print(f"FAIL [{label}] missing {needle}")
+                  failed.append(label)
+
+          # Structural checks tolerate Kotlin multiline formatting.
+          regex_checks = [
+              ("report-color-mode-telemetry", "report", r"COLOR\s+\$v229ColorOverlayLabel"),
+              ("live-color-mode-telemetry", "live", r"COLOR\s+•\s+\$v229LiveColorOverlayLabel"),
+              ("lut-cube-type", "engine", r"Array\s*<\s*Array\s*<\s*IntArray\s*>\s*>"),
+          ]
+
+          for label, file_key, pattern in regex_checks:
+              if re.search(pattern, text[file_key]):
+                  print(f"PASS [{label}]")
+              else:
+                  print(f"FAIL [{label}] pattern missing {pattern}")
+                  failed.append(label)
+
+          if failed:
+              raise SystemExit(
+                  "V229 verification failed only for: " +
+                  ", ".join(failed)
+              )
+
+          print("PASS: V229 Professional Color Engine real implementation verified.")
+          PY
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V229 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v229-build.log
+
+      - name: Print exact Kotlin compiler errors and context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v229-build.log ]; then
+            echo "Gradle did not start. Check the failed step above."
+            exit 0
+          fi
+
+          echo "===== V229 IMPORTANT ERRORS ====="
+
+          grep -Ein \
+            "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|no value passed|too many arguments|FAILURE:)" \
+            v229-build.log | head -6000 || true
+
+          echo "===== SOURCE CONTEXT ====="
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v229-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          matches = re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )
+
+          seen = set()
+
+          for filename, line_text, col in matches:
+              key = (filename, line_text)
+              if key in seen:
+                  continue
+              seen.add(key)
+
+              if len(seen) > 55:
+                  break
+
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files:
+                  continue
+
+              path = files[0]
+              lines = path.read_text(encoding="utf-8").splitlines()
+
+              print(f"\nFILE: {path}  LINE: {line_no}")
+
+              for n in range(
+                  max(1, line_no - 50),
+                  min(len(lines), line_no + 90) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V229 only after successful APK build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaInstantReviewDialog.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaBrandMetadataStore.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorEngine.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorStudioActivity.kt \
+            v172-source/app/src/main/AndroidManifest.xml \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V229 source already committed."
+          else
+            git commit -m "Add develop.uganda V229 Professional Color Engine"
+            git push
+          fi
+
+      - name: Package successful V229 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V229 APK
+        run: |
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE.apk
+
+      - name: Upload V229 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE
+          path: DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V229 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE-SOURCE
+          path: DEVELOP-UGANDA-V229-PROFESSIONAL-COLOR-ENGINE-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V229 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V229-BUILD-LOG
+          path: v172-source/v229-build.log
+          if-no-files-found: warn
+          retention-days: 7
