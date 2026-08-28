@@ -1,0 +1,292 @@
+name: Build develop.uganda V235 Final Mixer A
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/BUILD-DEVELOP-UGANDA-V235-FINAL-MIXER-A.yml'
+      - 'DEVELOP-UGANDA-V235-FINAL-MIXER-A.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V233 V234 or V235 base
+        run: |
+          set -e
+
+          PATCH="DEVELOP-UGANDA-V235-FINAL-MIXER-A.py"
+          GRADLE="v172-source/app/build.gradle.kts"
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+
+          test -f "$PATCH"
+          python3 -m py_compile "$PATCH"
+
+          test -f "$GRADLE"
+          test -f "$SRC/DevelopUgandaColorEngine.kt"
+          test -f "$SRC/DevelopUgandaColorTuner.kt"
+          test -f "$SRC/DevelopUgandaLiveGradePanel.kt"
+          test -f "$SRC/DevelopUgandaCameraActivity.kt"
+          test -f "$SRC/DevelopUgandaLiveActivity.kt"
+
+          if grep -q 'versionCode = 23500' "$GRADLE"; then
+            echo "PASS: V235 already applied; rebuilding safely."
+          elif grep -q 'versionCode = 23400' "$GRADLE"; then
+            echo "PASS: V234 base found."
+          elif grep -q 'versionCode = 23300' "$GRADLE"; then
+            echo "PASS: V233 repo base found; V235 includes the V234 navy-safe LUT UI principles directly."
+          else
+            echo "Unsupported base version:"
+            grep -E 'versionCode|versionName' "$GRADLE" || true
+            exit 1
+          fi
+
+      - name: Lock retained camera and newsroom systems
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          protected = [
+              "DevelopUgandaColorTuner.kt",
+              "DevelopUgandaDirectorOverlayView.kt",
+              "DevelopUgandaClipQc.kt",
+              "DevelopUgandaContinuityMemory.kt",
+              "DevelopUgandaLensIntelligence.kt",
+              "DevelopUgandaCameraHealthActivity.kt",
+              "DevelopUgandaMediaInbox.kt",
+              "DevelopUgandaStoryPlayerActivity.kt",
+              "DevelopUgandaPhotoSuiteActivity.kt",
+              "DevelopUgandaStoryPackager.kt",
+          ]
+
+          found = {}
+          for name in protected:
+              path = src / name
+              if not path.exists():
+                  raise SystemExit(f"Protected V235 base file missing: {name}")
+              found[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+          Path("/tmp/v235-protected.json").write_text(
+              json.dumps(found, indent=2),
+              encoding="utf-8"
+          )
+          print("PASS: retained-system fingerprints saved.")
+          PY
+
+      - name: Apply V235 Uganda LUT Mixer Pro
+        run: |
+          set -e
+          python3 DEVELOP-UGANDA-V235-FINAL-MIXER-A.py
+
+      - name: Prove retained systems are unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          before = json.loads(
+              Path("/tmp/v235-protected.json").read_text(encoding="utf-8")
+          )
+
+          for name, expected in before.items():
+              path = src / name
+              actual = hashlib.sha256(path.read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f"Protected system changed: {name}")
+
+          print("PASS: V231/V232 tuner, Director/QC, continuity, lens, health, inbox, story player, photo suite and story packager retained.")
+          PY
+
+      - name: Verify V235 implementation
+        run: |
+          set -e
+
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          ENGINE="$SRC/DevelopUgandaColorEngine.kt"
+          MIXER="$SRC/DevelopUgandaEverydayColorMixer.kt"
+          GRADE="$SRC/DevelopUgandaLiveGradePanel.kt"
+          NAVY="$SRC/DevelopUgandaNavySheet.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          grep -q 'object DevelopUgandaEverydayColorMixer' "$MIXER"
+          grep -q 'Family("GREEN"' "$MIXER"
+          grep -q 'Family("RED"' "$MIXER"
+          grep -q 'Family("YELLOW"' "$MIXER"
+          grep -q 'Family("BLUE"' "$MIXER"
+          grep -q 'Family("ORANGE"' "$MIXER"
+          grep -q 'Family("BROWN"' "$MIXER"
+          grep -q 'coerceIn(0, 200)' "$MIXER"
+
+          grep -q 'DevelopUgandaEverydayColorMixer.apply' "$ENGINE"
+          grep -q 'DevelopUgandaEverydayColorMixer.previewBias' "$ENGINE"
+          grep -q 'everyday_color_controls' "$ENGINE"
+          grep -q 'SingleColorLut.createFromCube' "$ENGINE"
+          grep -q 'DEVELOP_UGANDA_V235_' "$ENGINE"
+
+          grep -q 'EVERYDAY COLORS • SAME 6 ON EVERY LUT • 0–200%' "$GRADE"
+          grep -q 'HOLD ORIGINAL' "$GRADE"
+          grep -q 'ORIGINAL MP4 stays clean' "$GRADE"
+          grep -q 'DevelopUgandaNavySheet.show' "$GRADE"
+
+          grep -q 'object DevelopUgandaNavySheet' "$NAVY"
+          grep -q 'ScrollView' "$NAVY"
+          grep -q 'Gravity.BOTTOM' "$NAVY"
+
+          grep -q 'versionCode = 23500' "$GRADLE"
+          grep -q 'versionName = "235.0-uganda-lut-mixer-pro"' "$GRADLE"
+
+          echo "PASS: V235 six-color per-LUT mixer + navy-safe live grade verified."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V235 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v235-build.log
+
+      - name: Print useful V235 compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          echo "========== V235 IMPORTANT BUILD ERRORS =========="
+          grep -Ein \
+            '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)' \
+            v235-build.log \
+            | head -5000 \
+            || true
+
+          echo "========== V235 SOURCE CONTEXT =========="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("v235-build.log").read_text(
+              encoding="utf-8",
+              errors="ignore"
+          )
+
+          matches = re.findall(
+              r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)',
+              log
+          )
+
+          seen = set()
+          for filename, line_text, col in matches:
+              key = (filename, line_text)
+              if key in seen:
+                  continue
+              seen.add(key)
+              if len(seen) > 50:
+                  break
+
+              line_no = int(line_text)
+              candidates = list(
+                  Path("app/src/main/java").rglob(filename)
+              )
+              if not candidates:
+                  continue
+
+              path = candidates[0]
+              lines = path.read_text(
+                  encoding="utf-8"
+              ).splitlines()
+
+              print(f"\nFILE: {path} LINE: {line_no}")
+              for n in range(
+                  max(1, line_no - 35),
+                  min(len(lines), line_no + 60) + 1
+              ):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V235 only after successful APK build
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app \
+            README-V235-UGANDA-LUT-MIXER-PRO.txt
+
+          if git diff --cached --quiet; then
+            echo "V235 source already committed."
+          else
+            git commit -m "Add develop.uganda V235 Uganda LUT Mixer Pro"
+            git push
+          fi
+
+      - name: Package successful V235 source
+        run: |
+          set -e
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V235 APK
+        run: |
+          set -e
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO.apk
+
+          ls -lh \
+            DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO.apk \
+            DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO-SOURCE.zip
+
+      - name: Upload V235 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO
+          path: DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V235 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO-SOURCE
+          path: DEVELOP-UGANDA-V235-UGANDA-LUT-MIXER-PRO-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V235 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V235-BUILD-LOG
+          path: v172-source/v235-build.log
+          if-no-files-found: warn
+          retention-days: 7
