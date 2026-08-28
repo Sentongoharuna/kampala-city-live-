@@ -1,0 +1,213 @@
+name: Build develop.uganda V236 Field A
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/DU-V236-BUILD-A.yml'
+      - 'DU-V236-FIELD-A.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V235 or V236 base
+        run: |
+          set -e
+          PATCH="DU-V236-FIELD-A.py"
+          GRADLE="v172-source/app/build.gradle.kts"
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+
+          test -f "$PATCH"
+          python3 -m py_compile "$PATCH"
+          test -f "$GRADLE"
+          test -f "$SRC/DevelopUgandaEverydayColorMixer.kt"
+          test -f "$SRC/DevelopUgandaLiveGradePanel.kt"
+          test -f "$SRC/DevelopUgandaNavySheet.kt"
+
+          if grep -q 'versionCode = 23600' "$GRADLE"; then
+            echo "PASS: V236 already applied; rebuilding safely."
+          elif grep -q 'versionCode = 23500' "$GRADLE"; then
+            echo "PASS: V235 Uganda LUT Mixer Pro base found."
+          else
+            echo "Unsupported base version:"
+            grep -E 'versionCode|versionName' "$GRADLE" || true
+            exit 1
+          fi
+
+      - name: Lock V235 color systems
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          protected = [
+              "DevelopUgandaColorEngine.kt",
+              "DevelopUgandaColorTuner.kt",
+              "DevelopUgandaEverydayColorMixer.kt",
+              "DevelopUgandaLiveGradePanel.kt",
+              "DevelopUgandaNavySheet.kt",
+          ]
+          data = {}
+          for name in protected:
+              path = src / name
+              if not path.exists():
+                  raise SystemExit(f"Protected V235 color file missing: {name}")
+              data[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+          Path("/tmp/v236-v235-color-lock.json").write_text(
+              json.dumps(data, indent=2), encoding="utf-8"
+          )
+          print("PASS: V235 LUT/color fingerprints saved.")
+          PY
+
+      - name: Apply V236 Field A
+        run: |
+          set -e
+          python3 DU-V236-FIELD-A.py
+
+      - name: Prove V235 LUT systems unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          before = json.loads(
+              Path("/tmp/v236-v235-color-lock.json").read_text(encoding="utf-8")
+          )
+          for name, expected in before.items():
+              actual = hashlib.sha256((src / name).read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f"V235 protected color system changed: {name}")
+          print("PASS: V235 LUT engine, five-color palette, six-color mixer and navy grade UI retained exactly.")
+          PY
+
+      - name: Verify V236 implementation
+        run: |
+          set -e
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          PANEL="$SRC/DevelopUgandaFieldIntelligencePanel.kt"
+          CAMERA="$SRC/DevelopUgandaCameraActivity.kt"
+          LIVE="$SRC/DevelopUgandaLiveActivity.kt"
+          STORY="$SRC/DevelopUgandaStoryPackager.kt"
+          MANIFEST="v172-source/app/src/main/AndroidManifest.xml"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          grep -q 'VERTICAL 9:16' "$PANEL"
+          grep -q 'YOUTUBE 16:9' "$PANEL"
+          grep -q 'INSTAGRAM FEED 4:5' "$PANEL"
+          grep -q 'SQUARE 1:1' "$PANEL"
+          grep -q 'CINEMA 2.39:1' "$PANEL"
+          grep -q 'DUAL SAFE' "$PANEL"
+          grep -q 'GnssStatus.Callback' "$PANEL"
+          grep -q 'usedInFix' "$PANEL"
+          grep -q 'getCn0DbHz' "$PANEL"
+          grep -q 'sunPosition' "$PANEL"
+          grep -q 'HORIZON' "$PANEL"
+          grep -q 'DevelopUgandaFieldIntelligencePanel.attach' "$CAMERA"
+          grep -q 'DevelopUgandaFieldIntelligencePanel.attach' "$LIVE"
+          grep -q 'field_intelligence' "$STORY"
+          grep -q 'versionCode = 23600' "$GRADLE"
+          grep -q 'versionName = "236.0-multiformat-satellite-field-intelligence"' "$GRADLE"
+          grep -A2 'android:name=".DevelopUgandaCameraActivity"' "$MANIFEST" | grep -q 'screenOrientation="unspecified"'
+          grep -A2 'android:name=".DevelopUgandaLiveActivity"' "$MANIFEST" | grep -q 'screenOrientation="unspecified"'
+          echo "PASS: V236 format lock + GNSS + horizon + sun + Story Package metadata verified."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V236 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v236-build.log
+
+      - name: Print useful compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          echo "========== V236 IMPORTANT BUILD ERRORS =========="
+          grep -Ein \
+            '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)' \
+            v236-build.log \
+            | head -5000 \
+            || true
+
+      - name: Commit V236 only after successful APK build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app \
+            README-V236-MULTIFORMAT-SATELLITE-FIELD-INTELLIGENCE.txt
+
+          if git diff --cached --quiet; then
+            echo "V236 source already committed."
+          else
+            git commit -m "Add develop.uganda V236 multi-format satellite field intelligence"
+            git push
+          fi
+
+      - name: Prepare V236 APK
+        run: |
+          set -e
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V236-FIELD-A.apk
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V236-FIELD-A-SOURCE.zip app
+          cd ..
+          ls -lh DEVELOP-UGANDA-V236-FIELD-A.apk DEVELOP-UGANDA-V236-FIELD-A-SOURCE.zip
+
+      - name: Upload V236 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V236-FIELD-A
+          path: DEVELOP-UGANDA-V236-FIELD-A.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V236 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V236-FIELD-A-SOURCE
+          path: DEVELOP-UGANDA-V236-FIELD-A-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V236 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V236-FIELD-A-BUILD-LOG
+          path: v172-source/v236-build.log
+          if-no-files-found: warn
+          retention-days: 7
