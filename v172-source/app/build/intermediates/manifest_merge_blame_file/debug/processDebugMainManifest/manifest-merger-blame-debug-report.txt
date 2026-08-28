@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.sentongoharuna.pulse"
-4    android:versionCode="23500"
-5    android:versionName="235.0-uganda-lut-mixer-pro" >
+4    android:versionCode="23600"
+5    android:versionName="236.0-multiformat-satellite-field-intelligence" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="23"
@@ -92,8 +92,8 @@
 51-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:31:13-54
 52            android:exported="false"
 52-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:33:13-37
-53            android:screenOrientation="portrait" />
-53-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:32:13-49
+53            android:screenOrientation="unspecified" />
+53-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:32:13-52
 54        <activity
 54-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:35:9-38:39
 55            android:name="com.sentongoharuna.pulse.DevelopUgandaFocusAssistCameraActivity"
@@ -276,8 +276,8 @@
 143-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:146:13-56
 144            android:exported="false"
 144-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:148:13-37
-145            android:screenOrientation="portrait" />
-145-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:147:13-49
+145            android:screenOrientation="unspecified" />
+145-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:147:13-52
 146        <activity
 146-->/home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:150:9-160:20
 147            android:name="com.sentongoharuna.pulse.DevelopUgandaNewsroomActivity"

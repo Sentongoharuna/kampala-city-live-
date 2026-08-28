@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 23500
-        versionName = "235.0-uganda-lut-mixer-pro"
+        versionCode = 23600
+        versionName = "236.0-multiformat-satellite-field-intelligence"
     }
 
     buildTypes {

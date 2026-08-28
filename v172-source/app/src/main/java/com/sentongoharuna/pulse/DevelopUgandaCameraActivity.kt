@@ -2087,6 +2087,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             hintProvider = { v229ColorHint() },
             mode = DevelopUgandaUnifiedControlDeck.Mode.REPORT
         )
+        DevelopUgandaFieldIntelligencePanel.attach(
+            activity = this,
+            root = root,
+            previewView = previewView
+        )
         sceneButton.setOnTouchListener(
             DeckTouchListener(ACTION_SCENE)
         )
@@ -6831,7 +6836,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             }
         activeVideoStabilizationLabel = "STAB OFF"
         activeVideoDynamicRangeLabel = "SDR"
-        activeVideoAspectLabel = "9:16 SOCIAL SAFE"
+        activeVideoAspectLabel =
+            DevelopUgandaFieldIntelligencePanel.activeFormatLabel(this)
 
         val preview = Preview.Builder()
             .build()
@@ -9954,7 +9960,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V235_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_V236_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US

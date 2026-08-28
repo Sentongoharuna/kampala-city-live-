@@ -220,7 +220,7 @@ ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/a
 activity#com.sentongoharuna.pulse.DevelopUgandaLiveActivity
 ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:30:9-33:39
 	android:screenOrientation
-		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:32:13-49
+		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:32:13-52
 	android:exported
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:33:13-37
 	android:name
@@ -404,7 +404,7 @@ ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/a
 activity#com.sentongoharuna.pulse.DevelopUgandaCameraActivity
 ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:145:9-148:39
 	android:screenOrientation
-		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:147:13-49
+		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:147:13-52
 	android:exported
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:148:13-37
 	android:name

@@ -1513,6 +1513,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             hintProvider = { v229LiveColorHint() },
             mode = DevelopUgandaUnifiedControlDeck.Mode.LIVE
         )
+        DevelopUgandaFieldIntelligencePanel.attach(
+            activity = this,
+            root = root,
+            previewView = previewView
+        )
     }
 
     private fun togglePreviewMode() {
@@ -4551,7 +4556,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V235_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_V236_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 

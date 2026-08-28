@@ -190,13 +190,21 @@ object DevelopUgandaStoryPackager {
                     relative,
                     "METADATA.json",
                     JSONObject()
-                        .put("app_version", "V233")
+                        .put("app_version", "V236")
                         .put("brand_display_name", brandSnapshot.displayName)
                         .put("brand_organization", brandSnapshot.organization)
                         .put("brand_overlay_preset", brandSnapshot.preset)
                         .put("brand_output_profile", brandSnapshot.outputProfile)
                         .put("package_id", packageId)
                         .put("source_kind", metadata.sourceKind)
+                        .put(
+                            "capture_format",
+                            DevelopUgandaFieldIntelligencePanel.activeFormatLabel(appContext)
+                        )
+                        .put(
+                            "field_intelligence",
+                            DevelopUgandaFieldIntelligencePanel.snapshotJson(appContext)
+                        )
                         .put("camera", metadata.camera)
                         .put("reporter", metadata.reporter)
                         .put("story_id", metadata.storyId)
@@ -240,7 +248,7 @@ object DevelopUgandaStoryPackager {
                     appContext,
                     relative,
                     "COLOR_MASTER_STATUS.txt",
-                    "WAITING • V233 color engine will resolve the selected profile after the original Story Package is ready"
+                    "WAITING • V235 color engine will resolve the selected profile after the original Story Package is ready"
                 )
 
                 writeText(
@@ -263,7 +271,7 @@ object DevelopUgandaStoryPackager {
                     "MANIFEST.json",
                     JSONObject()
                         .put("package_version", 1)
-                        .put("app_version", "V233")
+                        .put("app_version", "V236")
                         .put("package_id", packageId)
                         .put("created_utc", Instant.now().toString())
                         .put("source_uri", sourceUri.toString())
