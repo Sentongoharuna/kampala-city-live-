@@ -36,7 +36,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * V231 Uganda Scene Color Lab.
+ * V232 Uganda Scene Color Lab.
  *
  * ORIGINAL is always preserved. The operator monitor is an optional matrix
  * approximation. COLOR_MASTER.mp4 is the real 17^3 Media3 SingleColorLut
@@ -421,7 +421,7 @@ object DevelopUgandaColorEngine {
 
     fun monitorEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_MONITOR, false)
+            .getBoolean(KEY_MONITOR, true)
 
     fun setMonitorEnabled(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -457,27 +457,58 @@ object DevelopUgandaColorEngine {
 
     /**
      * Optional operator monitor approximation only. It is deliberately OFF by
-     * default so V231 cannot destabilize an already proven CameraX preview.
+     * default so V232 keeps the live operator preview graded while the original camera master stays untouched an already proven CameraX preview.
      */
     fun applyPreviewMonitor(
         previewView: PreviewView,
         selection: ResolvedSelection
     ) {
+        applyPreviewMonitor(
+            previewView,
+            selection,
+            "GLOBAL"
+        )
+    }
+
+    /**
+     * V232 live grade monitor. The monitor remains an operator preview and is
+     * never burned into the original CameraX master. The selected scene LUT,
+     * master strength and the five V231/V232 palette controls are applied to
+     * the camera preview immediately. COLOR_MASTER.mp4 still uses the real
+     * tuned 17^3 Media3 LUT render.
+     */
+    fun applyPreviewMonitor(
+        previewView: PreviewView,
+        selection: ResolvedSelection,
+        scope: String
+    ) {
         if (!monitorEnabled(previewView.context) || selection.profile == null) {
-            previewView.setLayerType(View.LAYER_TYPE_NONE, null)
+            clearPreviewMonitor(previewView)
             return
         }
+
+        val tuning =
+            DevelopUgandaColorTuner.load(
+                previewView.context,
+                scope,
+                selection.profile.id
+            )
 
         val paint = Paint().apply {
             colorFilter = ColorMatrixColorFilter(
                 previewMatrix(
                     selection.profile,
-                    selection.strength / 100f
+                    selection.strength / 100f,
+                    tuning
                 )
             )
         }
 
         previewView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+    }
+
+    fun clearPreviewMonitor(previewView: PreviewView) {
+        previewView.setLayerType(View.LAYER_TYPE_NONE, null)
     }
 
     fun createLutEffect(selection: ResolvedSelection): SingleColorLut? {
@@ -628,7 +659,7 @@ object DevelopUgandaColorEngine {
                                     outputInfo.height,
                                     outputInfo.durationMs,
                                     outputInfo.bitrate,
-                                    "V231 Uganda Scene Color Lab • 17³ 3D LUT + palette tuning master ready"
+                                    "V232 Uganda Scene Color Lab • 17³ 3D LUT + palette tuning master ready"
                                 )
                             )
                         }
@@ -730,7 +761,7 @@ object DevelopUgandaColorEngine {
             .put(
                 "master_pipeline",
                 if (value.enabled) {
-                    "Media3 SingleColorLut 17^3 + V231 Uganda palette tuner + H.264/AAC re-encode"
+                    "Media3 SingleColorLut 17^3 + V232 Uganda palette tuner + H.264/AAC re-encode"
                 } else {
                     "Original only"
                 }
@@ -807,7 +838,7 @@ object DevelopUgandaColorEngine {
             .replace(Regex("[^A-Z0-9_-]+"), "_")
             .take(42)
 
-        val name = "DEVELOP_UGANDA_V231_${safeProfile}_${safePackage}.mp4"
+        val name = "DEVELOP_UGANDA_V232_${safeProfile}_${safePackage}.mp4"
 
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, name)
@@ -882,30 +913,42 @@ object DevelopUgandaColorEngine {
         return profiles.first { it.id == id }
     }
 
-    private fun previewMatrix(profile: Profile, strength: Float): ColorMatrix {
+    private fun previewMatrix(
+        profile: Profile,
+        strength: Float,
+        tuning: DevelopUgandaColorTuner.Tuning
+    ): ColorMatrix {
         val sat = 1f + (profile.saturation - 1f) * strength
         val contrast = 1f + (profile.contrast - 1f) * strength
+        val paletteBias =
+            DevelopUgandaColorTuner.previewBias(
+                profile.id,
+                tuning
+            )
 
         val creativeRed =
             profile.midtoneRed * 0.55f +
                 profile.highlightRed * 0.25f +
                 profile.shadowRed * 0.20f +
                 profile.orangePush * 0.20f -
-                profile.cyanPush * 0.16f
+                profile.cyanPush * 0.16f +
+                paletteBias[0]
 
         val creativeGreen =
             profile.midtoneGreen * 0.55f +
                 profile.highlightGreen * 0.25f +
                 profile.shadowGreen * 0.20f +
                 profile.cyanPush * 0.06f +
-                profile.greenPush * 0.12f
+                profile.greenPush * 0.12f +
+                paletteBias[1]
 
         val creativeBlue =
             profile.midtoneBlue * 0.55f +
                 profile.highlightBlue * 0.25f +
                 profile.shadowBlue * 0.20f +
                 profile.cyanPush * 0.16f -
-                profile.orangePush * 0.12f
+                profile.orangePush * 0.12f +
+                paletteBias[2]
 
         val redGain =
             (1f + (profile.redGain - 1f) * strength) *
@@ -1071,7 +1114,7 @@ object DevelopUgandaColorEngine {
             b.coerceIn(0f, 1f)
         )
 
-        // V231 keeps the authored V230 LUT at 100% per swatch, then lets the
+        // V232 keeps the authored V230 LUT at 100% per swatch, then lets the
         // operator independently subtract/add each palette family from 0–200%.
         val tuned = DevelopUgandaColorTuner.applyPalette(
             profile.id,

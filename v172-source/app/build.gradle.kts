@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 23100
-        versionName = "231.0-uganda-scene-color-lab"
+        versionCode = 23200
+        versionName = "232.0-live-grade-monitor"
     }
 
     buildTypes {

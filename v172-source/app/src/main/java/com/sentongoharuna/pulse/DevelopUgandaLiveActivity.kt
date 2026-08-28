@@ -244,7 +244,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var liveAutoViewLabeler: ImageLabeler
     private var liveAutoViewBusy = false
     private var liveAutoViewSummary = "AUTO VIEW • analysing scene"
-    private var lastV231LiveColorMonitorKey = ""
+    private var lastV232LiveColorMonitorKey = ""
     private var v229LiveColorOverlayLabel = "AUTO"
 
     private lateinit var livePowerManager: PowerManager
@@ -1315,7 +1315,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 "COLOR ▾\n${v229LiveColorDeckLabel()}",
                 0xFFA793D8.toInt()
             ) {
-                showV231LiveColorDropdown(
+                showV232LiveColorDropdown(
                     liveColorButton
                 )
             }
@@ -1498,6 +1498,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         setContentView(
             root
+        )
+        DevelopUgandaLiveGradePanel.attach(
+            activity = this,
+            root = root,
+            previewView = previewView,
+            scopeProvider = { v229LiveColorScope() },
+            hintProvider = { v229LiveColorHint() }
         )
     }
 
@@ -3199,7 +3206,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             statusParts.add(
-                "V231"
+                "V232"
             )
         }
 
@@ -4727,7 +4734,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         if (
                             !event.hasError()
                         ) {
-                            scheduleV231LiveColorMaster(
+                            scheduleV232LiveColorMaster(
                                 event.outputResults.outputUri,
                                 liveRecordingName.ifBlank {
                                     "LIVE_${System.currentTimeMillis()}"
@@ -5235,7 +5242,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     }
 
     private fun updateSignals() {
-        refreshV231LiveColorMonitor()
+        refreshV232LiveColorMonitor()
         updateLiveModePreviewTuning()
 
         netLamp.setTextColor(
@@ -5601,7 +5608,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         }
     }
 
-    private fun refreshV231LiveColorMonitor() {
+    private fun refreshV232LiveColorMonitor() {
         if (
             !::previewView.isInitialized ||
             !::liveColorButton.isInitialized
@@ -5632,19 +5639,20 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         if (
             key !=
-                lastV231LiveColorMonitorKey
+                lastV232LiveColorMonitorKey
         ) {
-            lastV231LiveColorMonitorKey =
+            lastV232LiveColorMonitorKey =
                 key
 
             DevelopUgandaColorEngine.applyPreviewMonitor(
                 previewView,
-                value
+                value,
+                v229LiveColorScope()
             )
         }
     }
 
-    private fun showV231LiveColorDropdown(
+    private fun showV232LiveColorDropdown(
         anchor: View
     ) {
         if (
@@ -5652,7 +5660,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 null
         ) {
             toast(
-                "Choose the V231 color profile before recording"
+                "Choose the V232 color profile before recording"
             )
             return
         }
@@ -5667,7 +5675,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         showLivePillDropdown(
             anchor,
-            "V231 PROFESSIONAL COLOR",
+            "V232 PROFESSIONAL COLOR",
             options.toTypedArray(),
             DevelopUgandaColorEngine.selectedMenuIndex(
                 this,
@@ -5679,7 +5687,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked >=
                     options.lastIndex
             ) {
-                openV231LiveColorStudio()
+                openV232LiveColorStudio()
                 return@showLivePillDropdown
             }
 
@@ -5689,18 +5697,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked
             )
 
-            lastV231LiveColorMonitorKey =
+            lastV232LiveColorMonitorKey =
                 ""
 
-            refreshV231LiveColorMonitor()
+            refreshV232LiveColorMonitor()
 
             toast(
-                "V231 COLOR • ${v229LiveColorResolved().statusLabel()}"
+                "V232 COLOR • ${v229LiveColorResolved().statusLabel()}"
             )
         }
     }
 
-    private fun openV231LiveColorStudio() {
+    private fun openV232LiveColorStudio() {
         startActivity(
             android.content.Intent(
                 this,
@@ -5718,7 +5726,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
     }
 
-    private fun scheduleV231LiveColorMaster(
+    private fun scheduleV232LiveColorMaster(
         sourceUri: android.net.Uri,
         packageId: String
     ) {
@@ -5731,7 +5739,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             DevelopUgandaStoryPackager.markColorMasterSkipped(
                 applicationContext,
                 packageId,
-                "ORIGINAL selected • no V231 color master requested"
+                "ORIGINAL selected • no V232 color master requested"
             )
             return
         }
@@ -5812,7 +5820,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                     runOnUiThread {
                         toast(
-                            "V231 LIVE COLOR MASTER READY • ${outcome.profileLabel}"
+                            "V232 LIVE COLOR MASTER READY • ${outcome.profileLabel}"
                         )
                     }
                 } else {

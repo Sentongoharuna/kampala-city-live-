@@ -68,10 +68,10 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
             setPadding(dp(12), dp(18), dp(12), dp(12))
         }
 
-        root.addView(label("develop.uganda • V231", 20f, violet, true))
+        root.addView(label("develop.uganda • V232", 20f, violet, true))
         root.addView(
             label(
-                "UGANDA SCENE COLOR LAB • 5-COLOR LUT TUNER • REAL 17³ MASTER",
+                "UGANDA SCENE COLOR LAB + LIVE GRADE • 5-COLOR LUT TUNER • REAL 17³ MASTER",
                 8f,
                 green,
                 true
@@ -98,7 +98,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
             addView(label("OUTPUT ARCHITECTURE", 11f, white, true))
             addView(
                 label(
-                    "ORIGINAL MP4 • NEVER REPLACED\nCOLOR_MASTER.mp4 • V231 tuned 17³ LUT + H.264/AAC re-encode\nEACH LUT • five independent palette amounts saved per camera scope\n100% • authored V230 color • 0% reduces it • 200% pushes it harder",
+                    "ORIGINAL MP4 • NEVER REPLACED\nCOLOR_MASTER.mp4 • V232 tuned 17³ LUT + H.264/AAC re-encode\nEACH LUT • five independent palette amounts saved per camera scope\n100% • authored V230 color • 0% reduces it • 200% pushes it harder",
                     8f,
                     muted,
                     false
@@ -151,7 +151,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
         page.addView(profileHost)
 
         monitorCheck = CheckBox(this).apply {
-            text = "OPTIONAL COLOR MONITOR APPROXIMATION"
+            text = "LIVE CAMERA GRADE MONITOR"
             textSize = 9f
             setTextColor(white)
             buttonTintList = android.content.res.ColorStateList.valueOf(green)
@@ -163,9 +163,9 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
                 )
                 toast(
                     if (checked) {
-                        "Monitor approximation ON • exported Color Master uses the full tuned 3D LUT"
+                        "Live grade monitor ON • camera screen follows your tuning • exported Color Master uses the full tuned 3D LUT"
                     } else {
-                        "Monitor approximation OFF • original camera preview protected"
+                        "Live grade monitor OFF • original camera preview shown"
                     }
                 )
             }
@@ -174,7 +174,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
 
         page.addView(
             label(
-                "V231 names the looks after familiar Ugandan scenes. The numbers identify different color recipes, so KAMPALA NIGHT 01 and 02 can stay recognizably related while rendering differently.",
+                "V232 names the looks after familiar Ugandan scenes. The numbers identify different color recipes, so KAMPALA NIGHT 01 and 02 can stay recognizably related while rendering differently.",
                 8f,
                 amber,
                 true
@@ -386,7 +386,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
                     menuIndex
                 )
                 refresh()
-                toast("V231 COLOR • $name")
+                toast("V232 COLOR • $name")
             }
         }
 

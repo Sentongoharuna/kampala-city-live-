@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.pow
 
 /**
- * V231 Uganda Scene Palette Tuner.
+ * V232 Uganda Scene Palette Tuner.
  *
  * Each V230 LUT keeps its authored baseline at 100%. The five palette controls
  * are independent per scene/profile and per camera scope. 0% subtracts that
@@ -379,6 +379,53 @@ object DevelopUgandaColorTuner {
             r.coerceIn(0f, 1f),
             g.coerceIn(0f, 1f),
             b.coerceIn(0f, 1f)
+        )
+    }
+
+
+    /**
+     * Fast screen-space approximation used by the V232 live monitor.
+     * The final export still uses applyPalette() inside the 17^3 LUT cube.
+     * This returns a small RGB creative bias so slider movement is visible
+     * immediately on the CameraX PreviewView without re-rendering a LUT cube.
+     */
+    fun previewBias(
+        profileId: String,
+        tuning: Tuning
+    ): FloatArray {
+        val style = style(profileId) ?: return floatArrayOf(0f, 0f, 0f)
+        var rr = 0f
+        var gg = 0f
+        var bb = 0f
+
+        style.slots.forEachIndexed { index, slot ->
+            val delta = (tuning.value(index) - DEFAULT) / 100f
+            if (abs(delta) < 0.001f) return@forEachIndexed
+
+            val roleWeight = when (slot.role) {
+                Role.SHADOW -> 0.42f
+                Role.AMBIENT -> 0.48f
+                Role.MIDTONE -> 0.58f
+                Role.HIGHLIGHT -> 0.48f
+                Role.ACCENT -> 0.40f
+            }
+
+            val color = Color.parseColor(slot.hex)
+            val cr = Color.red(color) / 255f
+            val cg = Color.green(color) / 255f
+            val cb = Color.blue(color) / 255f
+            val y = cr * 0.2126f + cg * 0.7152f + cb * 0.0722f
+            val scale = delta * roleWeight * 0.22f
+
+            rr += (cr - y) * scale
+            gg += (cg - y) * scale
+            bb += (cb - y) * scale
+        }
+
+        return floatArrayOf(
+            rr.coerceIn(-0.20f, 0.20f),
+            gg.coerceIn(-0.20f, 0.20f),
+            bb.coerceIn(-0.20f, 0.20f)
         )
     }
 
