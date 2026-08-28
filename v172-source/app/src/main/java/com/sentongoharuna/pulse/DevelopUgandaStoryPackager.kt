@@ -190,7 +190,7 @@ object DevelopUgandaStoryPackager {
                     relative,
                     "METADATA.json",
                     JSONObject()
-                        .put("app_version", "V229")
+                        .put("app_version", "V230")
                         .put("brand_display_name", brandSnapshot.displayName)
                         .put("brand_organization", brandSnapshot.organization)
                         .put("brand_overlay_preset", brandSnapshot.preset)
@@ -240,7 +240,7 @@ object DevelopUgandaStoryPackager {
                     appContext,
                     relative,
                     "COLOR_MASTER_STATUS.txt",
-                    "WAITING • V229 color engine will resolve the selected profile after the original Story Package is ready"
+                    "WAITING • V230 color engine will resolve the selected profile after the original Story Package is ready"
                 )
 
                 writeText(
@@ -263,7 +263,7 @@ object DevelopUgandaStoryPackager {
                     "MANIFEST.json",
                     JSONObject()
                         .put("package_version", 1)
-                        .put("app_version", "V229")
+                        .put("app_version", "V230")
                         .put("package_id", packageId)
                         .put("created_utc", Instant.now().toString())
                         .put("source_uri", sourceUri.toString())
@@ -413,7 +413,7 @@ object DevelopUgandaStoryPackager {
                     relative,
                     "COLOR_PROFILE.json",
                     JSONObject()
-                        .put("engine", "develop.uganda V229 Professional Color Engine")
+                        .put("engine", "develop.uganda V230 Cinema Color Engine 2.0")
                         .put("profile_label", profileLabel)
                         .put("strength_percent", strength)
                         .put("master_file", "COLOR_MASTER.mp4")
@@ -448,7 +448,7 @@ object DevelopUgandaStoryPackager {
 
                 showToast(
                     appContext,
-                    "Story Package updated • V229 color master attached"
+                    "Story Package updated • V230 color master attached"
                 )
             } catch (e: Exception) {
                 markColorMasterFailed(
@@ -806,7 +806,7 @@ object DevelopUgandaStoryPackager {
         packageId: String,
         metadata: StoryMetadata
     ): String = buildString {
-        append("develop.uganda AUTO STORY PACKAGE • V229\n\n")
+        append("develop.uganda AUTO STORY PACKAGE • V230\n\n")
         append("PACKAGE ID • $packageId\n")
         append("CAMERA • ${metadata.camera}\n")
         append("REPORTER • ${metadata.reporter}\n")

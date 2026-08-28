@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 22900
-        versionName = "229.0-professional-color-engine"
+        versionCode = 23000
+        versionName = "230.0-cinema-color-engine-2"
     }
 
     buildTypes {

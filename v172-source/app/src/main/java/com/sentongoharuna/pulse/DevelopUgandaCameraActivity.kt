@@ -415,7 +415,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var automaticSocialExportActive = false
     private var selectedCameraDeviceId: String? = null
     private var directorEnabled = true
-    private var lastV229ColorMonitorKey = ""
+    private var lastV230ColorMonitorKey = ""
     private var v229ColorOverlayLabel = "AUTO"
     private var useFront = false
     private var torchOn = false
@@ -1226,7 +1226,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             hud(
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V229"
+                    "V230"
                 ),
                 13.8f,
                 0xFFD8B85B.toInt(),
@@ -3705,7 +3705,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V229"
+                            "V230"
                         )
                         put(
                             "camera_engine",
@@ -5258,7 +5258,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
     }
 
-    private fun refreshV229ColorMonitor() {
+    private fun refreshV230ColorMonitor() {
         if (
             !::previewView.isInitialized ||
             !::colorButton.isInitialized
@@ -5285,9 +5285,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         if (
             key !=
-                lastV229ColorMonitorKey
+                lastV230ColorMonitorKey
         ) {
-            lastV229ColorMonitorKey =
+            lastV230ColorMonitorKey =
                 key
 
             DevelopUgandaColorEngine.applyPreviewMonitor(
@@ -5297,7 +5297,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
     }
 
-    private fun showV229ColorDropdown(
+    private fun showV230ColorDropdown(
         anchor: View
     ) {
         if (
@@ -5305,7 +5305,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 null
         ) {
             toast(
-                "Choose the V229 color profile before recording"
+                "Choose the V230 color profile before recording"
             )
             return
         }
@@ -5326,7 +5326,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         showReportPillDropdown(
             anchor,
-            "V229 PROFESSIONAL COLOR",
+            "V230 PROFESSIONAL COLOR",
             base.toTypedArray(),
             selected
         ) {
@@ -5335,7 +5335,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 picked >=
                     base.lastIndex
             ) {
-                openV229ColorStudio()
+                openV230ColorStudio()
                 return@showReportPillDropdown
             }
 
@@ -5345,19 +5345,19 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 picked
             )
 
-            lastV229ColorMonitorKey =
+            lastV230ColorMonitorKey =
                 ""
 
-            refreshV229ColorMonitor()
+            refreshV230ColorMonitor()
             refreshReportSettingsSummary()
 
             toast(
-                "V229 COLOR • ${v229ColorResolved().statusLabel()}"
+                "V230 COLOR • ${v229ColorResolved().statusLabel()}"
             )
         }
     }
 
-    private fun openV229ColorStudio() {
+    private fun openV230ColorStudio() {
         startActivity(
             android.content.Intent(
                 this,
@@ -5375,7 +5375,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         )
     }
 
-    private fun scheduleV229ColorMaster(
+    private fun scheduleV230ColorMaster(
         sourceUri: Uri,
         packageId: String
     ) {
@@ -5388,7 +5388,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             DevelopUgandaStoryPackager.markColorMasterSkipped(
                 applicationContext,
                 packageId,
-                "ORIGINAL selected • no V229 color master requested"
+                "ORIGINAL selected • no V230 color master requested"
             )
             return
         }
@@ -5473,7 +5473,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                     runOnUiThread {
                         toast(
-                            "V229 COLOR MASTER READY • ${outcome.profileLabel}"
+                            "V230 COLOR MASTER READY • ${outcome.profileLabel}"
                         )
                     }
                 } else {
@@ -5485,7 +5485,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                     runOnUiThread {
                         toast(
-                            "V229 color master not created • original video is safe"
+                            "V230 color master not created • original video is safe"
                         )
                     }
                 }
@@ -7486,7 +7486,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             drawFitText(
                 c,
-                "${sceneTag()} • V229",
+                "${sceneTag()} • V230",
                 safeLeft,
                 y,
                 maxWidth,
@@ -7607,7 +7607,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
         ) {
             stateParts.add(
-                "V229"
+                "V230"
             )
         }
 
@@ -9134,8 +9134,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         super.onResume()
 
         refreshV228BrandUi()
-        lastV229ColorMonitorKey = ""
-        refreshV229ColorMonitor()
+        lastV230ColorMonitorKey = ""
+        refreshV230ColorMonitor()
 
         rotationVectorSensor?.let { sensor ->
             sensorManager.registerListener(
@@ -10154,7 +10154,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                                 }
                             }
 
-                        scheduleV229ColorMaster(
+                        scheduleV230ColorMaster(
                             event.outputResults.outputUri,
                             v229ColorPackageId
                         )
@@ -10372,7 +10372,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     }
 
     private fun refreshHud() {
-        refreshV229ColorMonitor()
+        refreshV230ColorMonitor()
         applyAutoDirectorIfNeeded()
         updateReportModePreviewTuning()
         applyIndependentCameraExperienceUi()
@@ -12208,7 +12208,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             openV228BrandMetadataStudio()
 
                         ACTION_COLOR_ENGINE ->
-                            showV229ColorDropdown(
+                            showV230ColorDropdown(
                                 colorButton
                             )
 

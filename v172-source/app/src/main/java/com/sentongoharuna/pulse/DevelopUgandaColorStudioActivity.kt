@@ -17,8 +17,8 @@ import kotlin.math.roundToInt
 class DevelopUgandaColorStudioActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_SCOPE = "v229_color_scope"
-        const val EXTRA_HINT = "v229_color_hint"
+        const val EXTRA_SCOPE = "v230_color_scope"
+        const val EXTRA_HINT = "v230_color_hint"
     }
 
     private val ink = 0xFF031829.toInt()
@@ -64,10 +64,10 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
             setPadding(dp(12), dp(18), dp(12), dp(12))
         }
 
-        root.addView(label("develop.uganda • V229", 20f, violet, true))
+        root.addView(label("develop.uganda • V230", 20f, violet, true))
         root.addView(
             label(
-                "PROFESSIONAL COLOR ENGINE • REAL 17³ COLOR MASTER PIPELINE",
+                "CINEMA COLOR ENGINE 2.0 • SIGNATURE LUT RECIPES • REAL 17³ MASTER",
                 8f,
                 green,
                 true
@@ -95,6 +95,18 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
             addView(
                 label(
                     "ORIGINAL MP4 • NEVER REPLACED\nCOLOR_MASTER.mp4 • Media3 SingleColorLut 17³ + H.264/AAC re-encode\nHDR ORIGINAL • retained; delivery master tone-maps to SDR where Media3 supports it\nMONITOR • optional approximation only",
+                    8f,
+                    muted,
+                    false
+                ).apply { setPadding(0, dp(5), 0, 0) }
+            )
+        })
+
+        page.addView(card().apply {
+            addView(label("CINEMA COLOR ENGINE 2.0", 11f, white, true))
+            addView(
+                label(
+                    "V230 deliberately makes the creative looks more distinct: split-toned shadows/midtones/highlights, selective teal/amber/green color shaping, stronger film density and profile-specific highlight shoulders. The ORIGINAL file is still preserved.",
                     8f,
                     muted,
                     false
@@ -170,7 +182,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
 
         page.addView(
             label(
-                "The DU profiles are original develop.uganda color transforms. They are not proprietary ARRI, Sony, RED, Blackmagic, Canon, Panasonic, Fujifilm or Nikon LUT files.",
+                "V230 uses original develop.uganda color recipes. The reference palettes guide split-toning and selective color; they are not copied proprietary camera LUT files.",
                 8f,
                 amber,
                 true
@@ -210,15 +222,26 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
         )
         addProfileButton(
             "ORIGINAL • NO COLOR MASTER",
-            "No V229 grade is exported. The original CameraX recording remains the only master.",
+            "No V230 grade is exported. The original CameraX recording remains the only master.",
             1
         )
 
+        var lastFamily = ""
         DevelopUgandaColorEngine.profiles.forEachIndexed { index, profile ->
+            if (profile.family != lastFamily) {
+                lastFamily = profile.family
+                profileHost.addView(
+                    label(profile.family, 9f, amber, true).apply {
+                        setPadding(dp(2), dp(12), dp(2), dp(2))
+                    }
+                )
+            }
+
             addProfileButton(
                 profile.label,
                 profile.purpose,
-                index + 2
+                index + 2,
+                profile.palette
             )
         }
 
@@ -228,7 +251,8 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
     private fun addProfileButton(
         name: String,
         purpose: String,
-        menuIndex: Int
+        menuIndex: Int,
+        palette: String = ""
     ) {
         val selected =
             DevelopUgandaColorEngine.selectedMenuIndex(this, scope) == menuIndex
@@ -253,7 +277,7 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
                     menuIndex
                 )
                 refresh()
-                toast("V229 color • $name")
+                toast("V230 CINEMA COLOR • $name")
             }
         }
 
@@ -269,6 +293,14 @@ class DevelopUgandaColorStudioActivity : AppCompatActivity() {
                 setPadding(dp(2), dp(5), dp(2), 0)
             }
         )
+
+        if (palette.isNotBlank()) {
+            box.addView(
+                label("PALETTE • $palette", 7.2f, amber, true).apply {
+                    setPadding(dp(2), dp(4), dp(2), 0)
+                }
+            )
+        }
 
         profileHost.addView(
             box,

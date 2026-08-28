@@ -36,7 +36,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * V229 Professional Color Engine.
+ * V230 Cinema Color Engine 2.0.
  *
  * ORIGINAL is always preserved. The operator monitor is an optional matrix
  * approximation. COLOR_MASTER.mp4 is the real 17^3 Media3 SingleColorLut
@@ -52,7 +52,9 @@ object DevelopUgandaColorEngine {
     data class Profile(
         val id: String,
         val label: String,
+        val family: String,
         val purpose: String,
+        val palette: String,
         val contrast: Float,
         val saturation: Float,
         val gamma: Float,
@@ -63,9 +65,16 @@ object DevelopUgandaColorEngine {
         val shadowRed: Float,
         val shadowGreen: Float,
         val shadowBlue: Float,
+        val midtoneRed: Float,
+        val midtoneGreen: Float,
+        val midtoneBlue: Float,
         val highlightRed: Float,
         val highlightGreen: Float,
         val highlightBlue: Float,
+        val cyanPush: Float,
+        val orangePush: Float,
+        val greenPush: Float,
+        val shoulder: Float,
         val defaultStrength: Int
     )
 
@@ -111,7 +120,7 @@ object DevelopUgandaColorEngine {
     const val ID_AUTO = "AUTO"
     const val ID_ORIGINAL = "ORIGINAL"
 
-    private const val PREFS = "develop_uganda_v229_color_engine"
+    private const val PREFS = "develop_uganda_v230_color_engine"
     private const val KEY_MONITOR = "monitor_enabled"
 
     private val main = Handler(Looper.getMainLooper())
@@ -121,132 +130,226 @@ object DevelopUgandaColorEngine {
         Profile(
             "CINEMA_NATURAL",
             "DU CINEMA NATURAL",
-            "Natural cinema • gentle highlight roll-off • restrained saturation",
-            1.04f, 0.97f, 1.02f, 0.010f,
-            1.018f, 1.000f, 0.988f,
-            -0.004f, 0.000f, 0.008f,
-            0.010f, 0.004f, -0.006f,
-            88
+            "CORE CINEMA",
+            "Neutral cinema master • real materials • gentle highlight roll-off",
+            "NATURAL • STEEL BLUE • WARM SKIN",
+            1.06f, 0.96f, 1.02f, 0.008f,
+            1.010f, 1.000f, 0.990f,
+            -0.008f, 0.004f, 0.012f,
+            0.004f, 0.001f, -0.004f,
+            0.015f, 0.007f, -0.010f,
+            0.008f, 0.006f, 0.000f,
+            2.10f, 90
         ),
         Profile(
             "COOL_CINEMA",
             "DU COOL CINEMA",
-            "Cool cinematic separation • clean highlights • controlled cyan",
-            1.055f, 0.96f, 1.01f, 0.008f,
-            0.995f, 1.004f, 1.026f,
-            -0.010f, 0.002f, 0.018f,
-            0.008f, 0.002f, -0.004f,
-            82
+            "CORE CINEMA",
+            "Clearly cooler shadows • cyan/steel separation • clean highlights",
+            "COOL STEEL • CYAN SHADOW • NEUTRAL WHITE",
+            1.08f, 0.94f, 1.01f, 0.006f,
+            0.985f, 1.005f, 1.035f,
+            -0.025f, 0.006f, 0.035f,
+            -0.010f, 0.002f, 0.014f,
+            0.008f, 0.002f, -0.006f,
+            0.025f, 0.003f, 0.000f,
+            2.00f, 88
         ),
         Profile(
             "FILM_BIAS",
             "DU FILM BIAS",
-            "Warm highlights • cooler shadows • film-density style contrast",
-            1.085f, 0.93f, 1.03f, 0.012f,
-            1.015f, 0.998f, 0.985f,
-            -0.006f, 0.001f, 0.014f,
-            0.018f, 0.006f, -0.010f,
-            82
+            "CORE CINEMA",
+            "Visible warm highlights • cool shadows • denser film-style contrast",
+            "COOL SHADOW • AMBER HIGHLIGHT • DENSE BLACK",
+            1.11f, 0.95f, 1.03f, 0.008f,
+            1.020f, 0.995f, 0.980f,
+            -0.018f, 0.000f, 0.025f,
+            0.006f, 0.000f, -0.006f,
+            0.035f, 0.012f, -0.022f,
+            0.012f, 0.022f, 0.000f,
+            2.40f, 86
         ),
         Profile(
-            "EXTENDED_VIDEO",
-            "DU EXTENDED VIDEO",
-            "Professional default • open shadows • gentle contrast",
-            1.015f, 0.985f, 1.00f, 0.016f,
-            1.004f, 1.002f, 0.998f,
-            0.000f, 0.002f, 0.006f,
-            0.004f, 0.002f, -0.002f,
-            92
+            "URBAN_TEAL",
+            "DU URBAN TEAL",
+            "SIGNATURE CINEMA",
+            "Teal/cyan shadows • warm orange highlights • strong city-film separation",
+            "#0F354E • #1E7B93 • #D94C2E • #9B243A",
+            1.15f, 1.02f, 0.99f, 0.004f,
+            0.960f, 1.010f, 1.055f,
+            -0.050f, 0.018f, 0.075f,
+            -0.018f, 0.006f, 0.025f,
+            0.040f, 0.015f, -0.030f,
+            0.055f, 0.045f, 0.000f,
+            2.50f, 86
         ),
         Profile(
-            "SOFT_FILM",
-            "DU SOFT FILM",
-            "Documentary-style low contrast • muted chroma • soft roll-off",
-            0.965f, 0.86f, 1.025f, 0.022f,
-            1.004f, 1.000f, 0.996f,
-            -0.002f, 0.002f, 0.006f,
-            0.006f, 0.002f, -0.004f,
-            88
+            "GOLDEN_CITY",
+            "DU GOLDEN CITY",
+            "SIGNATURE CINEMA",
+            "Golden sunset/highlights • steel-blue shadows • rich skyline separation",
+            "#F39E4C • #C14615 • #6E90A0 • #586D75 • #25292A",
+            1.12f, 1.05f, 0.99f, 0.004f,
+            1.045f, 1.006f, 0.960f,
+            -0.010f, 0.000f, 0.018f,
+            0.012f, 0.004f, -0.012f,
+            0.060f, 0.025f, -0.045f,
+            0.012f, 0.065f, 0.000f,
+            2.60f, 84
         ),
         Profile(
-            "WARM_709",
-            "DU WARM 709",
-            "Clean newsroom rendering with modest warmth",
-            1.055f, 0.98f, 1.00f, 0.008f,
-            1.026f, 1.004f, 0.978f,
-            0.000f, 0.002f, 0.004f,
-            0.016f, 0.005f, -0.008f,
-            78
+            "STEEL_FIRE",
+            "DU STEEL + FIRE",
+            "SIGNATURE CINEMA",
+            "Deep steel shadows • hot orange/fire highlights • machinery and welding look",
+            "#181A19 • #283842 • #314C56 • #CD371C • #F29F2F",
+            1.18f, 1.05f, 0.98f, 0.002f,
+            0.970f, 1.000f, 1.035f,
+            -0.040f, 0.010f, 0.050f,
+            -0.015f, 0.000f, 0.015f,
+            0.075f, 0.025f, -0.060f,
+            0.040f, 0.080f, 0.000f,
+            2.80f, 80
         ),
         Profile(
-            "NIGHT_CINEMA",
-            "DU NIGHT CINEMA",
-            "Lifted dark detail • restrained chroma • cool shadow separation",
-            0.97f, 0.82f, 1.05f, 0.030f,
-            0.994f, 1.000f, 1.018f,
-            -0.008f, 0.000f, 0.016f,
-            0.004f, 0.002f, -0.002f,
-            92
+            "RETRO_AMBER",
+            "DU RETRO AMBER",
+            "SIGNATURE CINEMA",
+            "Deep teal/green blacks • amber lamps • vintage music/garage atmosphere",
+            "DEEP TEAL • BURNT ORANGE • AMBER • WARM METAL",
+            1.13f, 0.92f, 1.02f, 0.006f,
+            1.040f, 1.000f, 0.960f,
+            -0.025f, 0.012f, 0.012f,
+            0.010f, 0.000f, -0.020f,
+            0.065f, 0.030f, -0.055f,
+            0.020f, 0.080f, 0.010f,
+            2.80f, 82
         ),
         Profile(
-            "BLEACH_DRAMA",
-            "DU BLEACH DRAMA",
-            "Hard dramatic contrast • substantially reduced saturation",
-            1.14f, 0.58f, 0.98f, 0.004f,
-            1.008f, 1.000f, 0.992f,
-            -0.004f, 0.000f, 0.005f,
-            0.008f, 0.004f, -0.004f,
-            72
+            "BURGUNDY_CINEMA",
+            "DU BURGUNDY CINEMA",
+            "SIGNATURE CINEMA",
+            "Burgundy/plum shadows • bronze highlights • dramatic interiors and night",
+            "#2D0E1E • #4A052D • #651A29 • #9B6230",
+            1.14f, 0.97f, 1.02f, 0.004f,
+            1.040f, 0.970f, 0.985f,
+            0.015f, -0.025f, 0.015f,
+            0.025f, -0.015f, 0.005f,
+            0.045f, 0.005f, -0.025f,
+            0.000f, 0.030f, 0.000f,
+            2.60f, 82
         ),
         Profile(
-            "GOLDEN_HOUR",
-            "DU GOLDEN HOUR",
-            "Warm travel/commercial rendering without crushed shadows",
-            1.045f, 1.02f, 1.00f, 0.010f,
-            1.036f, 1.008f, 0.966f,
-            0.000f, 0.002f, 0.004f,
-            0.024f, 0.010f, -0.012f,
-            74
+            "OLIVE_DOCUMENTARY",
+            "DU OLIVE DOCUMENTARY",
+            "SIGNATURE CINEMA",
+            "Muted olive earth tones • pale blue air • documentary film character",
+            "#5B5540 • #AE9D7F • #4A4D1F • #A49B47 • #94B4C0",
+            1.07f, 0.82f, 1.03f, 0.016f,
+            1.015f, 1.008f, 0.980f,
+            0.005f, 0.010f, -0.006f,
+            0.015f, 0.012f, -0.020f,
+            0.020f, 0.015f, -0.008f,
+            0.008f, 0.010f, 0.025f,
+            2.10f, 88
+        ),
+        Profile(
+            "DEEP_SPACE",
+            "DU DEEP SPACE",
+            "SIGNATURE CINEMA",
+            "Navy/plum depth • controlled gold • premium low-light cinematic character",
+            "#45223B • #16173A • #2A4E63 • #697763 • #B07D3A",
+            1.16f, 0.96f, 1.02f, 0.002f,
+            0.970f, 0.990f, 1.050f,
+            0.015f, -0.030f, 0.045f,
+            -0.010f, -0.010f, 0.020f,
+            0.050f, 0.015f, -0.030f,
+            0.025f, 0.035f, 0.000f,
+            3.00f, 80
         ),
         Profile(
             "CLEAN_SOCIAL",
             "DU CLEAN SOCIAL",
-            "Bright clean social delivery • moderate contrast • restrained color",
-            1.035f, 0.96f, 0.99f, 0.014f,
-            1.010f, 1.008f, 1.002f,
-            0.002f, 0.003f, 0.005f,
-            0.008f, 0.006f, 0.000f,
-            94
+            "DELIVERY / SUBJECT",
+            "Bright clean TikTok/Reels delivery • moderate contrast • controlled color",
+            "CLEAN WHITE • CLEAR BLUE • NATURAL WARMTH",
+            1.05f, 0.98f, 0.99f, 0.012f,
+            1.010f, 1.010f, 1.005f,
+            -0.002f, 0.002f, 0.008f,
+            0.002f, 0.002f, 0.002f,
+            0.012f, 0.008f, -0.004f,
+            0.006f, 0.008f, 0.000f,
+            1.90f, 94
         ),
         Profile(
             "CONSTRUCTION",
             "DU CONSTRUCTION",
-            "Neutral concrete/steel • controlled orange/yellow • structural clarity",
-            1.075f, 0.92f, 0.99f, 0.006f,
-            1.004f, 1.006f, 1.008f,
-            -0.002f, 0.002f, 0.006f,
-            0.006f, 0.004f, 0.000f,
-            86
+            "DELIVERY / SUBJECT",
+            "Concrete/steel clarity • cooler structural shadows • controlled yellow/orange",
+            "CONCRETE • STEEL • SAFETY ORANGE • CLEAN WHITE",
+            1.12f, 0.92f, 0.99f, 0.004f,
+            0.995f, 1.005f, 1.015f,
+            -0.015f, 0.005f, 0.025f,
+            -0.004f, 0.002f, 0.006f,
+            0.020f, 0.006f, -0.012f,
+            0.012f, 0.012f, -0.004f,
+            2.30f, 90
         ),
         Profile(
             "PEOPLE",
             "DU PEOPLE",
-            "Skin-first neutral rendering • restrained reds • modest contrast",
-            1.015f, 0.91f, 1.015f, 0.016f,
-            1.016f, 1.004f, 0.994f,
+            "DELIVERY / SUBJECT",
+            "Skin-first rendering • restrained reds • soft highlight roll-off",
+            "NATURAL SKIN • SOFT WHITE • CONTROLLED RED",
+            1.03f, 0.93f, 1.02f, 0.014f,
+            1.018f, 1.004f, 0.990f,
             0.002f, 0.003f, 0.004f,
-            0.014f, 0.006f, -0.004f,
-            88
+            0.004f, 0.003f, 0.000f,
+            0.018f, 0.008f, -0.006f,
+            0.000f, 0.006f, 0.000f,
+            2.20f, 90
+        ),
+        Profile(
+            "NIGHT_CINEMA",
+            "DU NIGHT CINEMA",
+            "DELIVERY / SUBJECT",
+            "Lifted dark detail • cool shadow depth • restrained low-light chroma",
+            "NAVY SHADOW • COOL BLACK • CONTROLLED WARM LIGHT",
+            0.99f, 0.80f, 1.06f, 0.028f,
+            0.980f, 0.995f, 1.040f,
+            -0.030f, 0.008f, 0.050f,
+            -0.005f, 0.000f, 0.010f,
+            0.010f, 0.000f, -0.005f,
+            0.030f, 0.005f, 0.000f,
+            1.80f, 94
+        ),
+        Profile(
+            "SOFT_FILM",
+            "DU SOFT FILM",
+            "DELIVERY / SUBJECT",
+            "Low-contrast documentary • muted chroma • soft highlight shoulder",
+            "MUTED NEUTRAL • OPEN SHADOW • SOFT WHITE",
+            0.96f, 0.82f, 1.025f, 0.025f,
+            1.004f, 1.000f, 0.996f,
+            -0.002f, 0.002f, 0.008f,
+            0.000f, 0.002f, 0.002f,
+            0.008f, 0.004f, -0.005f,
+            0.004f, 0.003f, 0.000f,
+            1.60f, 90
         ),
         Profile(
             "MONO_CINEMA",
             "DU MONO CINEMA",
-            "Luminance-based monochrome • lifted blacks • cinema contrast",
-            1.085f, 0.0f, 1.00f, 0.012f,
+            "DELIVERY / SUBJECT",
+            "Luminance monochrome • lifted blacks • cinema contrast",
+            "BLACK • SILVER • WHITE",
+            1.10f, 0.00f, 1.00f, 0.010f,
             1.000f, 1.000f, 1.000f,
             0.000f, 0.000f, 0.000f,
             0.000f, 0.000f, 0.000f,
-            90
+            0.000f, 0.000f, 0.000f,
+            0.000f, 0.000f, 0.000f,
+            2.30f, 92
         )
     )
 
@@ -354,7 +457,7 @@ object DevelopUgandaColorEngine {
 
     /**
      * Optional operator monitor approximation only. It is deliberately OFF by
-     * default so V229 cannot destabilize an already proven CameraX preview.
+     * default so V230 cannot destabilize an already proven CameraX preview.
      */
     fun applyPreviewMonitor(
         previewView: PreviewView,
@@ -417,7 +520,7 @@ object DevelopUgandaColorEngine {
         }
 
         val inputInfo = readVideoInfo(context, inputUri)
-        val tempDir = File(context.cacheDir, "v229_color_exports").apply { mkdirs() }
+        val tempDir = File(context.cacheDir, "v230_color_exports").apply { mkdirs() }
         val temp = File(tempDir, "color_${System.currentTimeMillis()}.mp4")
         if (temp.exists()) temp.delete()
 
@@ -507,7 +610,7 @@ object DevelopUgandaColorEngine {
                                     outputInfo.height,
                                     outputInfo.durationMs,
                                     outputInfo.bitrate,
-                                    "17³ 3D LUT color master ready"
+                                    "V230 Cinema Color Engine 2.0 • 17³ 3D LUT master ready"
                                 )
                             )
                         }
@@ -589,13 +692,15 @@ object DevelopUgandaColorEngine {
             .put("requested_profile", value.requestedId)
             .put("resolved_profile", value.profile?.id ?: ID_ORIGINAL)
             .put("resolved_label", value.label)
+            .put("profile_family", value.profile?.family ?: "ORIGINAL")
+            .put("profile_palette", value.profile?.palette ?: "ORIGINAL")
             .put("strength_percent", value.strength)
             .put("auto_resolved", value.autoResolved)
             .put("monitor_enabled", monitorEnabled(context))
             .put(
                 "master_pipeline",
                 if (value.enabled) {
-                    "Media3 SingleColorLut 17^3 + H.264/AAC re-encode"
+                    "Media3 SingleColorLut 17^3 + V230 selective split-tone + H.264/AAC re-encode"
                 } else {
                     "Original only"
                 }
@@ -672,7 +777,7 @@ object DevelopUgandaColorEngine {
             .replace(Regex("[^A-Z0-9_-]+"), "_")
             .take(42)
 
-        val name = "DEVELOP_UGANDA_V229_${safeProfile}_${safePackage}.mp4"
+        val name = "DEVELOP_UGANDA_V230_${safeProfile}_${safePackage}.mp4"
 
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, name)
@@ -729,14 +834,18 @@ object DevelopUgandaColorEngine {
     private fun autoProfile(hint: String): Profile {
         val value = hint.uppercase(Locale.US)
         val id = when {
-            "SOCIAL" in value -> "CLEAN_SOCIAL"
-            "NIGHT" in value || "LOW LIGHT" in value -> "NIGHT_CINEMA"
-            "INTERVIEW" in value || "PEOPLE" in value || "V205" in value || "V211" in value -> "PEOPLE"
-            "CONSTRUCTION" in value || "BUILDING" in value -> "CONSTRUCTION"
-            "CINEMA" in value || "MOVIE" in value -> "CINEMA_NATURAL"
-            "OUTDOOR" in value || "TRAVEL" in value -> "GOLDEN_HOUR"
-            "DOCUMENTARY" in value -> "SOFT_FILM"
-            "NEWS" in value || "REPORTER" in value || "BREAKING" in value -> "EXTENDED_VIDEO"
+            "WELD" in value || "FIRE" in value || "SPARK" in value -> "STEEL_FIRE"
+            "SUNSET" in value || "GOLDEN" in value || "SUNRISE" in value -> "GOLDEN_CITY"
+            "NIGHT" in value || "LOW LIGHT" in value || "DARK" in value -> "NIGHT_CINEMA"
+            "CITY" in value || "STREET" in value || "URBAN" in value -> "URBAN_TEAL"
+            "SOCIAL" in value || "TIKTOK" in value || "REELS" in value -> "CLEAN_SOCIAL"
+            "INTERVIEW" in value || "PEOPLE" in value || "PORTRAIT" in value || "V205" in value || "V211" in value -> "PEOPLE"
+            "CONSTRUCTION" in value || "BUILDING" in value || "SITE" in value -> "CONSTRUCTION"
+            "DOCUMENTARY" in value || "NATURE" in value || "LANDSCAPE" in value -> "OLIVE_DOCUMENTARY"
+            "MUSIC" in value || "RETRO" in value || "GARAGE" in value -> "RETRO_AMBER"
+            "DRAMA" in value || "INTERIOR" in value -> "BURGUNDY_CINEMA"
+            "NEWS" in value || "REPORTER" in value || "BREAKING" in value -> "CINEMA_NATURAL"
+            "CINEMA" in value || "MOVIE" in value -> "FILM_BIAS"
             else -> "CINEMA_NATURAL"
         }
 
@@ -746,15 +855,45 @@ object DevelopUgandaColorEngine {
     private fun previewMatrix(profile: Profile, strength: Float): ColorMatrix {
         val sat = 1f + (profile.saturation - 1f) * strength
         val contrast = 1f + (profile.contrast - 1f) * strength
-        val redGain = 1f + (profile.redGain - 1f) * strength
-        val greenGain = 1f + (profile.greenGain - 1f) * strength
-        val blueGain = 1f + (profile.blueGain - 1f) * strength
+
+        val creativeRed =
+            profile.midtoneRed * 0.55f +
+                profile.highlightRed * 0.25f +
+                profile.shadowRed * 0.20f +
+                profile.orangePush * 0.20f -
+                profile.cyanPush * 0.16f
+
+        val creativeGreen =
+            profile.midtoneGreen * 0.55f +
+                profile.highlightGreen * 0.25f +
+                profile.shadowGreen * 0.20f +
+                profile.cyanPush * 0.06f +
+                profile.greenPush * 0.12f
+
+        val creativeBlue =
+            profile.midtoneBlue * 0.55f +
+                profile.highlightBlue * 0.25f +
+                profile.shadowBlue * 0.20f +
+                profile.cyanPush * 0.16f -
+                profile.orangePush * 0.12f
+
+        val redGain =
+            (1f + (profile.redGain - 1f) * strength) *
+                (1f + creativeRed * strength)
+        val greenGain =
+            (1f + (profile.greenGain - 1f) * strength) *
+                (1f + creativeGreen * strength)
+        val blueGain =
+            (1f + (profile.blueGain - 1f) * strength) *
+                (1f + creativeBlue * strength)
 
         val inv = 1f - sat
         val rw = 0.2126f
         val gw = 0.7152f
         val bw = 0.0722f
-        val offset = (profile.blackLift * 255f * strength) - ((contrast - 1f) * 127.5f)
+        val offset =
+            (profile.blackLift * 255f * strength) -
+                ((contrast - 1f) * 127.5f)
 
         return ColorMatrix(
             floatArrayOf(
@@ -820,7 +959,9 @@ object DevelopUgandaColorEngine {
         var g = tone(inputG, profile)
         var b = tone(inputB, profile)
 
-        var luma = (r * 0.2126f + g * 0.7152f + b * 0.0722f).coerceIn(0f, 1f)
+        var luma =
+            (r * 0.2126f + g * 0.7152f + b * 0.0722f)
+                .coerceIn(0f, 1f)
 
         r = luma + (r - luma) * profile.saturation
         g = luma + (g - luma) * profile.saturation
@@ -830,13 +971,67 @@ object DevelopUgandaColorEngine {
         g *= profile.greenGain
         b *= profile.blueGain
 
-        luma = (r * 0.2126f + g * 0.7152f + b * 0.0722f).coerceIn(0f, 1f)
-        val shadowWeight = (1f - luma).coerceIn(0f, 1f).pow(2f)
-        val highlightWeight = luma.coerceIn(0f, 1f).pow(2f)
+        luma =
+            (r * 0.2126f + g * 0.7152f + b * 0.0722f)
+                .coerceIn(0f, 1f)
 
-        r += profile.shadowRed * shadowWeight + profile.highlightRed * highlightWeight
-        g += profile.shadowGreen * shadowWeight + profile.highlightGreen * highlightWeight
-        b += profile.shadowBlue * shadowWeight + profile.highlightBlue * highlightWeight
+        val shadowWeight =
+            (1f - luma).coerceIn(0f, 1f).pow(2.20f)
+        val highlightWeight =
+            luma.coerceIn(0f, 1f).pow(2.05f)
+        val midtoneWeight =
+            (1f - kotlin.math.abs(luma * 2f - 1f))
+                .coerceIn(0f, 1f)
+                .pow(1.35f)
+
+        r +=
+            profile.shadowRed * shadowWeight +
+                profile.midtoneRed * midtoneWeight +
+                profile.highlightRed * highlightWeight
+        g +=
+            profile.shadowGreen * shadowWeight +
+                profile.midtoneGreen * midtoneWeight +
+                profile.highlightGreen * highlightWeight
+        b +=
+            profile.shadowBlue * shadowWeight +
+                profile.midtoneBlue * midtoneWeight +
+                profile.highlightBlue * highlightWeight
+
+        val maxChannel = maxOf(r, g, b)
+        val minChannel = minOf(r, g, b)
+        val chroma = (maxChannel - minChannel).coerceIn(0f, 1f)
+
+        val cyanMask =
+            ((((g + b) * 0.5f) - r) * 2.1f)
+                .coerceIn(0f, 1f) *
+                (0.35f + chroma * 0.65f)
+        val warmMask =
+            ((r - b) * 1.8f)
+                .coerceIn(0f, 1f) *
+                (0.30f + chroma * 0.70f)
+        val greenMask =
+            ((g - maxOf(r, b)) * 2.2f)
+                .coerceIn(0f, 1f) *
+                (0.35f + chroma * 0.65f)
+
+        val cyanWeight =
+            cyanMask * (0.38f + (1f - luma) * 0.62f)
+        val orangeWeight =
+            warmMask * (0.30f + luma * 0.70f)
+        val greenWeight =
+            greenMask * (0.45f + midtoneWeight * 0.55f)
+
+        r -= profile.cyanPush * cyanWeight
+        g += profile.cyanPush * 0.35f * cyanWeight
+        b += profile.cyanPush * 0.70f * cyanWeight
+
+        r += profile.orangePush * orangeWeight
+        g += profile.orangePush * 0.35f * orangeWeight
+        b -= profile.orangePush * 0.55f * orangeWeight
+
+        r += profile.greenPush * 0.16f * greenWeight
+        g += profile.greenPush * greenWeight
+        b -= profile.greenPush * 0.24f * greenWeight
 
         val graded = floatArrayOf(
             r.coerceIn(0f, 1f),
@@ -857,9 +1052,12 @@ object DevelopUgandaColorEngine {
         x = 0.5f + (x - 0.5f) * profile.contrast
         x = profile.blackLift + x * (1f - profile.blackLift)
 
-        if (x > 0.72f) {
-            val over = x - 0.72f
-            x = 0.72f + over / (1f + over * 1.8f)
+        if (x > 0.68f) {
+            val over = x - 0.68f
+            x =
+                0.68f +
+                    over /
+                    (1f + over * profile.shoulder.coerceAtLeast(0.6f))
         }
 
         return x.coerceIn(0f, 1f)
