@@ -1,0 +1,359 @@
+name: Build develop.uganda V231 Uganda Scene Color Lab
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V230 working base
+        run: |
+          set -e
+          test -f DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB-PATCH.zip
+
+          GRADLE="v172-source/app/build.gradle.kts"
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+
+          grep -q 'versionCode = 23000' "$GRADLE"
+          grep -q 'versionName = "230.0-cinema-color-engine-2"' "$GRADLE"
+          test -f "$SRC/DevelopUgandaColorEngine.kt"
+          test -f "$SRC/DevelopUgandaColorStudioActivity.kt"
+          grep -q 'DU URBAN TEAL' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'DU GOLDEN CITY' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'DU STEEL + FIRE' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'DEVELOP_UGANDA_V230_' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'SingleColorLut.createFromCube' "$SRC/DevelopUgandaColorEngine.kt"
+          grep -q 'COLOR_MASTER.mp4' "$SRC/DevelopUgandaStoryPackager.kt"
+          grep -q 'ACTION_COLOR_ENGINE' "$SRC/DevelopUgandaCameraActivity.kt"
+          grep -q 'liveColorButton' "$SRC/DevelopUgandaLiveActivity.kt"
+
+          echo "PASS: V230 Cinema Color Engine 2.0 base confirmed."
+
+      - name: Unpack and syntax-check V231 patch
+        run: |
+          set -e
+          rm -rf /tmp/v231
+          mkdir -p /tmp/v231
+          unzip -q DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB-PATCH.zip -d /tmp/v231
+          python3 -m py_compile /tmp/v231/v231_patch.py
+          test -f /tmp/v231/DevelopUgandaColorEngine.kt
+          test -f /tmp/v231/DevelopUgandaColorStudioActivity.kt
+          test -f /tmp/v231/DevelopUgandaColorTuner.kt
+          test -f /tmp/v231/README-V231.txt
+          echo "PASS: V231 patch package complete."
+
+      - name: Lock protected camera and retained systems
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          protected = [
+              "DevelopUgandaDirectorOverlayView.kt",
+              "DevelopUgandaClipQc.kt",
+              "DevelopUgandaContinuityMemory.kt",
+              "DevelopUgandaLensIntelligence.kt",
+              "DevelopUgandaCameraHealthActivity.kt",
+              "DevelopUgandaMediaInbox.kt",
+              "DevelopUgandaStoryPlayerActivity.kt",
+              "DevelopUgandaBrandMetadataActivity.kt",
+              "DevelopUgandaPhotoSuiteActivity.kt",
+          ]
+
+          for name in protected:
+              if not (SRC / name).exists():
+                  raise SystemExit(f"Protected V230 base file missing: {name}")
+
+          def function_block(path, function_name):
+              text = path.read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+              depth = 0
+              quote = None
+              escaped = False
+              for i in range(brace, len(text)):
+                  ch = text[i]
+                  if quote is not None:
+                      if escaped: escaped = False
+                      elif ch == "\\": escaped = True
+                      elif ch == quote: quote = None
+                      continue
+                  if ch in ('"', "'"):
+                      quote = ch
+                      continue
+                  if ch == "{": depth += 1
+                  elif ch == "}":
+                      depth -= 1
+                      if depth == 0:
+                          return text[line_start:i+1]
+              raise RuntimeError(function_name)
+
+          saved = {name: hashlib.sha256((SRC / name).read_bytes()).hexdigest() for name in protected}
+          for key, filename, fn in [
+              ("report_bind", "DevelopUgandaCameraActivity.kt", "bindCamera"),
+              ("live_bind", "DevelopUgandaLiveActivity.kt", "bindCamera"),
+              ("photo_bind", "DevelopUgandaPhotoSuiteActivity.kt", "bindCamera"),
+              ("social_export", "DevelopUgandaCameraActivity.kt", "exportAutomaticSocialMaster"),
+              ("social_verify", "DevelopUgandaCameraActivity.kt", "verifyAutomaticSocialMaster"),
+          ]:
+              saved[key] = hashlib.sha256(function_block(SRC / filename, fn).encode()).hexdigest()
+
+          Path("/tmp/v231-protected.json").write_text(json.dumps(saved), encoding="utf-8")
+          print("PASS: protected fingerprints saved.")
+          PY
+
+      - name: Apply V231 Uganda Scene Color Lab
+        run: |
+          set -e
+          python3 /tmp/v231/v231_patch.py
+
+      - name: Prove protected systems were not changed
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          before = json.loads(Path("/tmp/v231-protected.json").read_text(encoding="utf-8"))
+          protected = [
+              "DevelopUgandaDirectorOverlayView.kt",
+              "DevelopUgandaClipQc.kt",
+              "DevelopUgandaContinuityMemory.kt",
+              "DevelopUgandaLensIntelligence.kt",
+              "DevelopUgandaCameraHealthActivity.kt",
+              "DevelopUgandaMediaInbox.kt",
+              "DevelopUgandaStoryPlayerActivity.kt",
+              "DevelopUgandaBrandMetadataActivity.kt",
+              "DevelopUgandaPhotoSuiteActivity.kt",
+          ]
+
+          def function_block(path, function_name):
+              text = path.read_text(encoding="utf-8")
+              marker = f"fun {function_name}"
+              start = text.index(marker)
+              line_start = text.rfind("\n", 0, start) + 1
+              brace = text.index("{", start)
+              depth = 0
+              quote = None
+              escaped = False
+              for i in range(brace, len(text)):
+                  ch = text[i]
+                  if quote is not None:
+                      if escaped: escaped = False
+                      elif ch == "\\": escaped = True
+                      elif ch == quote: quote = None
+                      continue
+                  if ch in ('"', "'"):
+                      quote = ch
+                      continue
+                  if ch == "{": depth += 1
+                  elif ch == "}":
+                      depth -= 1
+                      if depth == 0:
+                          return text[line_start:i+1]
+              raise RuntimeError(function_name)
+
+          current = {name: hashlib.sha256((SRC / name).read_bytes()).hexdigest() for name in protected}
+          for key, filename, fn in [
+              ("report_bind", "DevelopUgandaCameraActivity.kt", "bindCamera"),
+              ("live_bind", "DevelopUgandaLiveActivity.kt", "bindCamera"),
+              ("photo_bind", "DevelopUgandaPhotoSuiteActivity.kt", "bindCamera"),
+              ("social_export", "DevelopUgandaCameraActivity.kt", "exportAutomaticSocialMaster"),
+              ("social_verify", "DevelopUgandaCameraActivity.kt", "verifyAutomaticSocialMaster"),
+          ]:
+              current[key] = hashlib.sha256(function_block(SRC / filename, fn).encode()).hexdigest()
+
+          failures = [key for key, old in before.items() if current.get(key) != old]
+          if failures:
+              raise SystemExit("Protected system changed unexpectedly: " + ", ".join(failures))
+
+          print("PASS: CameraX bind engines unchanged.")
+          print("PASS: Social Master export/verification unchanged.")
+          print("PASS: Photo, Director/QC, Brand and Media systems retained.")
+          PY
+
+      - name: Verify V231 real palette tuning implementation
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          engine = (SRC / "DevelopUgandaColorEngine.kt").read_text(encoding="utf-8")
+          tuner = (SRC / "DevelopUgandaColorTuner.kt").read_text(encoding="utf-8")
+          studio = (SRC / "DevelopUgandaColorStudioActivity.kt").read_text(encoding="utf-8")
+          report = (SRC / "DevelopUgandaCameraActivity.kt").read_text(encoding="utf-8")
+          live = (SRC / "DevelopUgandaLiveActivity.kt").read_text(encoding="utf-8")
+          home = (SRC / "DevelopUgandaNewsroomActivity.kt").read_text(encoding="utf-8")
+          packager = (SRC / "DevelopUgandaStoryPackager.kt").read_text(encoding="utf-8")
+          brand = (SRC / "DevelopUgandaBrandMetadataStore.kt").read_text(encoding="utf-8")
+          gradle = Path("v172-source/app/build.gradle.kts").read_text(encoding="utf-8")
+
+          checks = [
+              ("real-lut", engine, "SingleColorLut.createFromCube"),
+              ("palette-apply", engine, "DevelopUgandaColorTuner.applyPalette"),
+              ("tuning-json", engine, '"palette_controls"'),
+              ("v231-output", engine, "DEVELOP_UGANDA_V231_"),
+              ("kampala-street", tuner, "KAMPALA STREET 01"),
+              ("nakasero-gold", tuner, "NAKASERO GOLD 01"),
+              ("clock-tower-steel", tuner, "CLOCK TOWER STEEL 01"),
+              ("kisenyi-amber", tuner, "KISENYI AMBER 01"),
+              ("night-variants", tuner, "KAMPALA NIGHT 02"),
+              ("concrete", tuner, "KAMPALA CONCRETE 01"),
+              ("0-200", tuner, "coerceIn(0, 200)"),
+              ("five-color-ui", studio, "INDIVIDUAL LUT COLORS"),
+              ("color-row", studio, "COLOR ROW"),
+              ("studio-v231", studio, "develop.uganda • V231"),
+              ("report-v231", report, "V231"),
+              ("live-v231", live, "V231"),
+              ("home-v231", home, "V231 • UGANDA SCENE COLOR LAB"),
+              ("package-master", packager, "COLOR_MASTER.mp4"),
+              ("brand-v231", brand, "Recorded with develop.uganda • V231"),
+              ("version-code", gradle, "versionCode = 23100"),
+              ("version-name", gradle, 'versionName = "231.0-uganda-scene-color-lab"'),
+          ]
+
+          failed = []
+          for label, source, needle in checks:
+              if needle in source:
+                  print(f"PASS [{label}]")
+              else:
+                  print(f"FAIL [{label}] missing {needle}")
+                  failed.append(label)
+
+          if failed:
+              raise SystemExit("V231 verification failed: " + ", ".join(failed))
+          print("PASS: V231 Uganda Scene Color Lab implementation verified.")
+          PY
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V231 APK before commit
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v231-build.log
+
+      - name: Print exact compiler errors and context
+        if: failure()
+        working-directory: v172-source
+        run: |
+          if [ ! -f v231-build.log ]; then
+            echo "Gradle did not start. Check failed step above."
+            exit 0
+          fi
+
+          echo "===== V231 IMPORTANT ERRORS ====="
+          grep -Ein "(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|no value passed|too many arguments|FAILURE:)" v231-build.log | head -6000 || true
+
+          echo "===== SOURCE CONTEXT ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          log = Path("v231-build.log").read_text(encoding="utf-8", errors="ignore")
+          seen = set()
+          for filename, line_text, col in re.findall(r'([A-Za-z0-9_]+\.kt):(\d+):(\d+)', log):
+              key = (filename, line_text)
+              if key in seen: continue
+              seen.add(key)
+              if len(seen) > 55: break
+              line_no = int(line_text)
+              files = list(Path("app/src/main/java").rglob(filename))
+              if not files: continue
+              path = files[0]
+              lines = path.read_text(encoding="utf-8").splitlines()
+              print(f"\nFILE: {path} LINE: {line_no}")
+              for n in range(max(1, line_no-50), min(len(lines), line_no+90)+1):
+                  mark = ">>" if n == line_no else "  "
+                  print(f"{mark} {n:4}: {lines[n-1]}")
+          PY
+
+      - name: Commit V231 only after successful APK build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaNewsroomActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaInstantReviewDialog.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaBrandMetadataStore.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorEngine.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorStudioActivity.kt \
+            v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaColorTuner.kt \
+            v172-source/app/build.gradle.kts
+
+          if git diff --cached --quiet; then
+            echo "V231 source already committed."
+          else
+            git commit -m "Add develop.uganda V231 Uganda Scene Color Lab"
+            git push
+          fi
+
+      - name: Package successful V231 source
+        run: |
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB-SOURCE.zip app
+          cd ..
+
+      - name: Prepare V231 APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB.apk
+
+      - name: Upload V231 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB
+          path: DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V231 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB-SOURCE
+          path: DEVELOP-UGANDA-V231-UGANDA-SCENE-COLOR-LAB-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V231 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V231-BUILD-LOG
+          path: v172-source/v231-build.log
+          if-no-files-found: warn
+          retention-days: 7
