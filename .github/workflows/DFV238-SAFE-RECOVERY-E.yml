@@ -1,0 +1,235 @@
+name: Build dfv238 SAFE RECOVERY E
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/DFV238-SAFE-RECOVERY-E.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore verified V238 source
+        run: |
+          set -e
+          V238_COMMIT="394049029eca20367cab1ce9628fc1dbe489dd7a"
+          git restore --source="$V238_COMMIT" --staged --worktree v172-source/app
+          rm -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaDfv238CameraShell.kt
+          rm -rf v172-source/app/build
+          grep -q 'versionCode = 23800' v172-source/app/build.gradle.kts
+          grep -q 'versionName = "238.0-operator-experience-pro"' v172-source/app/build.gradle.kts
+          echo "PASS: exact verified V238 source restored."
+
+      - name: Apply minimal dfv238 changes
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          SRC = Path('v172-source/app/src/main/java/com/sentongoharuna/pulse')
+          CAMERA = SRC / 'DevelopUgandaCameraActivity.kt'
+          OP = SRC / 'DevelopUgandaOperatorExperience.kt'
+          ADAPT = SRC / 'DevelopUgandaAdaptiveFormatUi.kt'
+          LUT = SRC / 'DevelopUgandaLiveGradePanel.kt'
+          FIELD = SRC / 'DevelopUgandaFieldIntelligencePanel.kt'
+          STORY = SRC / 'DevelopUgandaStoryPackager.kt'
+          GRADLE = Path('v172-source/app/build.gradle.kts')
+
+          for p in [CAMERA, OP, ADAPT, LUT, FIELD, STORY, GRADLE]:
+              if not p.exists():
+                  raise SystemExit(f'Missing V238 file: {p}')
+
+          # Visible LUT button wording only. LUT algorithms remain untouched.
+          text = LUT.read_text(encoding='utf-8')
+          text = text.replace(
+              'text = "GRADE • V235\\nMIX ▸"',
+              'text = "LUTS • V235\\nMIX ▸"'
+          )
+          text = text.replace(
+              '"GRADE • ${selection.strength}%\\n${name.take(12)} ▸"',
+              '"LUTS • ${selection.strength}%\\n${name.take(12)} ▸"'
+          )
+          if 'LUTS •' not in text:
+              raise SystemExit('LUTS label not applied')
+          LUT.write_text(text, encoding='utf-8')
+
+          # Existing V236 ratio/format chip: preserve function, add ASPECT wording.
+          text = FIELD.read_text(encoding='utf-8')
+          old = '''"${if (format.landscape) "16:9" else format.id.substringAfter('_').replace('_', ':')} • ${if (format.dualSafe) "DUAL" else "LOCK"}\\nSAT $satUsed/$satVisible • $level"'''
+          new = '''"ASPECT • ${if (format.landscape) "16:9" else format.id.substringAfter('_').replace('_', ':')} • ${if (format.dualSafe) "DUAL" else "LOCK"}\\nSAT $satUsed/$satVisible • $level"'''
+          if old not in text:
+              raise SystemExit('Verified V238 ratio label not found')
+          text = text.replace(old, new, 1)
+          FIELD.write_text(text, encoding='utf-8')
+
+          # V238 adaptive UI: LUTS top-left, ASPECT top-right.
+          text = ADAPT.read_text(encoding='utf-8')
+          text, n1 = re.subn(
+              r'(placeChip\(\s*FIELD_CHIP_TAG,\s*start\s*=\s*)true(\s*,)',
+              r'\1false\2',
+              text,
+              count=1
+          )
+          text, n2 = re.subn(
+              r'(placeChip\(\s*GRADE_CHIP_TAG,\s*start\s*=\s*)false(\s*,)',
+              r'\1true\2',
+              text,
+              count=1
+          )
+          text, n3 = re.subn(
+              r'lp\.gravity\s*=\s*\(if \(start\) Gravity\.START else Gravity\.END\) or Gravity\.CENTER_VERTICAL',
+              'lp.gravity = Gravity.TOP or (if (start) Gravity.START else Gravity.END)',
+              text,
+              count=1
+          )
+          text, n4 = re.subn(
+              r'lp\.topMargin\s*=\s*0',
+              'lp.topMargin = dp(if (landscape) 8 else 10)',
+              text,
+              count=1
+          )
+          if (n1, n2, n3, n4) != (1, 1, 1, 1):
+              raise SystemExit(f'Adaptive patch counts: {(n1, n2, n3, n4)}')
+          ADAPT.write_text(text, encoding='utf-8')
+
+          # Keep LUTS + ASPECT visible when V238 auto-hides other HUD controls.
+          text = OP.read_text(encoding='utf-8')
+          text, n5 = re.subn(
+              r'(root\.findViewWithTag<View>\(FIELD_CHIP_TAG\)\?\.let\s*\{\s*)fieldBaseline\s*=\s*it\.visibility\s*it\.visibility\s*=\s*View\.GONE(\s*\})',
+              r'\1fieldBaseline = View.VISIBLE\n                    it.visibility = View.VISIBLE\2',
+              text,
+              count=1
+          )
+          text, n6 = re.subn(
+              r'(root\.findViewWithTag<View>\(GRADE_CHIP_TAG\)\?\.let\s*\{\s*)gradeBaseline\s*=\s*it\.visibility\s*it\.visibility\s*=\s*View\.GONE(\s*\})',
+              r'\1gradeBaseline = View.VISIBLE\n                    it.visibility = View.VISIBLE\2',
+              text,
+              count=1
+          )
+
+          # Move SHOT READY away from the top so ASPECT has the top-right position.
+          text, n7 = re.subn(
+              r'gravity\s*=\s*Gravity\.TOP or Gravity\.END\s*\n\s*topMargin\s*=\s*dp\(7\)\s*\n\s*rightMargin\s*=\s*dp\(8\)',
+              'gravity = Gravity.END or Gravity.CENTER_VERTICAL\n                    topMargin = 0\n                    rightMargin = dp(8)',
+              text,
+              count=1
+          )
+
+          if (n5, n6, n7) != (1, 1, 1):
+              raise SystemExit(f'Operator patch counts: {(n5, n6, n7)}')
+          OP.write_text(text, encoding='utf-8')
+
+          # Rename build only. No custom camera shell and no view re-parenting.
+          camera = CAMERA.read_text(encoding='utf-8')
+          camera = camera.replace('"V238"', '"dfv238"')
+          camera = camera.replace(' • V238"', ' • dfv238"')
+          CAMERA.write_text(camera, encoding='utf-8')
+
+          story = STORY.read_text(encoding='utf-8')
+          story = story.replace(
+              '.put("app_version", "V238")',
+              '.put("app_version", "dfv238")'
+          )
+          STORY.write_text(story, encoding='utf-8')
+
+          gradle = GRADLE.read_text(encoding='utf-8')
+          gradle = gradle.replace(
+              'versionCode = 23800',
+              'versionCode = 23804',
+              1
+          )
+          gradle = gradle.replace(
+              'versionName = "238.0-operator-experience-pro"',
+              'versionName = "dfv238-safe-recovery-e"',
+              1
+          )
+          GRADLE.write_text(gradle, encoding='utf-8')
+
+          print('PASS: minimal dfv238 changes applied to verified V238.')
+          PY
+
+      - name: Verify dfv238 before compiling
+        run: |
+          set -e
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          CAMERA="$SRC/DevelopUgandaCameraActivity.kt"
+          OP="$SRC/DevelopUgandaOperatorExperience.kt"
+          ADAPT="$SRC/DevelopUgandaAdaptiveFormatUi.kt"
+          LUT="$SRC/DevelopUgandaLiveGradePanel.kt"
+          FIELD="$SRC/DevelopUgandaFieldIntelligencePanel.kt"
+
+          grep -q 'v238_zoom_seek' "$CAMERA"
+          grep -q 'v238_exposure_seek' "$CAMERA"
+          grep -q 'AUTO-HIDE 3s' "$OP"
+          grep -q 'LUTS •' "$LUT"
+          grep -q 'ASPECT •' "$FIELD"
+          grep -q 'Gravity.TOP or (if (start) Gravity.START else Gravity.END)' "$ADAPT"
+          grep -q 'fieldBaseline = View.VISIBLE' "$OP"
+          grep -q 'gradeBaseline = View.VISIBLE' "$OP"
+          grep -q 'Gravity.END or Gravity.CENTER_VERTICAL' "$OP"
+          test ! -f "$SRC/DevelopUgandaDfv238CameraShell.kt"
+          ! grep -q 'DevelopUgandaDfv238CameraShell.attach' "$CAMERA"
+          grep -q 'versionCode = 23804' v172-source/app/build.gradle.kts
+
+          echo "PASS: dfv238 safe recovery E verified."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build dfv238 SAFE RECOVERY E APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee dfv238-safe-e-build.log
+
+      - name: Print compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          grep -Ein '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)' dfv238-safe-e-build.log | head -5000 || true
+
+      - name: Prepare APK
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-DFV238-SAFE-RECOVERY-E.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-DFV238-SAFE-RECOVERY-E
+          path: DEVELOP-UGANDA-DFV238-SAFE-RECOVERY-E.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DFV238-SAFE-RECOVERY-E-BUILD-LOG
+          path: v172-source/dfv238-safe-e-build.log
+          if-no-files-found: warn
+          retention-days: 7
