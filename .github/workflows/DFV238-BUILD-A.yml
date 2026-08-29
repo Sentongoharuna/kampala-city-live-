@@ -1,0 +1,205 @@
+name: Build develop.uganda dfv238
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/DFV238-BUILD-A.yml'
+      - 'DFV238-CAMERA-SHELL-A.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Start isolated dfv238 branch
+        run: |
+          set -e
+          git checkout -B dfv238
+
+      - name: Recover exact V238 app baseline
+        run: |
+          set -e
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          if test -f "$GRADLE" && grep -q 'versionCode = 23800' "$GRADLE"; then
+            echo "PASS: current source is already exact V238."
+            exit 0
+          fi
+
+          V238_COMMIT="$(git log --all --format='%H%x09%s' |             grep -m1 -E 'Add develop\.uganda V238 operator experience pro|V238 Operator Experience Pro' |             cut -f1 || true)"
+
+          if test -n "$V238_COMMIT"; then
+            echo "Recovering V238 source from commit $V238_COMMIT"
+            git restore --source="$V238_COMMIT" --staged --worktree v172-source/app
+          elif test -f DU-V238-OPERATOR-A.py &&                grep -Eq 'versionCode = (23600|23700)' "$GRADLE"; then
+            echo "No V238 commit found; reconstructing V238 from preserved V238 patch."
+            python3 -m py_compile DU-V238-OPERATOR-A.py
+            python3 DU-V238-OPERATOR-A.py
+          else
+            echo "ERROR: exact V238 source could not be recovered."
+            git log --oneline -30 || true
+            grep -E 'versionCode|versionName' "$GRADLE" || true
+            exit 1
+          fi
+
+          grep -q 'versionCode = 23800' "$GRADLE"
+          grep -q 'versionName = "238.0-operator-experience-pro"' "$GRADLE"
+          echo "PASS: exact V238 baseline restored."
+
+      - name: Verify dfv238 patch
+        run: |
+          set -e
+          python3 -m py_compile DFV238-CAMERA-SHELL-A.py
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaLiveGradePanel.kt
+          test -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaFieldIntelligencePanel.kt
+
+      - name: Lock V235 LUT algorithms
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          protected = [
+              "DevelopUgandaColorEngine.kt",
+              "DevelopUgandaColorTuner.kt",
+              "DevelopUgandaEverydayColorMixer.kt",
+              "DevelopUgandaNavySheet.kt",
+          ]
+          data = {name: hashlib.sha256((src / name).read_bytes()).hexdigest()
+                  for name in protected}
+          Path("/tmp/dfv238-protected.json").write_text(
+              json.dumps(data, indent=2), encoding="utf-8"
+          )
+          print("PASS: V235 LUT algorithm fingerprints saved.")
+          PY
+
+      - name: Apply dfv238
+        run: |
+          set -e
+          python3 DFV238-CAMERA-SHELL-A.py
+
+      - name: Prove LUT algorithms unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          locked = json.loads(
+              Path("/tmp/dfv238-protected.json").read_text(encoding="utf-8")
+          )
+          for name, expected in locked.items():
+              actual = hashlib.sha256((src / name).read_bytes()).hexdigest()
+              assert actual == expected, f"Protected LUT algorithm changed: {name}"
+          print("PASS: V235 LUT algorithms are byte-for-byte unchanged.")
+          PY
+
+      - name: Verify dfv238 design
+        run: |
+          set -e
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          SHELL="$SRC/DevelopUgandaDfv238CameraShell.kt"
+          CAMERA="$SRC/DevelopUgandaCameraActivity.kt"
+          LUT="$SRC/DevelopUgandaLiveGradePanel.kt"
+          FIELD="$SRC/DevelopUgandaFieldIntelligencePanel.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          test -f "$SHELL"
+          grep -q 'develop_uganda_v235_live_grade_panel' "$SHELL"
+          grep -q 'develop_uganda_v236_field_intelligence' "$SHELL"
+          grep -q 'v237_camera_action_row' "$SHELL"
+          grep -q 'LUTS is permanent' "$SHELL"
+          grep -q 'DevelopUgandaDfv238CameraShell.attach' "$CAMERA"
+          grep -q 'LUTS •' "$LUT"
+          grep -q 'ASPECT •' "$FIELD"
+          grep -q 'versionCode = 23801' "$GRADLE"
+          grep -q 'versionName = "dfv238"' "$GRADLE"
+          grep -q 'AUTO-HIDE 3s' "$SRC/DevelopUgandaOperatorExperience.kt"
+          grep -q 'v238_exposure_seek' "$CAMERA"
+          grep -q 'v238_zoom_seek' "$CAMERA"
+          grep -q 'DevelopUgandaAdaptiveFormatUi.Role.REPORT' "$CAMERA"
+          echo "PASS: dfv238 camera shell verified."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build dfv238 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee dfv238-build.log
+
+      - name: Print compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          grep -Ein '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)'             dfv238-build.log | head -5000 || true
+
+      - name: Commit successful dfv238 source to isolated branch
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add v172-source/app README-DFV238.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Build dfv238 from protected V238 baseline"
+          fi
+          git push origin HEAD:dfv238 --force-with-lease
+
+      - name: Prepare dfv238 artifacts
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk             DEVELOP-UGANDA-DFV238.apk
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-DFV238-SOURCE.zip app
+          cd ..
+
+      - name: Upload dfv238 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-DFV238
+          path: DEVELOP-UGANDA-DFV238.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload dfv238 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-DFV238-SOURCE
+          path: DEVELOP-UGANDA-DFV238-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-DFV238-BUILD-LOG
+          path: v172-source/dfv238-build.log
+          if-no-files-found: warn
+          retention-days: 7
