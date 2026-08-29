@@ -1,0 +1,103 @@
+name: Build develop.uganda V238 Operator Experience Pro
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/DU-V238-BUILD-A.yml'
+      - 'DU-V238-OPERATOR-A.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Verify base
+        run: |
+          set -e
+          PATCH="DU-V238-OPERATOR-A.py"
+          GRADLE="v172-source/app/build.gradle.kts"
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          test -f "$PATCH" && python3 -m py_compile "$PATCH"
+          test -f "$GRADLE" && test -f "$SRC/DevelopUgandaFieldIntelligencePanel.kt"
+          test -f "$SRC/DevelopUgandaEverydayColorMixer.kt" && test -f "$SRC/DevelopUgandaLiveGradePanel.kt"
+          if grep -q 'versionCode = 23800' "$GRADLE"; then echo "PASS: V238 rebuild."
+          elif grep -q 'versionCode = 23700' "$GRADLE"; then echo "PASS: V237 base."
+          elif grep -q 'versionCode = 23600' "$GRADLE"; then echo "PASS: V236 base; embedded V237 will be applied."
+          else grep -E 'versionCode|versionName' "$GRADLE"; exit 1; fi
+      - name: Lock protected systems
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          src=Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          names=["DevelopUgandaColorEngine.kt","DevelopUgandaColorTuner.kt","DevelopUgandaEverydayColorMixer.kt","DevelopUgandaLiveGradePanel.kt","DevelopUgandaNavySheet.kt","DevelopUgandaFieldIntelligencePanel.kt"]
+          d={n:hashlib.sha256((src/n).read_bytes()).hexdigest() for n in names}
+          Path('/tmp/v238-lock.json').write_text(json.dumps(d))
+          PY
+      - name: Apply V238
+        run: python3 DU-V238-OPERATOR-A.py
+      - name: Prove protected systems unchanged
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json
+          src=Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          d=json.loads(Path('/tmp/v238-lock.json').read_text())
+          for n,h in d.items():
+              assert hashlib.sha256((src/n).read_bytes()).hexdigest()==h, n
+          print('PASS protected systems unchanged')
+          PY
+      - name: Verify V238
+        run: |
+          set -e
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          OP="$SRC/DevelopUgandaOperatorExperience.kt"; CAMERA="$SRC/DevelopUgandaCameraActivity.kt"; LIVE="$SRC/DevelopUgandaLiveActivity.kt"; GRADLE="v172-source/app/build.gradle.kts"
+          test -f "$OP"
+          grep -q 'AUTO-HIDE 3s' "$OP"; grep -q 'CLEAN VIEW' "$OP"; grep -q 'v238_exposure_seek' "$OP"; grep -q 'v238_zoom_seek' "$OP"; grep -q 'READY ✓' "$OP"
+          grep -q 'DevelopUgandaOperatorExperience.Role.REPORT' "$CAMERA"; grep -q 'DevelopUgandaOperatorExperience.Role.LIVE' "$LIVE"
+          grep -q 'tag = "v238_zoom_seek"' "$CAMERA"; grep -q 'tag = "v238_exposure_seek"' "$CAMERA"
+          grep -q 'versionCode = 23800' "$GRADLE"; grep -q 'versionName = "238.0-operator-experience-pro"' "$GRADLE"
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.11.1'}
+      - name: Build V238 APK
+        working-directory: v172-source
+        run: set -o pipefail; gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v238-build.log
+      - name: Print compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: grep -Ein '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)' v238-build.log | head -5000 || true
+      - name: Commit V238 after successful build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add v172-source/app README-V237-ADAPTIVE-MULTIFORMAT-UI.txt README-V238-OPERATOR-EXPERIENCE-PRO.txt || true
+          if ! git diff --cached --quiet; then git commit -m "Add develop.uganda V238 operator experience pro"; git push; fi
+      - name: Prepare artifacts
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V238-OPERATOR-A.apk
+          cd v172-source && zip -qr ../DEVELOP-UGANDA-V238-OPERATOR-A-SOURCE.zip app && cd ..
+      - name: Upload V238 APK
+        uses: actions/upload-artifact@v4
+        with: {name: DEVELOP-UGANDA-V238-OPERATOR-A, path: DEVELOP-UGANDA-V238-OPERATOR-A.apk, if-no-files-found: error, retention-days: 14}
+      - name: Upload V238 source
+        uses: actions/upload-artifact@v4
+        with: {name: DEVELOP-UGANDA-V238-OPERATOR-A-SOURCE, path: DEVELOP-UGANDA-V238-OPERATOR-A-SOURCE.zip, if-no-files-found: error, retention-days: 14}
+      - name: Upload build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with: {name: DEVELOP-UGANDA-V238-OPERATOR-A-BUILD-LOG, path: v172-source/v238-build.log, if-no-files-found: warn, retention-days: 7}
