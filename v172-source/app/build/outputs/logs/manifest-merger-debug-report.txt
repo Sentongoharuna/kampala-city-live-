@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-162:12
-INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-162:12
-INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-162:12
-INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-162:12
+ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-167:12
+INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-167:12
+INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-167:12
+INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:1:1-167:12
 MERGED from [androidx.camera:camera-camera2-pipe:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/2433a270a86c39c5d616b327e61b5db6/transformed/jetified-camera-camera2-pipe-1.6.1/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.camera:camera-effects:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/ec77412e592931329fd97b4b34df6e50/transformed/jetified-camera-effects-1.6.1/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.camera:camera-video:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/8d1fb5b0239a7c851715b316585232a3/transformed/jetified-camera-video-1.6.1/AndroidManifest.xml:2:1-7:12
@@ -155,8 +155,8 @@ ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/a
 	android:name
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:15:21-69
 application
-ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:19:5-161:19
-INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:19:5-161:19
+ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:19:5-166:19
+INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:19:5-166:19
 MERGED from [androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:23:5-34:19
 MERGED from [androidx.camera:camera-camera2:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/fd65bc0e84d70234fd4d2193c3ff427a/transformed/jetified-camera-camera2-1.6.1/AndroidManifest.xml:23:5-34:19
 MERGED from [androidx.camera:camera-core:1.6.1] /home/runner/.gradle/caches/8.11.1/transforms/801b6adc10f7fe87e10ca49333622c6b/transformed/jetified-camera-core-1.6.1/AndroidManifest.xml:23:5-34:19
@@ -409,14 +409,14 @@ ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/a
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:148:13-37
 	android:name
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:146:13-56
-activity#com.sentongoharuna.pulse.DevelopUgandaNewsroomActivity
+activity#com.sentongoharuna.pulse.DevelopUgandaHomeActivity
 ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:150:9-160:20
 	android:screenOrientation
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:152:13-49
 	android:exported
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:153:13-36
 	android:name
-		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:151:13-58
+		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:151:13-54
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
 ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:155:13-158:29
 action#android.intent.action.MAIN
@@ -427,6 +427,14 @@ category#android.intent.category.LAUNCHER
 ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:157:17-76
 	android:name
 		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:157:27-74
+activity#com.sentongoharuna.pulse.DevelopUgandaNewsroomActivity
+ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:162:9-165:39
+	android:screenOrientation
+		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:164:13-49
+	android:exported
+		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:165:13-37
+	android:name
+		ADDED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml:163:13-58
 uses-sdk
 INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/runner/work/kampala-city-live-/kampala-city-live-/v172-source/app/src/main/AndroidManifest.xml

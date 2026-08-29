@@ -148,7 +148,7 @@
             android:exported="false"/>
 
         <activity
-            android:name=".DevelopUgandaNewsroomActivity"
+            android:name=".DevelopUgandaHomeActivity"
             android:screenOrientation="portrait"
             android:exported="true">
 
@@ -158,5 +158,10 @@
             </intent-filter>
 
         </activity>
+
+        <activity
+            android:name=".DevelopUgandaNewsroomActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
     </application>
 </manifest>

@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 23900
-        versionName = "239.0-professional-camera-hud"
+        versionCode = 24010
+        versionName = "240.1-home-hub-recovery"
     }
 
     buildTypes {

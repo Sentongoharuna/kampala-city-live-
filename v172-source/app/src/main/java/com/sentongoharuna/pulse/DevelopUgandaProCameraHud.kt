@@ -65,6 +65,16 @@ object DevelopUgandaProCameraHud {
         onSettings: () -> Unit,
         onZoomRatio: (Float) -> Unit
     ) {
+        val v240HudEnabled =
+            activity.getSharedPreferences(
+                "develop_uganda_v240_home",
+                android.content.Context.MODE_PRIVATE
+            ).getBoolean(
+                "develop_uganda_v240_enable_v239_hud",
+                false
+            )
+
+        if (!v240HudEnabled) return
         if (root.findViewWithTag<View>(TAG) != null) return
 
         Controller(

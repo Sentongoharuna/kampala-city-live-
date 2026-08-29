@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.sentongoharuna.pulse"
-    android:versionCode="23900"
-    android:versionName="239.0-professional-camera-hud" >
+    android:versionCode="24010"
+    android:versionName="240.1-home-hub-recovery" >
 
     <uses-sdk
         android:minSdkVersion="23"
@@ -144,7 +144,7 @@
             android:exported="false"
             android:screenOrientation="unspecified" />
         <activity
-            android:name="com.sentongoharuna.pulse.DevelopUgandaNewsroomActivity"
+            android:name="com.sentongoharuna.pulse.DevelopUgandaHomeActivity"
             android:exported="true"
             android:screenOrientation="portrait" >
             <intent-filter>
@@ -153,6 +153,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.sentongoharuna.pulse.DevelopUgandaNewsroomActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <service
             android:name="androidx.camera.core.impl.MetadataHolderService"
