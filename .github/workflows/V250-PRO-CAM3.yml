@@ -1,0 +1,164 @@
+name: Build develop.uganda V250 PRO CAM3
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/V250-PRO-CAM3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout full repository history
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install workflow replay helper
+      run: python3 -m pip install --quiet pyyaml
+
+    - name: Replay verified V250 PRO CAM2 source pipeline
+      run: |
+        set -e
+        python3 - <<'PY'
+        from pathlib import Path
+        import os
+        import subprocess
+        import yaml
+
+        root = Path.cwd()
+        source = root / ".github/workflows/V250-PRO-CAM2.yml"
+        if not source.exists():
+            raise SystemExit("V250 PRO CAM2 workflow is missing")
+
+        data = yaml.safe_load(source.read_text(encoding="utf-8"))
+        steps = data["jobs"]["build"]["steps"]
+
+        replayed = 0
+        for step in steps:
+            name = str(step.get("name", ""))
+            if name == "Set up Java 17":
+                break
+
+            command = step.get("run")
+            if not command:
+                continue
+
+            cwd = root
+            working = step.get("working-directory")
+            if working:
+                cwd = root / working
+
+            env = os.environ.copy()
+            for key, value in (step.get("env") or {}).items():
+                env[str(key)] = str(value)
+
+            print(f"REPLAY: {name}", flush=True)
+            subprocess.run(["bash", "-lc", command], cwd=str(cwd), env=env, check=True)
+            replayed += 1
+
+        if replayed < 3:
+            raise SystemExit(f"Unexpectedly replayed only {replayed} CAM2 run steps")
+
+        print(f"PASS: replayed {replayed} verified CAM2 source steps.")
+        PY
+
+    - name: Apply V250 PRO CAM3 clean deck patch
+      run: |
+        set -e
+        echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpzcmMgPSBQYXRoKCd2MTcyLXNvdXJjZS9hcHAvc3JjL21haW4vamF2YS9jb20vc2VudG9uZ29oYXJ1bmEvcHVsc2UnKQpjYW1lcmFfcGF0aCA9IHNyYyAvICdEZXZlbG9wVWdhbmRhQ2FtZXJhQWN0aXZpdHkua3QnCnByb19wYXRoID0gc3JjIC8gJ0RldmVsb3BVZ2FuZGFWMjQyUXVhbGl0eU1hdGNoUHJvLmt0JwpwYW5lbF9wYXRoID0gc3JjIC8gJ0RldmVsb3BVZ2FuZGFWMjQ0Q2luZW1hQ29udHJvbC5rdCcKaG9tZV9wYXRoID0gc3JjIC8gJ0RldmVsb3BVZ2FuZGFHZW5lcmFsSHViQWN0aXZpdHkua3QnCmdyYWRsZV9wYXRoID0gUGF0aCgndjE3Mi1zb3VyY2UvYXBwL2J1aWxkLmdyYWRsZS5rdHMnKQoKCmRlZiByZXBsYWNlX29uY2UodGV4dDogc3RyLCBvbGQ6IHN0ciwgbmV3OiBzdHIsIGxhYmVsOiBzdHIpIC0+IHN0cjoKICAgIGlmIG9sZCBub3QgaW4gdGV4dDoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KGYnQ0FNMyBhbmNob3IgbWlzc2luZzoge2xhYmVsfScpCiAgICByZXR1cm4gdGV4dC5yZXBsYWNlKG9sZCwgbmV3LCAxKQoKY2FtZXJhID0gY2FtZXJhX3BhdGgucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCnBybyA9IHByb19wYXRoLnJlYWRfdGV4dChlbmNvZGluZz0ndXRmLTgnKQpwYW5lbCA9IHBhbmVsX3BhdGgucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCmhvbWUgPSBob21lX3BhdGgucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCmdyYWRsZSA9IGdyYWRsZV9wYXRoLnJlYWRfdGV4dChlbmNvZGluZz0ndXRmLTgnKQoKIyBSZW1vdmUgdGhlIGxhcmdlIGJvdHRvbSBSRVBPUlQgSUQgLyBDSVRJWkVOIHBpbGwgd2hpbGUgcHJlc2VydmluZyB0aGUgaWRlbnRpdHkKIyBvYmplY3QgYW5kIGl0cyByZXBvcnRpbmcgbWV0YWRhdGEvZnVuY3Rpb25zIGVsc2V3aGVyZSBpbiB0aGUgY2FtZXJhLgppZGVudGl0eV9hbmNob3IgPSAnJycgICAgICAgIGJvdHRvbURlY2suYWRkVmlldyhpZGVudGl0eVJvdylcbicnJwppZGVudGl0eV9yZXBsYWNlbWVudCA9ICcnJyAgICAgICAgYm90dG9tRGVjay5hZGRWaWV3KGlkZW50aXR5Um93KVxuICAgICAgICAvLyBWMjUwIFBSTyBDQU0zOiBpZGVudGl0eSByZW1haW5zIGF2YWlsYWJsZSB0byB0aGUgcmVwb3J0aW5nIHN5c3RlbSxcbiAgICAgICAgLy8gYnV0IHRoZSBsYXJnZSBib3R0b20gUkVQT1JUIElEIC8gQ0lUSVpFTiBwaWxsIG5vIGxvbmdlciBvY2N1cGllc1xuICAgICAgICAvLyBzaG9vdGluZyBzcGFjZS4gVGhlIGNvbXBhY3QgSFVEIHJlcG9ydCBpZGVudGl0eSByZW1haW5zIHZpc2libGUuXG4gICAgICAgIGlkZW50aXR5Um93LnZpc2liaWxpdHkgPSBWaWV3LkdPTkVcbicnJwpjYW1lcmEgPSByZXBsYWNlX29uY2UoY2FtZXJhLCBpZGVudGl0eV9hbmNob3IsIGlkZW50aXR5X3JlcGxhY2VtZW50LCAnaWRlbnRpdHkgcm93JykKCiMgWm9vbSBydWxlciBzdGFydHMgaGlkZGVuIGFuZCBpcyB0aGlubmVyL2xvbmdlciBhdCB0aGUgZXh0cmVtZSByaWdodCBlZGdlLgp6b29tX2J1aWxkX29sZCA9ICcnJyAgICAgICAgcHJpdmF0ZSBmdW4gYnVpbGRab29tUnVsZXIoKSB7XG4gICAgICAgICAgICB6b29tUnVsZXIgPSBab29tUnVsZXJWaWV3KGFjdGl2aXR5LCBhY3Rpdml0eSkuYXBwbHkge1xuICAgICAgICAgICAgICAgIHRhZyA9ICJ2MjQyX3pvb21fcnVsZXIiXG4gICAgICAgICAgICB9XG5cbiAgICAgICAgICAgIHJvb3QuYWRkVmlldyhcbiAgICAgICAgICAgICAgICB6b29tUnVsZXIsXG4gICAgICAgICAgICAgICAgRnJhbWVMYXlvdXQuTGF5b3V0UGFyYW1zKFxuICAgICAgICAgICAgICAgICAgICBkcCgzMCksXG4gICAgICAgICAgICAgICAgICAgIGRwKDMwMClcbiAgICAgICAgICAgICAgICApLmFwcGx5IHtcbiAgICAgICAgICAgICAgICAgICAgZ3Jhdml0eSA9IEdyYXZpdHkuRU5EIG9yIEdyYXZpdHkuQk9UVE9NXG4gICAgICAgICAgICAgICAgICAgIHJpZ2h0TWFyZ2luID0gZHAoMSlcbiAgICAgICAgICAgICAgICAgICAgYm90dG9tTWFyZ2luID0gZHAoMjE1KVxuICAgICAgICAgICAgICAgIH1cbiAgICAgICAgICAgIClcbiAgICAgICAgfVxuJycnCnpvb21fYnVpbGRfbmV3ID0gJycnICAgICAgICBwcml2YXRlIGZ1biBidWlsZFpvb21SdWxlcigpIHtcbiAgICAgICAgICAgIHpvb21SdWxlciA9IFpvb21SdWxlclZpZXcoYWN0aXZpdHksIGFjdGl2aXR5KS5hcHBseSB7XG4gICAgICAgICAgICAgICAgdGFnID0gInYyNDJfem9vbV9ydWxlciJcbiAgICAgICAgICAgICAgICB2aXNpYmlsaXR5ID0gVmlldy5HT05FXG4gICAgICAgICAgICB9XG5cbiAgICAgICAgICAgIHJvb3QuYWRkVmlldyhcbiAgICAgICAgICAgICAgICB6b29tUnVsZXIsXG4gICAgICAgICAgICAgICAgRnJhbWVMYXlvdXQuTGF5b3V0UGFyYW1zKFxuICAgICAgICAgICAgICAgICAgICBkcCgyNCksXG4gICAgICAgICAgICAgICAgICAgIGRwKDM2MClcbiAgICAgICAgICAgICAgICApLmFwcGx5IHtcbiAgICAgICAgICAgICAgICAgICAgZ3Jhdml0eSA9IEdyYXZpdHkuRU5EIG9yIEdyYXZpdHkuQk9UVE9NXG4gICAgICAgICAgICAgICAgICAgIHJpZ2h0TWFyZ2luID0gMFxuICAgICAgICAgICAgICAgICAgICBib3R0b21NYXJnaW4gPSBkcCgxOTApXG4gICAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgKVxuICAgICAgICB9XG4nJycKcHJvID0gcmVwbGFjZV9vbmNlKHBybywgem9vbV9idWlsZF9vbGQsIHpvb21fYnVpbGRfbmV3LCAnem9vbSBydWxlciBsYXlvdXQnKQoKIyBDbG9zaW5nIHRoZSBzZXR0aW5ncyBkcmF3ZXIgbXVzdCBub3QgbGVhdmUgdGhlIHpvb20gcnVsZXIgcGVybWFuZW50bHkgdmlzaWJsZS4Kem9vbV9kcmF3ZXJfb2xkID0gJycnICAgICAgICAgICAgICAgIHpvb21SdWxlci5hbHBoYSA9IDBmXG4gICAgICAgICAgICAgICAgem9vbVJ1bGVyLnZpc2liaWxpdHkgPSBWaWV3LlZJU0lCTEVcbiAgICAgICAgICAgICAgICB6b29tUnVsZXIuYW5pbWF0ZSgpLmFscGhhKDFmKS5zZXREdXJhdGlvbigxNTBMKS5zdGFydCgpXG4nJycKem9vbV9kcmF3ZXJfbmV3ID0gJycnICAgICAgICAgICAgICAgIHpvb21SdWxlci5hbmltYXRlKCkuY2FuY2VsKClcbiAgICAgICAgICAgICAgICB6b29tUnVsZXIuYWxwaGEgPSAxZlxuICAgICAgICAgICAgICAgIHpvb21SdWxlci52aXNpYmlsaXR5ID0gVmlldy5HT05FXG4nJycKcHJvID0gcmVwbGFjZV9vbmNlKHBybywgem9vbV9kcmF3ZXJfb2xkLCB6b29tX2RyYXdlcl9uZXcsICdkcmF3ZXIgem9vbSBwZXJzaXN0ZW5jZScpCgojIFJlbW92ZSB0aGUgZGFyayByb3VuZGVkIGNhcHN1bGUuIFRoZSBhY3RpdmUgem9vbSBjb250cm9sIGlzIG5vdyBvbmx5IGEgcnVsZXIsCiMgd2l0aCB0aGUgY3VycmVudCB2YWx1ZSB2aXNpYmxlIGFyb3VuZCB0aGUgY2VudGVyIGFuZCBmYWRlZCB0aWNrcyB0b3dhcmQgdGhlIGVuZHMuCnpvb21fYmdfb2xkID0gJycnICAgICAgICAgICAgYmFja2dyb3VuZCA9IEdyYWRpZW50RHJhd2FibGUoKS5hcHBseSB7XG4gICAgICAgICAgICAgICAgc2hhcGUgPSBHcmFkaWVudERyYXdhYmxlLlJFQ1RBTkdMRVxuICAgICAgICAgICAgICAgIHNldENvbG9yKDB4ODgwMzE4MjkudG9JbnQoKSlcbiAgICAgICAgICAgICAgICBjb3JuZXJSYWRpdXMgPSBkcCgxMikudG9GbG9hdCgpXG4gICAgICAgICAgICAgICAgc2V0U3Ryb2tlKGRwKDEpLCAweDk5NzNCN0Q5LnRvSW50KCkpXG4gICAgICAgICAgICB9XG4nJycKem9vbV9iZ19uZXcgPSAnJycgICAgICAgICAgICBiYWNrZ3JvdW5kID0gbnVsbFxuJycnCnBybyA9IHJlcGxhY2Vfb25jZShwcm8sIHpvb21fYmdfb2xkLCB6b29tX2JnX25ldywgJ3pvb20gY2Fwc3VsZSBiYWNrZ3JvdW5kJykKCiMgU2xpZ2h0bHkgbW92ZSB0aGUgcnVsZXIgbGluZSB0b3dhcmQgdGhlIG91dHNpZGUgZWRnZSBzbyB0aGUgdmlkZW8gaW1hZ2Ugc3RheXMgY2xlYXIuCnBybyA9IHJlcGxhY2Vfb25jZSgKICAgIHBybywKICAgICcgICAgICAgICAgICB2YWwgY3ggPSB3aWR0aCAqIDAuNTZmXG4nLAogICAgJyAgICAgICAgICAgIHZhbCBjeCA9IHdpZHRoICogMC42OGZcbicsCiAgICAnem9vbSBydWxlciB4IHBvc2l0aW9uJwopCgojIFVwZGF0ZSB2aXNpYmxlIGJ1aWxkIGlkZW50aXR5IGFuZCBBbmRyb2lkIHZlcnNpb24uCmNhbWVyYSA9IGNhbWVyYS5yZXBsYWNlKCdWMjUwIFBSTyBDQU0yJywgJ1YyNTAgUFJPIENBTTMnKQpwYW5lbCA9IHBhbmVsLnJlcGxhY2UoJ1YyNTAg4oCiIFBSTyBDQU0yJywgJ1YyNTAg4oCiIFBSTyBDQU0zJykKaG9tZSA9IGhvbWUucmVwbGFjZSgnZGV2ZWxvcC51Z2FuZGEg4oCiIFYyNTAgUFJPIENBTTInLCAnZGV2ZWxvcC51Z2FuZGEg4oCiIFYyNTAgUFJPIENBTTMnKQpncmFkbGUgPSByZXBsYWNlX29uY2UoZ3JhZGxlLCAndmVyc2lvbkNvZGUgPSAyNTAwMicsICd2ZXJzaW9uQ29kZSA9IDI1MDAzJywgJ3ZlcnNpb25Db2RlJykKZ3JhZGxlID0gcmVwbGFjZV9vbmNlKGdyYWRsZSwgJ3ZlcnNpb25OYW1lID0gIjI1MC4yLXByby1jYW0yIicsICd2ZXJzaW9uTmFtZSA9ICIyNTAuMy1wcm8tY2FtMyInLCAndmVyc2lvbk5hbWUnKQoKY2FtZXJhX3BhdGgud3JpdGVfdGV4dChjYW1lcmEsIGVuY29kaW5nPSd1dGYtOCcpCnByb19wYXRoLndyaXRlX3RleHQocHJvLCBlbmNvZGluZz0ndXRmLTgnKQpwYW5lbF9wYXRoLndyaXRlX3RleHQocGFuZWwsIGVuY29kaW5nPSd1dGYtOCcpCmhvbWVfcGF0aC53cml0ZV90ZXh0KGhvbWUsIGVuY29kaW5nPSd1dGYtOCcpCmdyYWRsZV9wYXRoLndyaXRlX3RleHQoZ3JhZGxlLCBlbmNvZGluZz0ndXRmLTgnKQoKcHJpbnQoJ1BBU1M6IFYyNTAgUFJPIENBTTMgcGF0Y2ggYXBwbGllZC4nKQo=' | base64 -d > /tmp/v250_cam3_patch.py
+        python3 -m py_compile /tmp/v250_cam3_patch.py
+        python3 /tmp/v250_cam3_patch.py
+
+        CAMERA="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+        PRO="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaV242QualityMatchPro.kt"
+        PANEL="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaV244CinemaControl.kt"
+        HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaGeneralHubActivity.kt"
+        GRADLE="v172-source/app/build.gradle.kts"
+
+        grep -q 'identityRow.visibility = View.GONE' "$CAMERA"
+        grep -q 'visibility = View.GONE' "$PRO"
+        grep -q 'dp(360)' "$PRO"
+        grep -q 'background = null' "$PRO"
+        grep -q 'V250 PRO CAM3' "$CAMERA"
+        grep -q 'V250 • PRO CAM3' "$PANEL"
+        grep -q 'develop.uganda • V250 PRO CAM3' "$HOME"
+        grep -q 'versionCode = 25003' "$GRADLE"
+        grep -q 'versionName = "250.3-pro-cam3"' "$GRADLE"
+
+        # Protected camera systems must remain present.
+        grep -q 'v249ToggleReporterTags' "$CAMERA"
+        grep -q 'smoothZoomToTarget' "$PRO"
+        grep -q 'v248ShutterTag' "$CAMERA"
+        grep -q 'v247ApplyAdaptiveDetail' "$CAMERA"
+        grep -q 'v246ApplyCinemaImageEngine' "$CAMERA"
+        grep -q 'v245MasterQualityStatus' "$CAMERA"
+        grep -q 'verifyV242GalleryMaster' "$CAMERA"
+
+        echo "PASS: V250 PRO CAM3 verified before Android compilation."
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android platform
+      run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: 8.11.1
+
+    - name: Build V250 PRO CAM3 APK
+      working-directory: v172-source
+      run: |
+        set -o pipefail
+        gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v250-pro-cam3-build.log
+
+    - name: Print compiler errors
+      if: failure()
+      working-directory: v172-source
+      run: |
+        grep -Ein '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)' v250-pro-cam3-build.log | head -5000 || true
+
+    - name: Prepare V250 PRO CAM3 artifacts
+      run: |
+        cp v172-source/app/build/outputs/apk/debug/app-debug.apk DEVELOP-UGANDA-V250-PRO-CAM3.apk
+        cd v172-source
+        zip -qr ../DEVELOP-UGANDA-V250-PRO-CAM3-SOURCE.zip app
+        cd ..
+
+    - name: Upload V250 PRO CAM3 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: DEVELOP-UGANDA-V250-PRO-CAM3
+        path: DEVELOP-UGANDA-V250-PRO-CAM3.apk
+        if-no-files-found: error
+        retention-days: 14
+
+    - name: Upload V250 PRO CAM3 source
+      uses: actions/upload-artifact@v4
+      with:
+        name: DEVELOP-UGANDA-V250-PRO-CAM3-SOURCE
+        path: DEVELOP-UGANDA-V250-PRO-CAM3-SOURCE.zip
+        if-no-files-found: error
+        retention-days: 14
+
+    - name: Upload V250 PRO CAM3 build log if needed
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: V250-PRO-CAM3-BUILD-LOG
+        path: v172-source/v250-pro-cam3-build.log
+        if-no-files-found: warn
+        retention-days: 7
