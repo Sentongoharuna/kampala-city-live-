@@ -919,6 +919,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         horizonGuardView =
             TextView(this).apply {
+                tag = "v239_legacy_horizon"
                 text =
                     "━━━━━━━━  LEVEL --  ━━━━━━━━"
 
@@ -957,6 +958,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         motionGuardView =
             TextView(this).apply {
+                tag = "v239_legacy_motion"
                 text =
                     "STEADYSHOT • --"
 
@@ -1016,6 +1018,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         lightAdvisorView =
             TextView(this).apply {
+                tag = "v239_legacy_light"
                 text =
                     "LIGHT • SENSOR --"
 
@@ -1075,6 +1078,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         audioGuardView =
             TextView(this).apply {
+                tag = "v239_legacy_audio"
                 text =
                     "AUDIO • MIC READY"
 
@@ -1134,6 +1138,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         thermalGuardView =
             TextView(this).apply {
+                tag = "v239_legacy_thermal"
                 text =
                     "THERMAL • NORMAL"
 
@@ -1197,6 +1202,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         // and every narration line remain inside the visible camera screen.
         previewNarrationPanel =
             LinearLayout(this).apply {
+                tag = "v239_legacy_narration"
                 orientation =
                     LinearLayout.VERTICAL
 
@@ -1226,7 +1232,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             hud(
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V238"
+                    "V239"
                 ),
                 13.8f,
                 0xFFD8B85B.toInt(),
@@ -2119,6 +2125,45 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             activity = this,
             root = root,
             role = DevelopUgandaOperatorExperience.Role.REPORT
+        )
+        DevelopUgandaProCameraHud.attach(
+            activity = this,
+            root = root,
+            previewView = previewView,
+            tcProvider = { tc() },
+            formatProvider = { DevelopUgandaFieldIntelligencePanel.activeFormatLabel(this) },
+            qualityProvider = { qualityDeckLabel() },
+            fpsProvider = { activeVideoFpsLabel },
+            lensProvider = { currentLensDeckLabel() },
+            exposureProvider = {
+                camera?.cameraInfo?.exposureState?.exposureCompensationIndex ?: sceneExposureTarget
+            },
+            zoomProvider = {
+                camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: 1f
+            },
+            minZoomProvider = {
+                camera?.cameraInfo?.zoomState?.value?.minZoomRatio ?: 1f
+            },
+            maxZoomProvider = {
+                camera?.cameraInfo?.zoomState?.value?.maxZoomRatio ?: 1f
+            },
+            audioProvider = { Pair(audioAmplitude, audioPeakAmplitude) },
+            focusProvider = { focusAssistLabel() },
+            lockProvider = { operatorLocked },
+            onFocusToggle = {
+                val x = previewView.width.coerceAtLeast(1) / 2f
+                val y = previewView.height.coerceAtLeast(1) / 2f
+                togglePersistentFocusLock(x, y)
+            },
+            onLockToggle = { toggleReportOperatorLock() },
+            onAutoReset = { resetReportCameraSettings() },
+            onSettings = { showReportDetailedSettings() },
+            onZoomRatio = { ratio ->
+                try {
+                    camera?.cameraControl?.setZoomRatio(ratio)
+                } catch (_: Exception) {
+                }
+            }
         )
         sceneButton.setOnTouchListener(
             DeckTouchListener(ACTION_SCENE)
@@ -3752,7 +3797,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V238"
+                            "V239"
                         )
                         put(
                             "camera_engine",
@@ -5563,7 +5608,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             previewBrandView.text =
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V238"
+                    "V239"
                 )
         }
 
@@ -7535,7 +7580,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             drawFitText(
                 c,
-                "${sceneTag()} • V238",
+                "${sceneTag()} • V239",
                 safeLeft,
                 y,
                 maxWidth,
@@ -7656,7 +7701,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
         ) {
             stateParts.add(
-                "V238"
+                "V239"
             )
         }
 
@@ -10449,7 +10494,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             ::previewNarrationPanel.isInitialized
         ) {
             previewTagView.text =
-                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V238"
+                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V239"
 
             previewIdentityView.text =
                 "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}"

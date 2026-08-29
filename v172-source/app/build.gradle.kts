@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 23800
-        versionName = "238.0-operator-experience-pro"
+        versionCode = 23900
+        versionName = "239.0-professional-camera-hud"
     }
 
     buildTypes {
