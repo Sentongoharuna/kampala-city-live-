@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.sentongoharuna.pulse"
-    android:versionCode="23700"
-    android:versionName="237.0-adaptive-multiformat-ui" >
+    android:versionCode="23800"
+    android:versionName="238.0-operator-experience-pro" >
 
     <uses-sdk
         android:minSdkVersion="23"

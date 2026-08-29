@@ -1226,7 +1226,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             hud(
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V237"
+                    "V238"
                 ),
                 13.8f,
                 0xFFD8B85B.toInt(),
@@ -1975,6 +1975,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             wrap(48, 28)
         )
         zoomSeek = SeekBar(this).apply {
+            tag = "v238_zoom_seek"
             max = 100
         }
         zoomRow.addView(
@@ -1998,6 +1999,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             wrap(48, 28)
         )
         exposureSeek = SeekBar(this).apply {
+            tag = "v238_exposure_seek"
             max = 12
             progress = 6
         }
@@ -2112,6 +2114,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             activity = this,
             root = root,
             role = DevelopUgandaAdaptiveFormatUi.Role.REPORT
+        )
+        DevelopUgandaOperatorExperience.attach(
+            activity = this,
+            root = root,
+            role = DevelopUgandaOperatorExperience.Role.REPORT
         )
         sceneButton.setOnTouchListener(
             DeckTouchListener(ACTION_SCENE)
@@ -3745,7 +3752,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V237"
+                            "V238"
                         )
                         put(
                             "camera_engine",
@@ -5556,7 +5563,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             previewBrandView.text =
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V237"
+                    "V238"
                 )
         }
 
@@ -7528,7 +7535,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             drawFitText(
                 c,
-                "${sceneTag()} • V237",
+                "${sceneTag()} • V238",
                 safeLeft,
                 y,
                 maxWidth,
@@ -7649,7 +7656,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
         ) {
             stateParts.add(
-                "V237"
+                "V238"
             )
         }
 
@@ -10442,7 +10449,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             ::previewNarrationPanel.isInitialized
         ) {
             previewTagView.text =
-                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V237"
+                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V238"
 
             previewIdentityView.text =
                 "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}"

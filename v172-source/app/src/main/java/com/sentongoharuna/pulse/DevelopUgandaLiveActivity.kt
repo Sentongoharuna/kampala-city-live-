@@ -680,7 +680,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             label(
                 DevelopUgandaBrandMetadataStore.previewTitle(
                     this,
-                    "V237"
+                    "V238"
                 ),
                 20f,
                 amber,
@@ -1536,6 +1536,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             activity = this,
             root = root,
             role = DevelopUgandaAdaptiveFormatUi.Role.LIVE
+        )
+        DevelopUgandaOperatorExperience.attach(
+            activity = this,
+            root = root,
+            role = DevelopUgandaOperatorExperience.Role.LIVE
         )
     }
 
@@ -2644,7 +2649,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             val buildText =
-                "V237"
+                "V238"
 
             val buildLeft =
                 if (
@@ -3237,7 +3242,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             statusParts.add(
-                "V237"
+                "V238"
             )
         }
 
@@ -3494,7 +3499,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         ) {
             lowerParts.add(
-                "V237"
+                "V238"
             )
         }
 

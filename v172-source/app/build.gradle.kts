@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 23700
-        versionName = "237.0-adaptive-multiformat-ui"
+        versionCode = 23800
+        versionName = "238.0-operator-experience-pro"
     }
 
     buildTypes {
