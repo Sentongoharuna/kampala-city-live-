@@ -1,0 +1,1013 @@
+name: Build develop.uganda V241 Cinema Pro
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/V241-CINEMA-PRO-BUILD.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore verified V238 master camera
+        run: |
+          set -e
+          V238_COMMIT="394049029eca20367cab1ce9628fc1dbe489dd7a"
+          git restore --source="$V238_COMMIT" --staged --worktree v172-source/app
+          rm -rf v172-source/app/build
+          rm -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaDfv238CameraShell.kt
+
+          grep -q 'versionCode = 23800' v172-source/app/build.gradle.kts
+          grep -q 'versionName = "238.0-operator-experience-pro"' v172-source/app/build.gradle.kts
+
+          echo "PASS: exact verified V238 camera restored."
+
+      - name: Fingerprint protected LUT engine
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          protected = [
+              "DevelopUgandaColorEngine.kt",
+              "DevelopUgandaColorTuner.kt",
+              "DevelopUgandaEverydayColorMixer.kt",
+              "DevelopUgandaNavySheet.kt",
+          ]
+
+          data = {
+              name: hashlib.sha256((src / name).read_bytes()).hexdigest()
+              for name in protected
+          }
+          Path("/tmp/v241-lut-lock.json").write_text(
+              json.dumps(data, indent=2),
+              encoding="utf-8"
+          )
+          print("PASS: V235 LUT engine locked.")
+          PY
+
+      - name: Apply dfv238 safe camera format
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          SRC = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          CAMERA = SRC / "DevelopUgandaCameraActivity.kt"
+          OP = SRC / "DevelopUgandaOperatorExperience.kt"
+          ADAPT = SRC / "DevelopUgandaAdaptiveFormatUi.kt"
+          LUT = SRC / "DevelopUgandaLiveGradePanel.kt"
+          FIELD = SRC / "DevelopUgandaFieldIntelligencePanel.kt"
+
+          # LUT button wording only. No LUT algorithm changes.
+          text = LUT.read_text(encoding="utf-8")
+          text = text.replace(
+              'text = "GRADE • V235\\nMIX ▸"',
+              'text = "LUTS • V235\\nMIX ▸"'
+          )
+          text = text.replace(
+              '"GRADE • ${selection.strength}%\\n${name.take(12)} ▸"',
+              '"LUTS • ${selection.strength}%\\n${name.take(12)} ▸"'
+          )
+          if "LUTS •" not in text:
+              raise SystemExit("V241: LUTS label not applied")
+          LUT.write_text(text, encoding="utf-8")
+
+          # Keep real V236 aspect/format function.
+          text = FIELD.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r'"\$\{if \(format\.landscape\) "16:9" else format\.id\.substringAfter\(\'_\'\)\.replace\(\'_\', \':\'\)\} • '
+              r'\$\{if \(format\.dualSafe\) "DUAL" else "LOCK"\}\\nSAT \$satUsed/\$satVisible • \$level"'
+          )
+          replacement = (
+              '"ASPECT • ${if (format.landscape) "16:9" else '
+              'format.id.substringAfter(\'_\').replace(\'_\', \':\')} • '
+              '${if (format.dualSafe) "DUAL" else "LOCK"}\\n'
+              'SAT $satUsed/$satVisible • $level"'
+          )
+          text, n_aspect = pattern.subn(replacement, text, count=1)
+          if n_aspect != 1 or "ASPECT •" not in text:
+              raise SystemExit("V241: verified V238 aspect label not found")
+          FIELD.write_text(text, encoding="utf-8")
+
+          # LUTS top-left, ASPECT top-right.
+          text = ADAPT.read_text(encoding="utf-8")
+          text, n1 = re.subn(
+              r'(placeChip\(\s*FIELD_CHIP_TAG,\s*start\s*=\s*)true(\s*,)',
+              r'\1false\2',
+              text,
+              count=1
+          )
+          text, n2 = re.subn(
+              r'(placeChip\(\s*GRADE_CHIP_TAG,\s*start\s*=\s*)false(\s*,)',
+              r'\1true\2',
+              text,
+              count=1
+          )
+          text, n3 = re.subn(
+              r'lp\.gravity\s*=\s*\(if \(start\) Gravity\.START else Gravity\.END\) or Gravity\.CENTER_VERTICAL',
+              'lp.gravity = Gravity.TOP or (if (start) Gravity.START else Gravity.END)',
+              text,
+              count=1
+          )
+          text, n4 = re.subn(
+              r'lp\.topMargin\s*=\s*0',
+              'lp.topMargin = dp(if (landscape) 8 else 10)',
+              text,
+              count=1
+          )
+          if (n1, n2, n3, n4) != (1, 1, 1, 1):
+              raise SystemExit(f"V241 adaptive patch counts: {(n1,n2,n3,n4)}")
+          ADAPT.write_text(text, encoding="utf-8")
+
+          # V238 Clean View can hide other HUD, but never LUTS or ASPECT.
+          text = OP.read_text(encoding="utf-8")
+          text, n5 = re.subn(
+              r'(root\.findViewWithTag<View>\(FIELD_CHIP_TAG\)\?\.let\s*\{\s*)fieldBaseline\s*=\s*it\.visibility\s*it\.visibility\s*=\s*View\.GONE(\s*\})',
+              r'\1fieldBaseline = View.VISIBLE\n                    it.visibility = View.VISIBLE\2',
+              text,
+              count=1
+          )
+          text, n6 = re.subn(
+              r'(root\.findViewWithTag<View>\(GRADE_CHIP_TAG\)\?\.let\s*\{\s*)gradeBaseline\s*=\s*it\.visibility\s*it\.visibility\s*=\s*View\.GONE(\s*\})',
+              r'\1gradeBaseline = View.VISIBLE\n                    it.visibility = View.VISIBLE\2',
+              text,
+              count=1
+          )
+
+          # Move SHOT READY away from top-right.
+          text, n7 = re.subn(
+              r'gravity\s*=\s*Gravity\.TOP or Gravity\.END\s*\n\s*topMargin\s*=\s*dp\(7\)\s*\n\s*rightMargin\s*=\s*dp\(8\)',
+              'gravity = Gravity.END or Gravity.CENTER_VERTICAL\n                    topMargin = 0\n                    rightMargin = dp(8)',
+              text,
+              count=1
+          )
+          if (n5, n6, n7) != (1, 1, 1):
+              raise SystemExit(f"V241 operator patch counts: {(n5,n6,n7)}")
+          OP.write_text(text, encoding="utf-8")
+
+          # Cinema-oriented initial defaults. Existing user controls can change them.
+          camera = CAMERA.read_text(encoding="utf-8")
+          camera = camera.replace(
+              "private var sceneIndex = 0",
+              "private var sceneIndex = 2",
+              1
+          )
+          camera = camera.replace(
+              "private var qualityIndex = 0",
+              "private var qualityIndex = 2",
+              1
+          )
+          camera = camera.replace(
+              "private var reportPresetIndex = 0",
+              "private var reportPresetIndex = 5",
+              1
+          )
+          CAMERA.write_text(camera, encoding="utf-8")
+
+          print("PASS: dfv238 working format + V241 cinema defaults applied.")
+          PY
+
+      - name: Add V241 Pro Settings and zoom ruler
+        run: |
+          set -e
+          cat > v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaV241CinemaPro.kt <<'KOTLIN'
+          package com.sentongoharuna.pulse
+
+          import android.graphics.Canvas
+          import android.graphics.Color
+          import android.graphics.Paint
+          import android.graphics.Typeface
+          import android.graphics.drawable.GradientDrawable
+          import android.os.Handler
+          import android.os.Looper
+          import android.view.Gravity
+          import android.view.HapticFeedbackConstants
+          import android.view.MotionEvent
+          import android.view.View
+          import android.view.ViewGroup
+          import android.widget.Button
+          import android.widget.FrameLayout
+          import android.widget.LinearLayout
+          import android.widget.ScrollView
+          import android.widget.SeekBar
+          import android.widget.TextView
+          import android.widget.Toast
+          import androidx.appcompat.app.AppCompatActivity
+          import kotlin.math.roundToInt
+
+          /**
+           * V241 Cinema Pro operator layer.
+           *
+           * It never replaces or re-parents the CameraX preview.
+           * It uses the existing V238 buttons and the existing real zoom SeekBar.
+           */
+          object DevelopUgandaV241CinemaPro {
+
+              private const val TAG = "develop_uganda_v241_cinema_pro"
+              private const val LUT_TAG = "develop_uganda_v235_live_grade_panel"
+              private const val ASPECT_TAG = "develop_uganda_v236_field_intelligence"
+              private const val TOOLS_TAG = "develop_uganda_v233_tools_chip"
+              private const val ZOOM_TAG = "v238_zoom_seek"
+
+              fun attach(
+                  activity: AppCompatActivity,
+                  root: FrameLayout
+              ) {
+                  if (root.findViewWithTag<View>(TAG) != null) return
+                  Controller(activity, root).attach()
+              }
+
+              private class Controller(
+                  private val activity: AppCompatActivity,
+                  private val root: FrameLayout
+              ) {
+                  private val handler = Handler(Looper.getMainLooper())
+                  private lateinit var marker: View
+                  private lateinit var settingsTab: Button
+                  private lateinit var drawer: LinearLayout
+                  private lateinit var scrim: View
+                  private lateinit var zoomRuler: ZoomRulerView
+
+                  private val tick = object : Runnable {
+                      override fun run() {
+                          if (activity.isFinishing || activity.isDestroyed) return
+
+                          root.findViewWithTag<View>(TOOLS_TAG)?.visibility = View.GONE
+                          root.findViewWithTag<View>("v237_camera_zoom_row")?.visibility = View.GONE
+                          root.findViewWithTag<View>(LUT_TAG)?.visibility = View.VISIBLE
+                          root.findViewWithTag<View>(ASPECT_TAG)?.visibility = View.VISIBLE
+
+                          zoomRuler.syncFromSeek()
+                          handler.postDelayed(this, 250L)
+                      }
+                  }
+
+                  fun attach() {
+                      marker = View(activity).apply {
+                          tag = TAG
+                          visibility = View.GONE
+                      }
+                      root.addView(marker, FrameLayout.LayoutParams(1, 1))
+
+                      buildScrim()
+                      buildDrawer()
+                      buildSettingsTab()
+                      buildZoomRuler()
+
+                      marker.addOnAttachStateChangeListener(
+                          object : View.OnAttachStateChangeListener {
+                              override fun onViewAttachedToWindow(v: View) = Unit
+                              override fun onViewDetachedFromWindow(v: View) {
+                                  handler.removeCallbacksAndMessages(null)
+                              }
+                          }
+                      )
+
+                      handler.post(tick)
+                  }
+
+                  private fun buildScrim() {
+                      scrim = View(activity).apply {
+                          setBackgroundColor(0x55000000)
+                          visibility = View.GONE
+                          setOnClickListener { setDrawer(false) }
+                      }
+
+                      root.addView(
+                          scrim,
+                          FrameLayout.LayoutParams(
+                              ViewGroup.LayoutParams.MATCH_PARENT,
+                              ViewGroup.LayoutParams.MATCH_PARENT
+                          )
+                      )
+                  }
+
+                  private fun buildSettingsTab() {
+                      settingsTab = proButton("PRO\nSETTINGS ▸").apply {
+                          tag = "v241_settings_tab"
+                          setOnClickListener { setDrawer(true) }
+                      }
+
+                      root.addView(
+                          settingsTab,
+                          FrameLayout.LayoutParams(
+                              dp(92),
+                              dp(52)
+                          ).apply {
+                              gravity = Gravity.END or Gravity.TOP
+                              topMargin = dp(78)
+                              rightMargin = dp(7)
+                          }
+                      )
+                  }
+
+                  private fun buildDrawer() {
+                      drawer = LinearLayout(activity).apply {
+                          tag = "v241_settings_drawer"
+                          orientation = LinearLayout.VERTICAL
+                          setPadding(dp(11), dp(12), dp(11), dp(10))
+                          background = rounded(
+                              0xFA031829.toInt(),
+                              0xFF73B7D9.toInt(),
+                              18
+                          )
+                          visibility = View.GONE
+                          elevation = dp(18).toFloat()
+                      }
+
+                      val header = LinearLayout(activity).apply {
+                          orientation = LinearLayout.HORIZONTAL
+                          gravity = Gravity.CENTER_VERTICAL
+                      }
+
+                      header.addView(
+                          TextView(activity).apply {
+                              text = "V241 • CINEMA PRO SETTINGS"
+                              textSize = 11f
+                              setTextColor(Color.WHITE)
+                              typeface = Typeface.DEFAULT_BOLD
+                          },
+                          LinearLayout.LayoutParams(
+                              0,
+                              ViewGroup.LayoutParams.WRAP_CONTENT,
+                              1f
+                          )
+                      )
+
+                      header.addView(
+                          proButton("CLOSE ×").apply {
+                              setOnClickListener { setDrawer(false) }
+                          },
+                          LinearLayout.LayoutParams(dp(82), dp(44))
+                      )
+                      drawer.addView(header)
+
+                      drawer.addView(
+                          TextView(activity).apply {
+                              text =
+                                  "Movie-oriented master controls • V235 LUT engine protected • " +
+                                  "4K UHD uses the real V238 CameraX master profile. " +
+                                  "8K is never faked and remains device/encoder dependent."
+                              textSize = 7.8f
+                              setTextColor(0xFFB8CBD6.toInt())
+                              setPadding(0, dp(5), 0, dp(9))
+                          }
+                      )
+
+                      val body = LinearLayout(activity).apply {
+                          orientation = LinearLayout.VERTICAL
+                      }
+
+                      addSection(body, "MASTER OUTPUT")
+                      body.addView(
+                          settingButton(
+                              "4K MASTER / QUALITY",
+                              "Open MASTER UHD, UHD 60, HDR and the other real capability-driven profiles."
+                          ) {
+                              triggerTag("v237_quality_button")
+                          }
+                      )
+                      body.addView(
+                          settingButton(
+                              "8K MAX • CHECK DEVICE",
+                              "No fake 8K. Check the camera capabilities before attempting an 8K pipeline."
+                          ) {
+                              if (!triggerText("CAMERA", "CAPS")) {
+                                  Toast.makeText(
+                                      activity,
+                                      "8K needs real phone camera and encoder support. V241 uses true 4K UHD when 8K is unavailable.",
+                                      Toast.LENGTH_LONG
+                                  ).show()
+                              }
+                          }
+                      )
+                      body.addView(
+                          settingButton(
+                              "CINEMA / MOVIE SCENE",
+                              "Choose CINEMA, MOVIE, DOCUMENTARY, INTERVIEW or REPORTER."
+                          ) {
+                              triggerTag("v237_scene_button")
+                          }
+                      )
+
+                      addSection(body, "IMAGE + COLOR")
+                      body.addView(
+                          settingButton(
+                              "LUTS / COLOR GRADE",
+                              "Protected V235 LUT mixer • strength + scene palette + everyday color controls."
+                          ) {
+                              triggerTag(LUT_TAG)
+                          }
+                      )
+                      body.addView(
+                          settingButton(
+                              "ASPECT / FORMAT",
+                              "9:16, 16:9, 4:5, 1:1, cinema 2.39:1 and dual-safe."
+                          ) {
+                              triggerTag(ASPECT_TAG)
+                          }
+                      )
+
+                      addSection(body, "CAMERA CONTROL")
+                      body.addView(
+                          settingButton(
+                              "FULL CAMERA TOOLS",
+                              "All original V238 tools remain available here, off the shooting frame."
+                          ) {
+                              triggerTag(TOOLS_TAG)
+                          }
+                      )
+                      body.addView(
+                          settingButton(
+                              "SHOT ASSIST / FOCUS",
+                              "Focus assist, peak and zebra tools when available."
+                          ) {
+                              triggerText("ASSIST")
+                          }
+                      )
+                      body.addView(
+                          settingButton(
+                              "GUIDES",
+                              "Composition and framing guides."
+                          ) {
+                              triggerText("GUIDES")
+                          }
+                      )
+                      body.addView(
+                          settingButton(
+                              "DETAILED CAMERA SETTINGS",
+                              "Open the existing V238 detailed settings."
+                          ) {
+                              triggerText("SETTINGS")
+                          }
+                      )
+
+                      addSection(body, "SAFETY + RESET")
+                      body.addView(
+                          settingButton(
+                              "CAMERA HEALTH",
+                              "Thermal, battery, storage, microphone, GPS and recording-health checks."
+                          ) {
+                              triggerText("HEALTH")
+                          }
+                      )
+                      body.addView(
+                          settingButton(
+                              "RESET CAMERA",
+                              "Return adjustable camera controls to their safe defaults."
+                          ) {
+                              triggerText("RESET")
+                          }
+                      )
+
+                      val scroll = ScrollView(activity).apply {
+                          isFillViewport = false
+                          addView(
+                              body,
+                              ViewGroup.LayoutParams(
+                                  ViewGroup.LayoutParams.MATCH_PARENT,
+                                  ViewGroup.LayoutParams.WRAP_CONTENT
+                              )
+                          )
+                      }
+
+                      drawer.addView(
+                          scroll,
+                          LinearLayout.LayoutParams(
+                              ViewGroup.LayoutParams.MATCH_PARENT,
+                              0,
+                              1f
+                          )
+                      )
+
+                      drawer.addView(
+                          TextView(activity).apply {
+                              text =
+                                  "V241 starts from CINEMA + MASTER UHD when no saved user preference overrides it. " +
+                                  "Use the frame-rate profile actually supported by the device for cinema motion."
+                              textSize = 7.2f
+                              setTextColor(0xFF91B6A0.toInt())
+                              typeface = Typeface.DEFAULT_BOLD
+                              setPadding(0, dp(7), 0, 0)
+                          }
+                      )
+
+                      val width =
+                          (activity.resources.displayMetrics.widthPixels * 0.84f)
+                              .toInt()
+                              .coerceAtMost(dp(410))
+
+                      root.addView(
+                          drawer,
+                          FrameLayout.LayoutParams(
+                              width,
+                              ViewGroup.LayoutParams.MATCH_PARENT
+                          ).apply {
+                              gravity = Gravity.END
+                              topMargin = dp(4)
+                              bottomMargin = dp(4)
+                              rightMargin = dp(4)
+                          }
+                      )
+                  }
+
+                  private fun buildZoomRuler() {
+                      zoomRuler = ZoomRulerView(activity, root).apply {
+                          tag = "v241_zoom_ruler"
+                      }
+
+                      root.addView(
+                          zoomRuler,
+                          FrameLayout.LayoutParams(
+                              dp(70),
+                              dp(380)
+                          ).apply {
+                              gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                              rightMargin = dp(5)
+                              topMargin = dp(72)
+                          }
+                      )
+                  }
+
+                  private fun setDrawer(open: Boolean) {
+                      drawer.visibility = if (open) View.VISIBLE else View.GONE
+                      scrim.visibility = if (open) View.VISIBLE else View.GONE
+                      settingsTab.visibility = if (open) View.GONE else View.VISIBLE
+                      zoomRuler.visibility = if (open) View.GONE else View.VISIBLE
+
+                      if (open) drawer.bringToFront()
+                  }
+
+                  private fun addSection(
+                      host: LinearLayout,
+                      title: String
+                  ) {
+                      host.addView(
+                          TextView(activity).apply {
+                              text = title
+                              textSize = 7.8f
+                              setTextColor(0xFFD0B06F.toInt())
+                              typeface = Typeface.DEFAULT_BOLD
+                              setPadding(0, dp(9), 0, dp(4))
+                          }
+                      )
+                  }
+
+                  private fun settingButton(
+                      title: String,
+                      detail: String,
+                      action: () -> Unit
+                  ): LinearLayout {
+                      val row = LinearLayout(activity).apply {
+                          orientation = LinearLayout.VERTICAL
+                          setPadding(dp(10), dp(8), dp(10), dp(8))
+                          background = rounded(
+                              0xEE092236.toInt(),
+                              0xFF456983.toInt(),
+                              14
+                          )
+                          isClickable = true
+                          isFocusable = true
+                          setOnClickListener {
+                              action()
+                              setDrawer(false)
+                          }
+                      }
+
+                      row.addView(
+                          TextView(activity).apply {
+                              text = title
+                              textSize = 8.5f
+                              setTextColor(Color.WHITE)
+                              typeface = Typeface.DEFAULT_BOLD
+                          }
+                      )
+                      row.addView(
+                          TextView(activity).apply {
+                              text = detail
+                              textSize = 7f
+                              setTextColor(0xFFB6C4CE.toInt())
+                              setPadding(0, dp(2), 0, 0)
+                          }
+                      )
+
+                      row.layoutParams =
+                          LinearLayout.LayoutParams(
+                              ViewGroup.LayoutParams.MATCH_PARENT,
+                              ViewGroup.LayoutParams.WRAP_CONTENT
+                          ).apply {
+                              bottomMargin = dp(5)
+                          }
+
+                      return row
+                  }
+
+                  private fun triggerTag(tag: String): Boolean {
+                      val view = root.findViewWithTag<View>(tag) ?: return false
+                      view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                      return view.performClick()
+                  }
+
+                  private fun triggerText(vararg words: String): Boolean {
+                      val wanted = words.map { it.uppercase() }
+                      var found: Button? = null
+
+                      fun walk(view: View) {
+                          if (found != null) return
+
+                          if (view is Button) {
+                              val value = view.text?.toString()?.uppercase() ?: ""
+                              if (wanted.all { value.contains(it) }) {
+                                  found = view
+                                  return
+                              }
+                          }
+
+                          if (view is ViewGroup) {
+                              for (i in 0 until view.childCount) {
+                                  walk(view.getChildAt(i))
+                                  if (found != null) return
+                              }
+                          }
+                      }
+
+                      walk(root)
+                      val button = found ?: return false
+                      button.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                      return button.performClick()
+                  }
+
+                  private fun proButton(value: String): Button =
+                      Button(activity).apply {
+                          text = value
+                          textSize = 7.8f
+                          isAllCaps = false
+                          typeface = Typeface.DEFAULT_BOLD
+                          setTextColor(Color.WHITE)
+                          setPadding(dp(5), 0, dp(5), 0)
+                          background = rounded(
+                              0xF0031829.toInt(),
+                              0xFF73B7D9.toInt(),
+                              16
+                          )
+                      }
+
+                  private fun rounded(
+                      fill: Int,
+                      stroke: Int,
+                      radius: Int
+                  ): GradientDrawable =
+                      GradientDrawable().apply {
+                          shape = GradientDrawable.RECTANGLE
+                          setColor(fill)
+                          cornerRadius = dp(radius).toFloat()
+                          setStroke(dp(1), stroke)
+                      }
+
+                  private fun dp(value: Int): Int =
+                      (value * activity.resources.displayMetrics.density).toInt()
+              }
+
+              private class ZoomRulerView(
+                  context: android.content.Context,
+                  private val root: FrameLayout
+              ) : View(context) {
+
+                  private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+                  private val major = Paint(Paint.ANTI_ALIAS_FLAG)
+                  private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+                  private var normalized = 0f
+
+                  init {
+                      paint.color = 0xFFB7CBD8.toInt()
+                      paint.strokeWidth = dp(1).toFloat()
+
+                      major.color = 0xFFF1F5F8.toInt()
+                      major.strokeWidth = dp(2).toFloat()
+
+                      textPaint.color = Color.WHITE
+                      textPaint.textSize = dp(8).toFloat()
+                      textPaint.typeface = Typeface.DEFAULT_BOLD
+
+                      background = GradientDrawable().apply {
+                          shape = GradientDrawable.RECTANGLE
+                          setColor(0xB8031829.toInt())
+                          cornerRadius = dp(18).toFloat()
+                          setStroke(dp(1), 0xFF73B7D9.toInt())
+                      }
+
+                      isClickable = true
+                      isFocusable = true
+                      setPadding(dp(4), dp(9), dp(4), dp(9))
+                  }
+
+                  fun syncFromSeek() {
+                      val seek =
+                          root.findViewWithTag<View>(ZOOM_TAG) as? SeekBar
+                              ?: return
+                      val maxValue = seek.max.coerceAtLeast(1)
+                      normalized =
+                          (seek.progress.toFloat() / maxValue.toFloat())
+                              .coerceIn(0f, 1f)
+                      invalidate()
+                  }
+
+                  override fun onDraw(canvas: Canvas) {
+                      super.onDraw(canvas)
+
+                      val centerX = width * 0.46f
+                      val top = dp(34).toFloat()
+                      val bottom = height - dp(34).toFloat()
+                      val range = (bottom - top).coerceAtLeast(1f)
+
+                      canvas.drawLine(centerX, top, centerX, bottom, paint)
+
+                      for (i in 0..20) {
+                          val y = bottom - range * (i / 20f)
+                          val isMajor = i % 5 == 0
+                          val len = if (isMajor) dp(18) else dp(9)
+
+                          canvas.drawLine(
+                              centerX - len,
+                              y,
+                              centerX + dp(3),
+                              y,
+                              if (isMajor) major else paint
+                          )
+                      }
+
+                      val markerY = bottom - range * normalized
+                      canvas.drawLine(
+                          dp(6).toFloat(),
+                          markerY,
+                          width - dp(6).toFloat(),
+                          markerY,
+                          major
+                      )
+
+                      textPaint.textAlign = Paint.Align.CENTER
+                      canvas.drawText("MAX", centerX, dp(18).toFloat(), textPaint)
+                      canvas.drawText("1×", centerX, height - dp(10).toFloat(), textPaint)
+
+                      val pct = (normalized * 100f).roundToInt()
+                      canvas.drawText(
+                          "$pct%",
+                          centerX,
+                          (markerY - dp(7)).coerceAtLeast(dp(28).toFloat()),
+                          textPaint
+                      )
+                  }
+
+                  override fun onTouchEvent(event: MotionEvent): Boolean {
+                      when (event.actionMasked) {
+                          MotionEvent.ACTION_DOWN,
+                          MotionEvent.ACTION_MOVE -> {
+                              val seek =
+                                  root.findViewWithTag<View>(ZOOM_TAG) as? SeekBar
+                                      ?: return false
+
+                              val top = dp(34).toFloat()
+                              val bottom = height - dp(34).toFloat()
+                              val usable = (bottom - top).coerceAtLeast(1f)
+                              val n =
+                                  (1f - ((event.y - top) / usable))
+                                      .coerceIn(0f, 1f)
+
+                              val next =
+                                  (n * seek.max.coerceAtLeast(1))
+                                      .roundToInt()
+                                      .coerceIn(0, seek.max)
+
+                              if (seek.progress != next) {
+                                  val maxValue = seek.max.coerceAtLeast(1)
+                                  val beforeBucket = (seek.progress * 4) / maxValue
+                                  val afterBucket = (next * 4) / maxValue
+
+                                  seek.progress = next
+                                  normalized = n
+
+                                  if (beforeBucket != afterBucket) {
+                                      performHapticFeedback(
+                                          HapticFeedbackConstants.CLOCK_TICK
+                                      )
+                                  }
+                                  invalidate()
+                              }
+                              return true
+                          }
+
+                          MotionEvent.ACTION_UP,
+                          MotionEvent.ACTION_CANCEL -> {
+                              performClick()
+                              return true
+                          }
+                      }
+
+                      return super.onTouchEvent(event)
+                  }
+
+                  override fun performClick(): Boolean {
+                      super.performClick()
+                      return true
+                  }
+
+                  private fun dp(value: Int): Int =
+                      (value * resources.displayMetrics.density).toInt()
+              }
+          }
+          KOTLIN
+
+      - name: Attach V241 without replacing camera preview
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          camera_path = src / "DevelopUgandaCameraActivity.kt"
+          story_path = src / "DevelopUgandaStoryPackager.kt"
+          gradle_path = Path("v172-source/app/build.gradle.kts")
+
+          camera = camera_path.read_text(encoding="utf-8")
+
+          pattern = re.compile(
+              r'(\s*DevelopUgandaOperatorExperience\.attach\(\s*'
+              r'activity\s*=\s*this,\s*'
+              r'root\s*=\s*root,\s*'
+              r'role\s*=\s*DevelopUgandaOperatorExperience\.Role\.REPORT\s*'
+              r'\))',
+              re.S
+          )
+
+          match = pattern.search(camera)
+          if not match:
+              raise SystemExit("V241: verified V238 operator attach block not found")
+
+          replacement = (
+              match.group(1) +
+              '\n        DevelopUgandaV241CinemaPro.attach(\n'
+              '            activity = this,\n'
+              '            root = root\n'
+              '        )'
+          )
+
+          camera = camera[:match.start()] + replacement + camera[match.end():]
+          camera = camera.replace('"V238"', '"V241"')
+          camera = camera.replace(' • V238"', ' • V241"')
+          camera_path.write_text(camera, encoding="utf-8")
+
+          story = story_path.read_text(encoding="utf-8")
+          story = story.replace(
+              '.put("app_version", "V238")',
+              '.put("app_version", "V241")'
+          )
+          story_path.write_text(story, encoding="utf-8")
+
+          gradle = gradle_path.read_text(encoding="utf-8")
+          gradle = gradle.replace(
+              "versionCode = 23800",
+              "versionCode = 24100",
+              1
+          )
+          gradle = gradle.replace(
+              'versionName = "238.0-operator-experience-pro"',
+              'versionName = "241.0-cinema-pro"',
+              1
+          )
+          gradle_path.write_text(gradle, encoding="utf-8")
+
+          print("PASS: V241 attached without replacing/re-parenting CameraX preview.")
+          PY
+
+      - name: Prove protected LUT algorithms unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          locked = json.loads(
+              Path("/tmp/v241-lut-lock.json").read_text(encoding="utf-8")
+          )
+
+          for name, expected in locked.items():
+              actual = hashlib.sha256((src / name).read_bytes()).hexdigest()
+              assert actual == expected, f"V241 protected LUT file changed: {name}"
+
+          print("PASS: V235 LUT algorithms remain byte-for-byte unchanged.")
+          PY
+
+      - name: Verify V241 design law
+        run: |
+          set -e
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          CAMERA="$SRC/DevelopUgandaCameraActivity.kt"
+          OP="$SRC/DevelopUgandaOperatorExperience.kt"
+          ADAPT="$SRC/DevelopUgandaAdaptiveFormatUi.kt"
+          LUT="$SRC/DevelopUgandaLiveGradePanel.kt"
+          FIELD="$SRC/DevelopUgandaFieldIntelligencePanel.kt"
+          V241="$SRC/DevelopUgandaV241CinemaPro.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          test -f "$V241"
+          grep -q 'DevelopUgandaV241CinemaPro.attach' "$CAMERA"
+          grep -q 'LUTS •' "$LUT"
+          grep -q 'ASPECT •' "$FIELD"
+          grep -q 'Gravity.TOP or (if (start) Gravity.START else Gravity.END)' "$ADAPT"
+          grep -q 'gradeBaseline = View.VISIBLE' "$OP"
+          grep -q 'fieldBaseline = View.VISIBLE' "$OP"
+          grep -q 'v241_zoom_ruler' "$V241"
+          grep -q 'v241_settings_drawer' "$V241"
+          grep -q 'v237_camera_zoom_row' "$V241"
+          grep -q 'develop_uganda_v233_tools_chip' "$V241"
+          grep -q 'versionCode = 24100' "$GRADLE"
+          grep -q 'versionName = "241.0-cinema-pro"' "$GRADLE"
+
+          grep -q 'v238_zoom_seek' "$CAMERA"
+          grep -q 'v238_exposure_seek' "$CAMERA"
+          grep -q 'AUTO-HIDE 3s' "$OP"
+
+          test ! -f "$SRC/DevelopUgandaDfv238CameraShell.kt"
+          ! grep -q 'DevelopUgandaDfv238CameraShell.attach' "$CAMERA"
+
+          echo "PASS: V241 verified."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V241 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v241-build.log
+
+      - name: Print compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          grep -Ein '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)' \
+            v241-build.log | head -5000 || true
+
+      - name: Prepare V241 artifacts
+        run: |
+          cp v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V241-CINEMA-PRO.apk
+
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V241-CINEMA-PRO-SOURCE.zip app
+          cd ..
+
+      - name: Upload V241 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V241-CINEMA-PRO
+          path: DEVELOP-UGANDA-V241-CINEMA-PRO.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V241 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V241-CINEMA-PRO-SOURCE
+          path: DEVELOP-UGANDA-V241-CINEMA-PRO-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V241 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: V241-CINEMA-PRO-BUILD-LOG
+          path: v172-source/v241-build.log
+          if-no-files-found: warn
+          retention-days: 7
