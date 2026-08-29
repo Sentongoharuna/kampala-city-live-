@@ -107,7 +107,7 @@ object DevelopUgandaLiveGradePanel {
         private fun buildChip() {
             chip = Button(activity).apply {
                 tag = TAG
-                text = "GRADE • V235\nMIX ▸"
+                text = "LUTS • V235\nMIX ▸"
                 textSize = 8.2f
                 isAllCaps = false
                 typeface = Typeface.DEFAULT_BOLD
@@ -763,7 +763,7 @@ object DevelopUgandaLiveGradePanel {
                 "● V235 LIVE GRADE • $name\n${selection.strength}% • $custom • HOLD ORIGINAL TO COMPARE"
 
             chip.text =
-                "GRADE • ${selection.strength}%\n${name.take(12)} ▸"
+                "LUTS • ${selection.strength}%\n${name.take(12)} ▸"
 
             lookButton.text =
                 "LOOK ▾\n${name.take(16)}"

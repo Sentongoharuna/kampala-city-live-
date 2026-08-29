@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 24010
-        versionName = "240.1-home-hub-recovery"
+        versionCode = 23801
+        versionName = "dfv238"
     }
 
     buildTypes {

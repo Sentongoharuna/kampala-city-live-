@@ -190,7 +190,7 @@ object DevelopUgandaStoryPackager {
                     relative,
                     "METADATA.json",
                     JSONObject()
-                        .put("app_version", "V240")
+                        .put("app_version", "V236")
                         .put("brand_display_name", brandSnapshot.displayName)
                         .put("brand_organization", brandSnapshot.organization)
                         .put("brand_overlay_preset", brandSnapshot.preset)

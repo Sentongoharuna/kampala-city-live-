@@ -570,8 +570,19 @@ object DevelopUgandaFieldIntelligencePanel {
             val cn0 = if (satCn0 > 0f) String.format(Locale.US, "%.1f", satCn0) else "--"
             val level = if (abs(roll) <= 1.5f) "LEVEL" else String.format(Locale.US, "%+.1f°", roll)
 
+            val aspectText =
+                when (format.id) {
+                    "VERTICAL_9_16" -> "9:16"
+                    "YOUTUBE_16_9" -> "16:9"
+                    "INSTAGRAM_4_5" -> "4:5"
+                    "SQUARE_1_1" -> "1:1"
+                    "CINEMA_239" -> "2.39:1"
+                    "DUAL_SAFE" -> "DUAL"
+                    else -> "FORMAT"
+                }
+
             chip.text =
-                "${if (format.landscape) "16:9" else format.id.substringAfter('_').replace('_', ':')} • ${if (format.dualSafe) "DUAL" else "LOCK"}\nSAT $satUsed/$satVisible • $level"
+                "ASPECT • $aspectText\nFORMAT ▸"
 
             infoText?.text =
                 "GNSS • $satUsed/$satVisible USED/VISIBLE • CN0 $cn0 dB-Hz • $accuracyText\n$constellationText"

@@ -54,7 +54,7 @@ object DevelopUgandaOperatorExperience {
 
         fun attach() {
             readyChip = Button(activity).apply {
-                tag = "v239_v238_ready_chip"
+                tag = "dfv238_shot_ready_chip"
                 text = "SHOT READY • HUD"
                 textSize = 7.6f
                 isAllCaps = false
