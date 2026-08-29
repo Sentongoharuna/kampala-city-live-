@@ -1,0 +1,210 @@
+name: Build develop.uganda V239 Professional Camera HUD
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/DU-V239-BUILD-A.yml'
+      - 'DU-V239-PRO-CAMERA-A.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify V238 or V239 base
+        run: |
+          set -e
+          PATCH="DU-V239-PRO-CAMERA-A.py"
+          GRADLE="v172-source/app/build.gradle.kts"
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+
+          test -f "$PATCH"
+          python3 -m py_compile "$PATCH"
+          test -f "$GRADLE"
+          test -f "$SRC/DevelopUgandaOperatorExperience.kt"
+          test -f "$SRC/DevelopUgandaAdaptiveFormatUi.kt"
+          test -f "$SRC/DevelopUgandaFieldIntelligencePanel.kt"
+          test -f "$SRC/DevelopUgandaEverydayColorMixer.kt"
+          test -f "$SRC/DevelopUgandaLiveGradePanel.kt"
+
+          if grep -q 'versionCode = 23900' "$GRADLE"; then
+            echo "PASS: V239 already applied; rebuilding safely."
+          elif grep -q 'versionCode = 23800' "$GRADLE"; then
+            echo "PASS: V238 Operator Experience Pro base found."
+          else
+            echo "Unsupported base version:"
+            grep -E 'versionCode|versionName' "$GRADLE" || true
+            exit 1
+          fi
+
+      - name: Lock V235 and V236 protected engines
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          protected = [
+              "DevelopUgandaColorEngine.kt",
+              "DevelopUgandaColorTuner.kt",
+              "DevelopUgandaEverydayColorMixer.kt",
+              "DevelopUgandaLiveGradePanel.kt",
+              "DevelopUgandaNavySheet.kt",
+              "DevelopUgandaFieldIntelligencePanel.kt",
+              "DevelopUgandaAdaptiveFormatUi.kt",
+          ]
+          data = {}
+          for name in protected:
+              path = src / name
+              if not path.exists():
+                  raise SystemExit(f"Protected file missing: {name}")
+              data[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+          Path("/tmp/v239-protected.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+          print("PASS: protected V235/V236/V237 fingerprints saved.")
+          PY
+
+      - name: Apply V239 Professional Camera HUD
+        run: |
+          set -e
+          python3 DU-V239-PRO-CAMERA-A.py
+
+      - name: Prove protected engines unchanged
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+          before = json.loads(Path("/tmp/v239-protected.json").read_text(encoding="utf-8"))
+          for name, expected in before.items():
+              actual = hashlib.sha256((src / name).read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f"Protected system changed: {name}")
+          print("PASS: LUT, color, GNSS and adaptive-format engines retained exactly.")
+          PY
+
+      - name: Verify V239 implementation
+        run: |
+          set -e
+          SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+          HUD="$SRC/DevelopUgandaProCameraHud.kt"
+          CAMERA="$SRC/DevelopUgandaCameraActivity.kt"
+          OP="$SRC/DevelopUgandaOperatorExperience.kt"
+          STORY="$SRC/DevelopUgandaStoryPackager.kt"
+          GRADLE="v172-source/app/build.gradle.kts"
+
+          test -f "$HUD"
+          grep -q 'LUT' "$HUD"
+          grep -q 'FORMAT' "$HUD"
+          grep -q 'HistogramView' "$HUD"
+          grep -q 'AudioMeterView' "$HUD"
+          grep -q 'ZoomRulerView' "$HUD"
+          grep -q 'FOCUS' "$HUD"
+          grep -q 'AUTO' "$HUD"
+          grep -q 'LOCK' "$HUD"
+          grep -q 'v237_camera_identity_row' "$HUD"
+          grep -q 'DevelopUgandaProCameraHud.attach' "$CAMERA"
+          grep -q 'tag = "v239_legacy_narration"' "$CAMERA"
+          grep -q 'tag = "v239_v238_ready_chip"' "$OP"
+          grep -q '.put("app_version", "V239")' "$STORY"
+          grep -q 'versionCode = 23900' "$GRADLE"
+          grep -q 'versionName = "239.0-professional-camera-hud"' "$GRADLE"
+          echo "PASS: V239 professional shooting HUD verified."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build V239 APK
+        working-directory: v172-source
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v239-build.log
+
+      - name: Print useful compiler errors
+        if: failure()
+        working-directory: v172-source
+        run: |
+          echo "========== V239 IMPORTANT BUILD ERRORS =========="
+          grep -Ein \
+            '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)' \
+            v239-build.log \
+            | head -5000 \
+            || true
+
+      - name: Commit V239 only after successful APK build
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            v172-source/app \
+            README-V239-PRO-CAMERA-HUD.txt
+
+          if git diff --cached --quiet; then
+            echo "V239 source already committed."
+          else
+            git commit -m "Add develop.uganda V239 professional camera HUD"
+            git push
+          fi
+
+      - name: Prepare V239 artifacts
+        run: |
+          set -e
+          cp \
+            v172-source/app/build/outputs/apk/debug/app-debug.apk \
+            DEVELOP-UGANDA-V239-PRO-CAMERA-A.apk
+          cd v172-source
+          zip -qr ../DEVELOP-UGANDA-V239-PRO-CAMERA-A-SOURCE.zip app
+          cd ..
+          ls -lh DEVELOP-UGANDA-V239-PRO-CAMERA-A.apk DEVELOP-UGANDA-V239-PRO-CAMERA-A-SOURCE.zip
+
+      - name: Upload V239 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V239-PRO-CAMERA-A
+          path: DEVELOP-UGANDA-V239-PRO-CAMERA-A.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V239 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V239-PRO-CAMERA-A-SOURCE
+          path: DEVELOP-UGANDA-V239-PRO-CAMERA-A-SOURCE.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload V239 build log if needed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEVELOP-UGANDA-V239-PRO-CAMERA-A-BUILD-LOG
+          path: v172-source/v239-build.log
+          if-no-files-found: warn
+          retention-days: 7
