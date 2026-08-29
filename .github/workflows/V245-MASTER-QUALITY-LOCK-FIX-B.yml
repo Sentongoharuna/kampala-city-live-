@@ -1,0 +1,1057 @@
+name: Build develop.uganda V245 Master Quality Lock FIX B
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/V245-MASTER-QUALITY-LOCK-FIX-B.yml'
+
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout full repository history
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Restore verified V238 master camera
+      run: 'set -e
+
+        V238_COMMIT="394049029eca20367cab1ce9628fc1dbe489dd7a"
+
+        git restore --source="$V238_COMMIT" --staged --worktree v172-source/app
+
+        rm -rf v172-source/app/build
+
+        rm -f v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaDfv238CameraShell.kt
+
+
+        grep -q ''versionCode = 23800'' v172-source/app/build.gradle.kts
+
+        grep -q ''versionName = "238.0-operator-experience-pro"'' v172-source/app/build.gradle.kts
+
+
+        echo "PASS: exact verified V238 camera restored."
+
+        '
+    - name: Fingerprint protected LUT engine
+      run: "set -e\npython3 - <<'PY'\nfrom pathlib import Path\nimport hashlib, json\n\nsrc = Path(\"v172-source/app/src/main/java/com/sentongoharuna/pulse\"\
+        )\nprotected = [\n    \"DevelopUgandaColorEngine.kt\",\n    \"DevelopUgandaColorTuner.kt\",\n    \"DevelopUgandaEverydayColorMixer.kt\"\
+        ,\n    \"DevelopUgandaNavySheet.kt\",\n]\n\ndata = {\n    name: hashlib.sha256((src / name).read_bytes()).hexdigest()\n\
+        \    for name in protected\n}\nPath(\"/tmp/v242-lut-lock.json\").write_text(\n    json.dumps(data, indent=2),\n  \
+        \  encoding=\"utf-8\"\n)\nprint(\"PASS: V235 LUT engine locked.\")\nPY\n"
+    - name: Apply dfv238 safe camera format
+      run: "set -e\npython3 - <<'PY'\nfrom pathlib import Path\nimport re\n\nSRC = Path(\"v172-source/app/src/main/java/com/sentongoharuna/pulse\"\
+        )\nCAMERA = SRC / \"DevelopUgandaCameraActivity.kt\"\nOP = SRC / \"DevelopUgandaOperatorExperience.kt\"\nADAPT = SRC\
+        \ / \"DevelopUgandaAdaptiveFormatUi.kt\"\nLUT = SRC / \"DevelopUgandaLiveGradePanel.kt\"\nFIELD = SRC / \"DevelopUgandaFieldIntelligencePanel.kt\"\
+        \n\n# LUT button wording only. No LUT algorithm changes.\ntext = LUT.read_text(encoding=\"utf-8\")\ntext = text.replace(\n\
+        \    'text = \"GRADE • V235\\\\nMIX ▸\"',\n    'text = \"LUTS • V235\\\\nMIX ▸\"'\n)\ntext = text.replace(\n    '\"\
+        GRADE • ${selection.strength}%\\\\n${name.take(12)} ▸\"',\n    '\"LUTS • ${selection.strength}%\\\\n${name.take(12)}\
+        \ ▸\"'\n)\nif \"LUTS •\" not in text:\n    raise SystemExit(\"V242: LUTS label not applied\")\nLUT.write_text(text,\
+        \ encoding=\"utf-8\")\n\n# Keep the exact working V236 format string.\n# Only add the visible ASPECT prefix; do not\
+        \ reconstruct \\nSAT...\ntext = FIELD.read_text(encoding=\"utf-8\")\nold_aspect_start = r'''\"${if (format.landscape)\
+        \ \"16:9\" else format.id.substringAfter('_').replace('_', ':')} • ${if (format.dualSafe) \"DUAL\" else \"LOCK\"}\\\
+        nSAT $satUsed/$satVisible • $level\"'''\nnew_aspect_start = r'''\"ASPECT • ${if (format.landscape) \"16:9\" else format.id.substringAfter('_').replace('_',\
+        \ ':')} • ${if (format.dualSafe) \"DUAL\" else \"LOCK\"}\\nSAT $satUsed/$satVisible • $level\"'''\nif old_aspect_start\
+        \ not in text:\n    raise SystemExit(\"V242: exact verified V238 aspect string not found\")\ntext = text.replace(old_aspect_start,\
+        \ new_aspect_start, 1)\nFIELD.write_text(text, encoding=\"utf-8\")\n\n# LUTS top-left, ASPECT top-right.\ntext = ADAPT.read_text(encoding=\"\
+        utf-8\")\ntext, n1 = re.subn(\n    r'(placeChip\\(\\s*FIELD_CHIP_TAG,\\s*start\\s*=\\s*)true(\\s*,)',\n    r'\\1false\\\
+        2',\n    text,\n    count=1\n)\ntext, n2 = re.subn(\n    r'(placeChip\\(\\s*GRADE_CHIP_TAG,\\s*start\\s*=\\s*)false(\\\
+        s*,)',\n    r'\\1true\\2',\n    text,\n    count=1\n)\ntext, n3 = re.subn(\n    r'lp\\.gravity\\s*=\\s*\\(if \\(start\\\
+        ) Gravity\\.START else Gravity\\.END\\) or Gravity\\.CENTER_VERTICAL',\n    'lp.gravity = Gravity.TOP or (if (start)\
+        \ Gravity.START else Gravity.END)',\n    text,\n    count=1\n)\ntext, n4 = re.subn(\n    r'lp\\.topMargin\\s*=\\s*0',\n\
+        \    'lp.topMargin = dp(if (landscape) 8 else 10)',\n    text,\n    count=1\n)\nif (n1, n2, n3, n4) != (1, 1, 1, 1):\n\
+        \    raise SystemExit(f\"V242 adaptive patch counts: {(n1,n2,n3,n4)}\")\nADAPT.write_text(text, encoding=\"utf-8\"\
+        )\n\n# V238 Clean View can hide other HUD, but never LUTS or ASPECT.\ntext = OP.read_text(encoding=\"utf-8\")\ntext,\
+        \ n5 = re.subn(\n    r'(root\\.findViewWithTag<View>\\(FIELD_CHIP_TAG\\)\\?\\.let\\s*\\{\\s*)fieldBaseline\\s*=\\\
+        s*it\\.visibility\\s*it\\.visibility\\s*=\\s*View\\.GONE(\\s*\\})',\n    r'\\1fieldBaseline = View.VISIBLE\\n    \
+        \                it.visibility = View.VISIBLE\\2',\n    text,\n    count=1\n)\ntext, n6 = re.subn(\n    r'(root\\\
+        .findViewWithTag<View>\\(GRADE_CHIP_TAG\\)\\?\\.let\\s*\\{\\s*)gradeBaseline\\s*=\\s*it\\.visibility\\s*it\\.visibility\\\
+        s*=\\s*View\\.GONE(\\s*\\})',\n    r'\\1gradeBaseline = View.VISIBLE\\n                    it.visibility = View.VISIBLE\\\
+        2',\n    text,\n    count=1\n)\n\n# Move SHOT READY away from top-right.\ntext, n7 = re.subn(\n    r'gravity\\s*=\\\
+        s*Gravity\\.TOP or Gravity\\.END\\s*\\n\\s*topMargin\\s*=\\s*dp\\(7\\)\\s*\\n\\s*rightMargin\\s*=\\s*dp\\(8\\)',\n\
+        \    'gravity = Gravity.END or Gravity.CENTER_VERTICAL\\n                    topMargin = 0\\n                    rightMargin\
+        \ = dp(8)',\n    text,\n    count=1\n)\nif (n5, n6, n7) != (1, 1, 1):\n    raise SystemExit(f\"V242 operator patch\
+        \ counts: {(n5,n6,n7)}\")\nOP.write_text(text, encoding=\"utf-8\")\n\n# Cinema-oriented initial defaults. Existing\
+        \ user controls can change them.\ncamera = CAMERA.read_text(encoding=\"utf-8\")\ncamera = camera.replace(\n    \"\
+        private var sceneIndex = 0\",\n    \"private var sceneIndex = 2\",\n    1\n)\ncamera = camera.replace(\n    \"private\
+        \ var qualityIndex = 0\",\n    \"private var qualityIndex = 2\",\n    1\n)\ncamera = camera.replace(\n    \"private\
+        \ var reportPresetIndex = 0\",\n    \"private var reportPresetIndex = 5\",\n    1\n)\nCAMERA.write_text(camera, encoding=\"\
+        utf-8\")\n\nprint(\"PASS: dfv238 working format + V242 cinema defaults applied.\")\nPY\n"
+    - name: Add V242 Pro Settings and zoom ruler
+      run: "set -e\ncat > v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaV242QualityMatchPro.kt <<'KOTLIN'\n\
+        package com.sentongoharuna.pulse\n\nimport android.graphics.Canvas\nimport android.graphics.Color\nimport android.graphics.Paint\n\
+        import android.graphics.Typeface\nimport android.graphics.drawable.GradientDrawable\nimport android.os.Handler\nimport\
+        \ android.os.Looper\nimport android.view.Gravity\nimport android.view.HapticFeedbackConstants\nimport android.view.MotionEvent\n\
+        import android.view.View\nimport android.view.ViewGroup\nimport android.widget.Button\nimport android.widget.FrameLayout\n\
+        import android.widget.LinearLayout\nimport android.widget.ScrollView\nimport android.widget.SeekBar\nimport android.widget.TextView\n\
+        import android.widget.Toast\nimport androidx.appcompat.app.AppCompatActivity\nimport kotlin.math.roundToInt\n\n/**\n\
+        \ * V242 Cinema Pro operator layer.\n *\n * It never replaces or re-parents the CameraX preview.\n * It uses the existing\
+        \ V238 buttons and the existing real zoom SeekBar.\n */\nobject DevelopUgandaV242QualityMatchPro {\n\n    private\
+        \ const val TAG = \"develop_uganda_v242_quality_match_pro\"\n    private const val LUT_TAG = \"develop_uganda_v235_live_grade_panel\"\
+        \n    private const val ASPECT_TAG = \"develop_uganda_v236_field_intelligence\"\n    private const val TOOLS_TAG =\
+        \ \"develop_uganda_v233_tools_chip\"\n    private const val ZOOM_TAG = \"v238_zoom_seek\"\n\n    fun attach(\n   \
+        \     activity: DevelopUgandaCameraActivity,\n        root: FrameLayout\n    ) {\n        if (root.findViewWithTag<View>(TAG)\
+        \ != null) return\n        Controller(activity, root).attach()\n    }\n\n    private class Controller(\n        private\
+        \ val activity: DevelopUgandaCameraActivity,\n        private val root: FrameLayout\n    ) {\n        private val\
+        \ handler = Handler(Looper.getMainLooper())\n        private lateinit var marker: View\n        private lateinit var\
+        \ settingsTab: Button\n        private lateinit var drawer: LinearLayout\n        private lateinit var scrim: View\n\
+        \        private lateinit var zoomRuler: ZoomRulerView\n\n        private val tick = object : Runnable {\n       \
+        \     override fun run() {\n                if (activity.isFinishing || activity.isDestroyed) return\n\n         \
+        \       root.findViewWithTag<View>(TOOLS_TAG)?.visibility = View.GONE\n                root.findViewWithTag<View>(\"\
+        v237_camera_zoom_row\")?.visibility = View.GONE\n                root.findViewWithTag<View>(LUT_TAG)?.visibility =\
+        \ View.VISIBLE\n                root.findViewWithTag<View>(ASPECT_TAG)?.visibility = View.VISIBLE\n\n            \
+        \    zoomRuler.syncFromSeek()\n                handler.postDelayed(this, 250L)\n            }\n        }\n\n     \
+        \   fun attach() {\n            marker = View(activity).apply {\n                tag = TAG\n                visibility\
+        \ = View.GONE\n            }\n            root.addView(marker, FrameLayout.LayoutParams(1, 1))\n\n            buildScrim()\n\
+        \            buildDrawer()\n            buildSettingsTab()\n            buildZoomRuler()\n\n            marker.addOnAttachStateChangeListener(\n\
+        \                object : View.OnAttachStateChangeListener {\n                    override fun onViewAttachedToWindow(v:\
+        \ View) = Unit\n                    override fun onViewDetachedFromWindow(v: View) {\n                        handler.removeCallbacksAndMessages(null)\n\
+        \                    }\n                }\n            )\n\n            handler.post(tick)\n        }\n\n        private\
+        \ fun buildScrim() {\n            scrim = View(activity).apply {\n                setBackgroundColor(0x55000000)\n\
+        \                visibility = View.GONE\n                setOnClickListener { setDrawer(false) }\n            }\n\n\
+        \            root.addView(\n                scrim,\n                FrameLayout.LayoutParams(\n                  \
+        \  ViewGroup.LayoutParams.MATCH_PARENT,\n                    ViewGroup.LayoutParams.MATCH_PARENT\n               \
+        \ )\n            )\n        }\n\n        private fun buildSettingsTab() {\n            settingsTab = proButton(\"\
+        PRO\\nSETTINGS ▸\").apply {\n                tag = \"v242_settings_tab\"\n                setOnClickListener { setDrawer(true)\
+        \ }\n            }\n\n            root.addView(\n                settingsTab,\n                FrameLayout.LayoutParams(\n\
+        \                    dp(92),\n                    dp(52)\n                ).apply {\n                    gravity =\
+        \ Gravity.END or Gravity.TOP\n                    topMargin = dp(78)\n                    rightMargin = dp(7)\n  \
+        \              }\n            )\n        }\n\n        private fun buildDrawer() {\n            drawer = LinearLayout(activity).apply\
+        \ {\n                tag = \"v242_settings_drawer\"\n                orientation = LinearLayout.VERTICAL\n       \
+        \         setPadding(dp(11), dp(12), dp(11), dp(10))\n                background = rounded(\n                    0xFA031829.toInt(),\n\
+        \                    0xFF73B7D9.toInt(),\n                    18\n                )\n                visibility =\
+        \ View.GONE\n                elevation = dp(18).toFloat()\n            }\n\n            val header = LinearLayout(activity).apply\
+        \ {\n                orientation = LinearLayout.HORIZONTAL\n                gravity = Gravity.CENTER_VERTICAL\n  \
+        \          }\n\n            header.addView(\n                TextView(activity).apply {\n                    text\
+        \ = \"V242 • QUALITY MATCH PRO\"\n                    textSize = 11f\n                    setTextColor(Color.WHITE)\n\
+        \                    typeface = Typeface.DEFAULT_BOLD\n                },\n                LinearLayout.LayoutParams(\n\
+        \                    0,\n                    ViewGroup.LayoutParams.WRAP_CONTENT,\n                    1f\n      \
+        \          )\n            )\n\n            header.addView(\n                proButton(\"CLOSE ×\").apply {\n     \
+        \               setOnClickListener { setDrawer(false) }\n                },\n                LinearLayout.LayoutParams(dp(82),\
+        \ dp(44))\n            )\n            drawer.addView(header)\n\n            drawer.addView(\n                TextView(activity).apply\
+        \ {\n                    text =\n                        \"Movie-oriented master controls • V235 LUT engine protected\
+        \ • \" +\n                        \"4K UHD uses the real V238 CameraX master profile. \" +\n                     \
+        \   \"8K is never faked and remains device/encoder dependent.\"\n                    textSize = 7.8f\n           \
+        \         setTextColor(0xFFB8CBD6.toInt())\n                    setPadding(0, dp(5), 0, dp(9))\n                }\n\
+        \            )\n\n            val body = LinearLayout(activity).apply {\n                orientation = LinearLayout.VERTICAL\n\
+        \            }\n\n            addSection(body, \"MASTER OUTPUT\")\n            body.addView(\n                settingButton(\n\
+        \                    \"4K MASTER / QUALITY\",\n                    \"Open MASTER UHD, UHD 60, HDR and the other real\
+        \ capability-driven profiles.\"\n                ) {\n                    triggerTag(\"v237_quality_button\")\n  \
+        \              }\n            )\n            body.addView(\n                settingButton(\n                    \"\
+        8K MAX • CHECK DEVICE\",\n                    \"No fake 8K. Check the camera capabilities before attempting an 8K\
+        \ pipeline.\"\n                ) {\n                    if (!triggerText(\"CAMERA\", \"CAPS\")) {\n              \
+        \          Toast.makeText(\n                            activity,\n                            \"8K needs real phone\
+        \ camera and encoder support. V242 uses true 4K UHD when 8K is unavailable.\",\n                            Toast.LENGTH_LONG\n\
+        \                        ).show()\n                    }\n                }\n            )\n            body.addView(\n\
+        \                settingButton(\n                    \"CINEMA / MOVIE SCENE\",\n                    \"Choose CINEMA,\
+        \ MOVIE, DOCUMENTARY, INTERVIEW or REPORTER.\"\n                ) {\n                    triggerTag(\"v237_scene_button\"\
+        )\n                }\n            )\n\n            addSection(body, \"IMAGE + COLOR\")\n            body.addView(\n\
+        \                settingButton(\n                    \"LUTS / COLOR GRADE\",\n                    \"Protected V235\
+        \ LUT mixer • strength + scene palette + everyday color controls.\"\n                ) {\n                    triggerTag(LUT_TAG)\n\
+        \                }\n            )\n            body.addView(\n                settingButton(\n                   \
+        \ \"ASPECT / FORMAT\",\n                    \"9:16, 16:9, 4:5, 1:1, cinema 2.39:1 and dual-safe.\"\n             \
+        \   ) {\n                    triggerTag(ASPECT_TAG)\n                }\n            )\n\n            addSection(body,\
+        \ \"CAMERA CONTROL\")\n            body.addView(\n                settingButton(\n                    \"FULL CAMERA\
+        \ TOOLS\",\n                    \"All original V238 tools remain available here, off the shooting frame.\"\n     \
+        \           ) {\n                    triggerTag(TOOLS_TAG)\n                }\n            )\n            body.addView(\n\
+        \                settingButton(\n                    \"SHOT ASSIST / FOCUS\",\n                    \"Focus assist,\
+        \ peak and zebra tools when available.\"\n                ) {\n                    triggerText(\"ASSIST\")\n     \
+        \           }\n            )\n            body.addView(\n                settingButton(\n                    \"GUIDES\"\
+        ,\n                    \"Composition and framing guides.\"\n                ) {\n                    triggerText(\"\
+        GUIDES\")\n                }\n            )\n            body.addView(\n                settingButton(\n         \
+        \           \"DETAILED CAMERA SETTINGS\",\n                    \"Open the existing V238 detailed settings.\"\n   \
+        \             ) {\n                    triggerText(\"SETTINGS\")\n                }\n            )\n\n           \
+        \ addSection(body, \"SAFETY + RESET\")\n            body.addView(\n                settingButton(\n              \
+        \      \"CAMERA HEALTH\",\n                    \"Thermal, battery, storage, microphone, GPS and recording-health checks.\"\
+        \n                ) {\n                    triggerText(\"HEALTH\")\n                }\n            )\n           \
+        \ body.addView(\n                settingButton(\n                    \"RESET CAMERA\",\n                    \"Return\
+        \ adjustable camera controls to their safe defaults.\"\n                ) {\n                    triggerText(\"RESET\"\
+        )\n                }\n            )\n\n            val scroll = ScrollView(activity).apply {\n                isFillViewport\
+        \ = false\n                addView(\n                    body,\n                    ViewGroup.LayoutParams(\n    \
+        \                    ViewGroup.LayoutParams.MATCH_PARENT,\n                        ViewGroup.LayoutParams.WRAP_CONTENT\n\
+        \                    )\n                )\n            }\n\n            drawer.addView(\n                scroll,\n\
+        \                LinearLayout.LayoutParams(\n                    ViewGroup.LayoutParams.MATCH_PARENT,\n          \
+        \          0,\n                    1f\n                )\n            )\n\n            drawer.addView(\n         \
+        \       TextView(activity).apply {\n                    text =\n                        \"V242 starts from CINEMA\
+        \ + MASTER UHD when no saved user preference overrides it. \" +\n                        \"Use the frame-rate profile\
+        \ actually supported by the device for cinema motion.\"\n                    textSize = 7.2f\n                   \
+        \ setTextColor(0xFF91B6A0.toInt())\n                    typeface = Typeface.DEFAULT_BOLD\n                    setPadding(0,\
+        \ dp(7), 0, 0)\n                }\n            )\n\n            val width =\n                (activity.resources.displayMetrics.widthPixels\
+        \ * 0.84f)\n                    .toInt()\n                    .coerceAtMost(dp(410))\n\n            root.addView(\n\
+        \                drawer,\n                FrameLayout.LayoutParams(\n                    width,\n                \
+        \    ViewGroup.LayoutParams.MATCH_PARENT\n                ).apply {\n                    gravity = Gravity.END\n \
+        \                   topMargin = dp(4)\n                    bottomMargin = dp(4)\n                    rightMargin =\
+        \ dp(4)\n                }\n            )\n        }\n\n        private fun buildZoomRuler() {\n            zoomRuler\
+        \ = ZoomRulerView(activity, activity).apply {\n                tag = \"v242_zoom_ruler\"\n            }\n\n      \
+        \      root.addView(\n                zoomRuler,\n                FrameLayout.LayoutParams(\n                    dp(46),\n\
+        \                    dp(220)\n                ).apply {\n                    gravity = Gravity.END or Gravity.BOTTOM\n\
+        \                    rightMargin = dp(4)\n                    bottomMargin = dp(188)\n                }\n        \
+        \    )\n        }\n\n        private fun setDrawer(open: Boolean) {\n            drawer.visibility = if (open) View.VISIBLE\
+        \ else View.GONE\n            scrim.visibility = if (open) View.VISIBLE else View.GONE\n            settingsTab.visibility\
+        \ = if (open) View.GONE else View.VISIBLE\n            zoomRuler.visibility = if (open) View.GONE else View.VISIBLE\n\
+        \n            if (open) drawer.bringToFront()\n        }\n\n        private fun addSection(\n            host: LinearLayout,\n\
+        \            title: String\n        ) {\n            host.addView(\n                TextView(activity).apply {\n \
+        \                   text = title\n                    textSize = 7.8f\n                    setTextColor(0xFFD0B06F.toInt())\n\
+        \                    typeface = Typeface.DEFAULT_BOLD\n                    setPadding(0, dp(9), 0, dp(4))\n      \
+        \          }\n            )\n        }\n\n        private fun settingButton(\n            title: String,\n       \
+        \     detail: String,\n            action: () -> Unit\n        ): LinearLayout {\n            val row = LinearLayout(activity).apply\
+        \ {\n                orientation = LinearLayout.VERTICAL\n                setPadding(dp(10), dp(8), dp(10), dp(8))\n\
+        \                background = rounded(\n                    0xEE092236.toInt(),\n                    0xFF456983.toInt(),\n\
+        \                    14\n                )\n                isClickable = true\n                isFocusable = true\n\
+        \                setOnClickListener {\n                    action()\n                    setDrawer(false)\n      \
+        \          }\n            }\n\n            row.addView(\n                TextView(activity).apply {\n            \
+        \        text = title\n                    textSize = 8.5f\n                    setTextColor(Color.WHITE)\n      \
+        \              typeface = Typeface.DEFAULT_BOLD\n                }\n            )\n            row.addView(\n    \
+        \            TextView(activity).apply {\n                    text = detail\n                    textSize = 7f\n  \
+        \                  setTextColor(0xFFB6C4CE.toInt())\n                    setPadding(0, dp(2), 0, 0)\n            \
+        \    }\n            )\n\n            row.layoutParams =\n                LinearLayout.LayoutParams(\n            \
+        \        ViewGroup.LayoutParams.MATCH_PARENT,\n                    ViewGroup.LayoutParams.WRAP_CONTENT\n         \
+        \       ).apply {\n                    bottomMargin = dp(5)\n                }\n\n            return row\n       \
+        \ }\n\n        private fun triggerTag(tag: String): Boolean {\n            val view = root.findViewWithTag<View>(tag)\
+        \ ?: return false\n            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)\n            return\
+        \ view.performClick()\n        }\n\n        private fun triggerText(vararg words: String): Boolean {\n           \
+        \ val wanted = words.map { it.uppercase() }\n            var found: Button? = null\n\n            fun walk(view: View)\
+        \ {\n                if (found != null) return\n\n                if (view is Button) {\n                    val value\
+        \ = view.text?.toString()?.uppercase() ?: \"\"\n                    if (wanted.all { value.contains(it) }) {\n   \
+        \                     found = view\n                        return\n                    }\n                }\n\n \
+        \               if (view is ViewGroup) {\n                    for (i in 0 until view.childCount) {\n             \
+        \           walk(view.getChildAt(i))\n                        if (found != null) return\n                    }\n \
+        \               }\n            }\n\n            walk(root)\n            val button = found ?: return false\n     \
+        \       button.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)\n            return button.performClick()\n\
+        \        }\n\n        private fun proButton(value: String): Button =\n            Button(activity).apply {\n     \
+        \           text = value\n                textSize = 7.8f\n                isAllCaps = false\n                typeface\
+        \ = Typeface.DEFAULT_BOLD\n                setTextColor(Color.WHITE)\n                setPadding(dp(5), 0, dp(5),\
+        \ 0)\n                background = rounded(\n                    0xF0031829.toInt(),\n                    0xFF73B7D9.toInt(),\n\
+        \                    16\n                )\n            }\n\n        private fun rounded(\n            fill: Int,\n\
+        \            stroke: Int,\n            radius: Int\n        ): GradientDrawable =\n            GradientDrawable().apply\
+        \ {\n                shape = GradientDrawable.RECTANGLE\n                setColor(fill)\n                cornerRadius\
+        \ = dp(radius).toFloat()\n                setStroke(dp(1), stroke)\n            }\n\n        private fun dp(value:\
+        \ Int): Int =\n            (value * activity.resources.displayMetrics.density).toInt()\n    }\n\n    private class\
+        \ ZoomRulerView(\n        context: android.content.Context,\n        private val cameraActivity: DevelopUgandaCameraActivity\n\
+        \    ) : View(context) {\n\n        private val finePaint = Paint(Paint.ANTI_ALIAS_FLAG)\n        private val majorPaint\
+        \ = Paint(Paint.ANTI_ALIAS_FLAG)\n        private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG)\n\n        private\
+        \ var minimum = 1f\n        private var maximum = 1f\n        private var current = 1f\n        private var normalized\
+        \ = 0f\n\n        init {\n            finePaint.color = 0x99C6D4DD.toInt()\n            finePaint.strokeWidth = dp(1).toFloat()\n\
+        \n            majorPaint.color = Color.WHITE\n            majorPaint.strokeWidth = dp(2).toFloat()\n\n           \
+        \ labelPaint.color = Color.WHITE\n            labelPaint.textSize = dp(6).toFloat()\n            labelPaint.typeface\
+        \ = Typeface.DEFAULT_BOLD\n            labelPaint.textAlign = Paint.Align.CENTER\n\n            background = GradientDrawable().apply\
+        \ {\n                shape = GradientDrawable.RECTANGLE\n                setColor(0x88031829.toInt())\n          \
+        \      cornerRadius = dp(12).toFloat()\n                setStroke(dp(1), 0x9973B7D9.toInt())\n            }\n\n  \
+        \          isClickable = true\n            isFocusable = true\n        }\n\n        fun syncFromSeek() {\n       \
+        \     val state = cameraActivity.v242ZoomSnapshot()\n            minimum = state[0]\n            maximum = state[1]\n\
+        \            current = state[2]\n\n            val span = (maximum - minimum).coerceAtLeast(0.001f)\n            normalized\
+        \ =\n                ((current - minimum) / span)\n                    .coerceIn(0f, 1f)\n\n            invalidate()\n\
+        \        }\n\n        override fun onDraw(canvas: Canvas) {\n            super.onDraw(canvas)\n\n            val cx\
+        \ = width * 0.54f\n            val top = dp(24).toFloat()\n            val bottom = height - dp(24).toFloat()\n  \
+        \          val range = (bottom - top).coerceAtLeast(1f)\n\n            canvas.drawLine(cx, top, cx, bottom, finePaint)\n\
+        \n            for (i in 0..10) {\n                val y = bottom - range * (i / 10f)\n                val majorTick\
+        \ = i % 5 == 0\n                val len = if (majorTick) dp(11) else dp(5)\n\n                canvas.drawLine(\n \
+        \                   cx - len,\n                    y,\n                    cx + dp(2),\n                    y,\n \
+        \                   if (majorTick) majorPaint else finePaint\n                )\n            }\n\n            val\
+        \ markerY = bottom - range * normalized\n\n            canvas.drawLine(\n                dp(4).toFloat(),\n      \
+        \          markerY,\n                width - dp(4).toFloat(),\n                markerY,\n                majorPaint\n\
+        \            )\n\n            canvas.drawText(\n                String.format(java.util.Locale.US, \"%.1f×\", maximum),\n\
+        \                cx,\n                dp(14).toFloat(),\n                labelPaint\n            )\n\n           \
+        \ canvas.drawText(\n                String.format(java.util.Locale.US, \"%.1f×\", minimum),\n                cx,\n\
+        \                height - dp(7).toFloat(),\n                labelPaint\n            )\n\n            canvas.drawText(\n\
+        \                String.format(java.util.Locale.US, \"%.1f×\", current),\n                cx,\n                (markerY\
+        \ - dp(5))\n                    .coerceIn(\n                        dp(23).toFloat(),\n                        height\
+        \ - dp(24).toFloat()\n                    ),\n                labelPaint\n            )\n        }\n\n        override\
+        \ fun onTouchEvent(event: MotionEvent): Boolean {\n            when (event.actionMasked) {\n                MotionEvent.ACTION_DOWN,\n\
+        \                MotionEvent.ACTION_MOVE -> {\n                    val top = dp(24).toFloat()\n                  \
+        \  val bottom = height - dp(24).toFloat()\n                    val usable = (bottom - top).coerceAtLeast(1f)\n\n \
+        \                   val next =\n                        (1f - ((event.y - top) / usable))\n                      \
+        \      .coerceIn(0f, 1f)\n\n                    val oldBucket =\n                        (normalized * 4f).roundToInt()\n\
+        \                    val newBucket =\n                        (next * 4f).roundToInt()\n\n                    normalized\
+        \ = next\n                    cameraActivity.v242SetZoomNormalized(next)\n\n                    if (oldBucket != newBucket)\
+        \ {\n                        performHapticFeedback(\n                            HapticFeedbackConstants.CLOCK_TICK\n\
+        \                        )\n                    }\n\n                    syncFromSeek()\n                    return\
+        \ true\n                }\n\n                MotionEvent.ACTION_UP,\n                MotionEvent.ACTION_CANCEL ->\
+        \ {\n                    performClick()\n                    return true\n                }\n            }\n\n   \
+        \         return super.onTouchEvent(event)\n        }\n\n        override fun performClick(): Boolean {\n        \
+        \    super.performClick()\n            return true\n        }\n\n        private fun dp(value: Int): Int =\n     \
+        \       (value * resources.displayMetrics.density).toInt()\n    }\n}\nKOTLIN\n"
+    - name: Attach V242 without replacing camera preview
+      run: "set -e\npython3 - <<'PY'\nfrom pathlib import Path\nimport re\n\nsrc = Path(\"v172-source/app/src/main/java/com/sentongoharuna/pulse\"\
+        )\ncamera_path = src / \"DevelopUgandaCameraActivity.kt\"\nstory_path = src / \"DevelopUgandaStoryPackager.kt\"\n\
+        gradle_path = Path(\"v172-source/app/build.gradle.kts\")\n\ncamera = camera_path.read_text(encoding=\"utf-8\")\n\n\
+        camera = camera.replace(\n    \"        applyIndependentCameraDefaultsIfNeeded()\\n        recordingWarningsSeen.clear()\"\
+        ,\n    \"        applyIndependentCameraDefaultsIfNeeded()\\n        applyV242MasterQualityOnce()\\n        recordingWarningsSeen.clear()\"\
+        ,\n    1\n)\n\npolicy_anchor = \"    private fun enforceImmersiveCameraWindow() {\"\n\npolicy_code = r\"\"\"\n   \
+        \ private fun applyV242MasterQualityOnce() {\n        val migration =\n            getSharedPreferences(\n       \
+        \         \"develop_uganda_v242_quality_policy\",\n                Context.MODE_PRIVATE\n            )\n\n       \
+        \ if (migration.getBoolean(\"master_initialized\", false)) {\n            return\n        }\n\n        qualityModes.indexOf(\"\
+        MASTER UHD\")\n            .takeIf { it >= 0 }\n            ?.let { qualityIndex = it }\n\n        sceneModes.indexOf(\"\
+        CINEMA\")\n            .takeIf { it >= 0 }\n            ?.let { sceneIndex = it }\n\n        reportPresetLabels.indexOf(\"\
+        CINEMA\")\n            .takeIf { it >= 0 }\n            ?.let { reportPresetIndex = it }\n\n        autoDirectorEnabled\
+        \ = false\n        saveReportCameraPreferences()\n\n        migration.edit()\n            .putBoolean(\"master_initialized\"\
+        , true)\n            .apply()\n    }\n\n    internal fun v242ZoomSnapshot(): FloatArray {\n        val state =\n \
+        \           camera?.cameraInfo?.zoomState?.value\n                ?: return floatArrayOf(1f, 1f, 1f)\n\n        return\
+        \ floatArrayOf(\n            state.minZoomRatio,\n            state.maxZoomRatio,\n            state.zoomRatio\n \
+        \       )\n    }\n\n    internal fun v242SetZoomNormalized(value: Float) {\n        val cam = camera ?: return\n \
+        \       val state =\n            cam.cameraInfo.zoomState.value\n                ?: return\n\n        val n = value.coerceIn(0f,\
+        \ 1f)\n        val span =\n            (state.maxZoomRatio - state.minZoomRatio)\n                .coerceAtLeast(0.001f)\n\
+        \n        val ratio =\n            (state.minZoomRatio + span * n)\n                .coerceIn(\n                 \
+        \   state.minZoomRatio,\n                    state.maxZoomRatio\n                )\n\n        cam.cameraControl.setZoomRatio(ratio)\n\
+        \n        if (::zoomSeek.isInitialized) {\n            zoomSeek.progress =\n                (n * 100f)\n         \
+        \           .roundToInt()\n                    .coerceIn(0, 100)\n        }\n    }\n\n    private fun verifyV242GalleryMaster(uri:\
+        \ Uri) {\n        val requested =\n            qualityModes.getOrNull(qualityIndex)\n                ?: \"AUTO\"\n\
+        \n        Thread {\n            val retriever = MediaMetadataRetriever()\n\n            try {\n                retriever.setDataSource(\n\
+        \                    this@DevelopUgandaCameraActivity,\n                    uri\n                )\n\n           \
+        \     val width =\n                    retriever.extractMetadata(\n                        MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH\n\
+        \                    )?.toIntOrNull() ?: 0\n\n                val height =\n                    retriever.extractMetadata(\n\
+        \                        MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT\n                    )?.toIntOrNull() ?:\
+        \ 0\n\n                val bitrate =\n                    retriever.extractMetadata(\n                        MediaMetadataRetriever.METADATA_KEY_BITRATE\n\
+        \                    )?.toLongOrNull() ?: 0L\n\n                val longSide = maxOf(width, height)\n            \
+        \    val shortSide = minOf(width, height)\n\n                val resolutionLabel =\n                    when {\n \
+        \                       longSide >= 7600 && shortSide >= 4000 -> \"8K\"\n                        longSide >= 3800\
+        \ && shortSide >= 2000 -> \"4K\"\n                        longSide >= 1900 && shortSide >= 1000 -> \"1080\"\n    \
+        \                    longSide >= 1200 -> \"HD\"\n                        else -> \"${width}×${height}\"\n        \
+        \            }\n\n                val requested4k =\n                    requested in setOf(\n                   \
+        \     \"MASTER UHD\",\n                        \"UHD 60\",\n                        \"MASTER HDR\"\n             \
+        \       )\n\n                val fallback =\n                    requested4k &&\n                        resolutionLabel\
+        \ != \"4K\" &&\n                        resolutionLabel != \"8K\"\n\n                val mbps =\n                \
+        \    if (bitrate > 0L) {\n                        String.format(\n                            Locale.US,\n       \
+        \                     \"%.1f\",\n                            bitrate / 1_000_000.0\n                        )\n  \
+        \                  } else {\n                        \"--\"\n                    }\n\n                runOnUiThread\
+        \ {\n                    statusView.text =\n                        if (fallback) {\n                            \"\
+        SAVED $resolutionLabel • FALLBACK\"\n                        } else {\n                            \"SAVED $resolutionLabel\
+        \ ✓\"\n                        }\n\n                    statusView.setTextColor(\n                        if (fallback)\
+        \ {\n                            0xFFD8B85B.toInt()\n                        } else {\n                          \
+        \  0xFF83B995.toInt()\n                        }\n                    )\n\n                    toast(\n          \
+        \              \"GALLERY MASTER • ${width}×${height} • ${mbps} Mbps\" +\n                            if (fallback)\
+        \ {\n                                \" • device fell back below requested 4K\"\n                            } else\
+        \ {\n                                \" • direct CameraX master\"\n                            }\n               \
+        \     )\n                }\n            } catch (_: Exception) {\n                runOnUiThread {\n              \
+        \      toast(\n                        \"Gallery master saved • resolution verification unavailable\"\n          \
+        \          )\n                }\n            } finally {\n                try {\n                    retriever.release()\n\
+        \                } catch (_: Exception) {\n                }\n            }\n        }.start()\n    }\n\n\"\"\"\n\n\
+        if policy_anchor not in camera:\n    raise SystemExit(\"V242: camera policy anchor not found\")\n\ncamera = camera.replace(\n\
+        \    policy_anchor,\n    policy_code + policy_anchor,\n    1\n)\n\ncamera = camera.replace(\n    \"              \
+        \          telemetryRecorder.exportSidecar(\\n                            baseName\\n                        )\",\n\
+        \    \"                        telemetryRecorder.exportSidecar(\\n                            baseName\\n        \
+        \                )\\n\\n                        verifyV242GalleryMaster(\\n                            event.outputResults.outputUri\\\
+        n                        )\",\n    1\n)\n\npattern = re.compile(\n    r'(\\s*DevelopUgandaOperatorExperience\\.attach\\\
+        (\\s*'\n    r'activity\\s*=\\s*this,\\s*'\n    r'root\\s*=\\s*root,\\s*'\n    r'role\\s*=\\s*DevelopUgandaOperatorExperience\\\
+        .Role\\.REPORT\\s*'\n    r'\\))',\n    re.S\n)\n\nmatch = pattern.search(camera)\nif not match:\n    raise SystemExit(\"\
+        V242: verified V238 operator attach block not found\")\n\nreplacement = (\n    match.group(1) +\n    '\\n        DevelopUgandaV242QualityMatchPro.attach(\\\
+        n'\n    '            activity = this,\\n'\n    '            root = root\\n'\n    '        )'\n)\n\ncamera = camera[:match.start()]\
+        \ + replacement + camera[match.end():]\ncamera = camera.replace('\"V238\"', '\"V242\"')\ncamera = camera.replace('\
+        \ • V238\"', ' • V242\"')\ncamera_path.write_text(camera, encoding=\"utf-8\")\n\nstory = story_path.read_text(encoding=\"\
+        utf-8\")\nstory = story.replace(\n    '.put(\"app_version\", \"V238\")',\n    '.put(\"app_version\", \"V242\")'\n\
+        )\nstory_path.write_text(story, encoding=\"utf-8\")\n\ngradle = gradle_path.read_text(encoding=\"utf-8\")\ngradle\
+        \ = gradle.replace(\n    \"versionCode = 23800\",\n    \"versionCode = 24200\",\n    1\n)\ngradle = gradle.replace(\n\
+        \    'versionName = \"238.0-operator-experience-pro\"',\n    'versionName = \"242.0-quality-match-pro\"',\n    1\n\
+        )\ngradle_path.write_text(gradle, encoding=\"utf-8\")\n\nprint(\"PASS: V242 attached without replacing/re-parenting\
+        \ CameraX preview.\")\nPY\n"
+    - name: Prove protected LUT algorithms unchanged
+      run: "set -e\npython3 - <<'PY'\nfrom pathlib import Path\nimport hashlib, json\n\nsrc = Path(\"v172-source/app/src/main/java/com/sentongoharuna/pulse\"\
+        )\nlocked = json.loads(\n    Path(\"/tmp/v242-lut-lock.json\").read_text(encoding=\"utf-8\")\n)\n\nfor name, expected\
+        \ in locked.items():\n    actual = hashlib.sha256((src / name).read_bytes()).hexdigest()\n    assert actual == expected,\
+        \ f\"V242 protected LUT file changed: {name}\"\n\nprint(\"PASS: V235 LUT algorithms remain byte-for-byte unchanged.\"\
+        )\nPY\n"
+    - name: Verify V242 design law
+      run: 'set -e
+
+        SRC="v172-source/app/src/main/java/com/sentongoharuna/pulse"
+
+        CAMERA="$SRC/DevelopUgandaCameraActivity.kt"
+
+        OP="$SRC/DevelopUgandaOperatorExperience.kt"
+
+        ADAPT="$SRC/DevelopUgandaAdaptiveFormatUi.kt"
+
+        LUT="$SRC/DevelopUgandaLiveGradePanel.kt"
+
+        FIELD="$SRC/DevelopUgandaFieldIntelligencePanel.kt"
+
+        V242="$SRC/DevelopUgandaV242QualityMatchPro.kt"
+
+        GRADLE="v172-source/app/build.gradle.kts"
+
+
+        test -f "$V242"
+
+        grep -q ''DevelopUgandaV242QualityMatchPro.attach'' "$CAMERA"
+
+        grep -q ''LUTS •'' "$LUT"
+
+        grep -q ''ASPECT •'' "$FIELD"
+
+        grep -q ''Gravity.TOP or (if (start) Gravity.START else Gravity.END)'' "$ADAPT"
+
+        grep -q ''gradeBaseline = View.VISIBLE'' "$OP"
+
+        grep -q ''fieldBaseline = View.VISIBLE'' "$OP"
+
+        grep -q ''v242_zoom_ruler'' "$V242"
+
+        grep -q ''v242_settings_drawer'' "$V242"
+
+        grep -q ''v242SetZoomNormalized'' "$CAMERA"
+
+        grep -q ''v242ZoomSnapshot'' "$CAMERA"
+
+        grep -q ''verifyV242GalleryMaster'' "$CAMERA"
+
+        grep -q ''applyV242MasterQualityOnce'' "$CAMERA"
+
+        grep -q ''v237_camera_zoom_row'' "$V242"
+
+        grep -q ''develop_uganda_v233_tools_chip'' "$V242"
+
+        grep -q ''versionCode = 24200'' "$GRADLE"
+
+        grep -q ''versionName = "242.0-quality-match-pro"'' "$GRADLE"
+
+
+        grep -q ''v238_zoom_seek'' "$CAMERA"
+
+        grep -q ''v238_exposure_seek'' "$CAMERA"
+
+        grep -q ''AUTO-HIDE 3s'' "$OP"
+
+
+        test ! -f "$SRC/DevelopUgandaDfv238CameraShell.kt"
+
+        ! grep -q ''DevelopUgandaDfv238CameraShell.attach'' "$CAMERA"
+
+
+        echo "PASS: V242 verified."
+
+        '
+    - name: Add V243 General Workflow Home
+      run: "set -e\nSRC=\"v172-source/app/src/main/java/com/sentongoharuna/pulse\"\nMANIFEST=\"v172-source/app/src/main/AndroidManifest.xml\"\
+        \nGRADLE=\"v172-source/app/build.gradle.kts\"\n\ncat > \"$SRC/DevelopUgandaGeneralHubActivity.kt\" <<'KOTLIN'\npackage\
+        \ com.sentongoharuna.pulse\n\nimport android.app.Activity\nimport android.content.Intent\nimport android.graphics.Color\n\
+        import android.graphics.Typeface\nimport android.graphics.drawable.GradientDrawable\nimport android.os.Bundle\nimport\
+        \ android.view.Gravity\nimport android.view.View\nimport android.view.ViewGroup\nimport android.widget.LinearLayout\n\
+        import android.widget.ScrollView\nimport android.widget.TextView\nimport androidx.appcompat.app.AppCompatActivity\n\
+        \n/**\n * V243 General Workflow Home.\n *\n * This is a clean organizational layer only.\n * No old camera, editor,\
+        \ story, LUT, brand, health or newsroom module is deleted.\n * The original Newsroom remains available as FULL DECK\
+        \ / ALL WORK.\n */\nclass DevelopUgandaGeneralHubActivity : AppCompatActivity() {\n\n    private val ink = 0xFF031829.toInt()\n\
+        \    private val panel = 0xFF061D2E.toInt()\n    private val card = 0xFF092236.toInt()\n    private val line = 0xFF456983.toInt()\n\
+        \    private val gold = 0xFFD0B06F.toInt()\n    private val cyan = 0xFF73B7D9.toInt()\n    private val green = 0xFF91B6A0.toInt()\n\
+        \    private val violet = 0xFFA793D8.toInt()\n    private val white = 0xFFF1F3F8.toInt()\n    private val muted =\
+        \ 0xFFB6C4CE.toInt()\n\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n\
+        \        setContentView(buildHome())\n    }\n\n    private fun buildHome(): View {\n        val scroll = ScrollView(this).apply\
+        \ {\n            setBackgroundColor(ink)\n            isFillViewport = true\n        }\n\n        val page = LinearLayout(this).apply\
+        \ {\n            orientation = LinearLayout.VERTICAL\n            setPadding(dp(12), dp(12), dp(12), dp(24))\n   \
+        \         setBackgroundColor(ink)\n        }\n\n        page.addView(\n            panelBlock().apply {\n        \
+        \        addView(\n                    text(\n                        \"develop.uganda • V243\",\n               \
+        \         22f,\n                        white,\n                        true\n                    )\n            \
+        \    )\n                addView(\n                    text(\n                        \"GENERAL WORKFLOW HOME\",\n\
+        \                        12f,\n                        gold,\n                        true\n                    ).apply\
+        \ {\n                        setPadding(0, dp(2), 0, 0)\n                    }\n                )\n              \
+        \  addView(\n                    text(\n                        \"CAPTURE  →  LUT / COLOR  →  REVIEW / QC  →  EDIT\
+        \  →  STORY PACKAGE  →  SHARE\",\n                        9.2f,\n                        muted,\n                \
+        \        true\n                    ).apply {\n                        setPadding(0, dp(9), 0, 0)\n               \
+        \     }\n                )\n                addView(\n                    text(\n                        \"Everything\
+        \ already built remains in the app. This page only organizes it into one clean professional route.\",\n          \
+        \              8.7f,\n                        muted,\n                        false\n                    ).apply {\n\
+        \                        setPadding(0, dp(6), 0, 0)\n                    }\n                )\n            }\n   \
+        \     )\n\n        section(page, \"CAPTURE\")\n\n        page.addView(\n            routeCard(\n                \"\
+        FIELD / CINEMA CAMERA\",\n                \"V242 quality-match camera • 4K master preference • LUTS + ASPECT protected\
+        \ • real zoom ruler • Pro Settings\",\n                cyan,\n                DevelopUgandaAllProCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"SOCIAL MEDIA CAMERA\"\
+        ,\n                \"TikTok / Reels / Shorts capture path • original recording remains safe • social delivery tools\
+        \ retained\",\n                green,\n                DevelopUgandaSocialMediaCameraActivity::class.java\n      \
+        \      )\n        )\n\n        page.addView(\n            routeCard(\n                \"LIVE STUDIO\",\n         \
+        \       \"Open the live production system without mixing its controls into the field camera\",\n                0xFFC76D73.toInt(),\n\
+        \                DevelopUgandaLiveActivity::class.java\n            )\n        )\n\n        section(page, \"COLOR\
+        \ + FINISH\")\n\n        page.addView(\n            routeCard(\n                \"LUTS / COLOR STUDIO\",\n       \
+        \         \"V235 professional LUT engine • 17³ color master • Uganda scene palettes • original master preserved\"\
+        ,\n                violet,\n                DevelopUgandaColorStudioActivity::class.java\n            )\n        )\n\
+        \n        page.addView(\n            routeCard(\n                \"EDIT VIDEO\",\n                \"Open the existing\
+        \ editor after capture and color work\",\n                cyan,\n                DevelopUgandaEditorActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"STORY PACKAGES / REVIEW\"\
+        ,\n                \"Open saved story packages, QC information, metadata and packaged reporting work\",\n        \
+        \        green,\n                DevelopUgandaStoryPackagesActivity::class.java\n            )\n        )\n\n    \
+        \    section(page, \"CONTROL + SAFETY\")\n\n        page.addView(\n            routeCard(\n                \"BRAND\
+        \ + METADATA\",\n                \"Control develop.uganda name, organization, visible tags and saved-video metadata\
+        \ without changing the camera engine\",\n                gold,\n                DevelopUgandaBrandMetadataActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"CAMERA HEALTH\",\n \
+        \               \"Real CameraX / Camera2 capabilities • UHD / HDR / FPS / stabilization / storage / thermal checks\"\
+        ,\n                cyan,\n                DevelopUgandaCameraHealthActivity::class.java\n            )\n        )\n\
+        \n        page.addView(\n            routeCard(\n                \"FULL DECK / ALL WORK\",\n                \"Open\
+        \ the original full Newsroom home with the complete history of tools and modules. Nothing is removed.\",\n       \
+        \         gold,\n                DevelopUgandaNewsroomActivity::class.java\n            )\n        )\n\n        section(page,\
+        \ \"SPECIALIZED PRO CAMERAS\")\n\n        page.addView(\n            routeCard(\n                \"PEOPLE / PORTRAIT\
+        \ FOCUS\",\n                \"V205 • people, portraits and interviews • AF emphasis\",\n                cyan,\n  \
+        \              DevelopUgandaFocusAssistCameraActivity::class.java\n            )\n        )\n\n        page.addView(\n\
+        \            routeCard(\n                \"SUBJECT METERING\",\n                \"V206 • backlight, windows and mixed-light\
+        \ metering\",\n                gold,\n                DevelopUgandaMeteringLockCameraActivity::class.java\n      \
+        \      )\n        )\n\n        page.addView(\n            routeCard(\n                \"BUILDINGS / LEVEL\",\n   \
+        \             \"V207 • architecture, rooms, level and horizon work\",\n                green,\n                DevelopUgandaHorizonCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"WALK / ACTION STEADY\"\
+        ,\n                \"V208 • movement, vehicles and stabilization-aware shooting\",\n                green,\n     \
+        \           DevelopUgandaSteadyShotCameraActivity::class.java\n            )\n        )\n\n        page.addView(\n\
+        \            routeCard(\n                \"NIGHT / LOW LIGHT\",\n                \"V209 • dark interiors and night\
+        \ streets • lux-aware guidance\",\n                violet,\n                DevelopUgandaNightIntelligenceCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"INTERVIEW / AUDIO\"\
+        ,\n                \"V211 • speech, interview and microphone-focused shooting\",\n                green,\n       \
+        \         DevelopUgandaAudioGuardCameraActivity::class.java\n            )\n        )\n\n        page.addView(\n \
+        \           routeCard(\n                \"VERIFIED REPORT\",\n                \"V212 • site reports / incidents /\
+        \ telemetry / integrity workflow\",\n                cyan,\n                DevelopUgandaVerifiedCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"LONG RECORD / THERMAL\
+        \ SAFE\",\n                \"V213 • long takes and hot-condition protection\",\n                0xFFC76D73.toInt(),\n\
+        \                DevelopUgandaThermalSafeCameraActivity::class.java\n            )\n        )\n\n        page.addView(\n\
+        \            routeCard(\n                \"CINEMATIC LOOKS\",\n                \"V214 • cinematic people / travel\
+        \ / creative shooting\",\n                violet,\n                DevelopUgandaModeSignatureCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"SMART AUTO\",\n    \
+        \            \"V215 • automatic guidance when you do not want to choose every mode manually\",\n                cyan,\n\
+        \                DevelopUgandaAutoDirectorCameraActivity::class.java\n            )\n        )\n\n        section(page,\
+        \ \"PHOTO CAMERAS\")\n\n        page.addView(\n            routeCard(\n                \"PHOTO PRO\",\n          \
+        \      \"Professional still-photo path\",\n                cyan,\n                DevelopUgandaPhotoProCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"BUILDING PHOTO\",\n\
+        \                \"Architecture and building stills\",\n                green,\n                DevelopUgandaBuildingPhotoCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"PEOPLE PHOTO\",\n  \
+        \              \"Portrait and people stills\",\n                gold,\n                DevelopUgandaPeoplePhotoCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"NIGHT PHOTO\",\n   \
+        \             \"Low-light still photography\",\n                violet,\n                DevelopUgandaNightPhotoCameraActivity::class.java\n\
+        \            )\n        )\n\n        page.addView(\n            routeCard(\n                \"VERIFIED PHOTO\",\n\
+        \                \"Evidence / site / documented still-photo path\",\n                cyan,\n                DevelopUgandaVerifiedPhotoCameraActivity::class.java\n\
+        \            )\n        )\n\n        section(page, \"SYSTEM PRINCIPLE\")\n\n        page.addView(\n            infoCard(\n\
+        \                \"NOTHING DROPPED\",\n                \"V205→V242 camera work, V235 LUTs, story packages, editor,\
+        \ Live Studio, metadata, health, QC and the original Newsroom remain available. V243 is the clean front door, not\
+        \ a replacement engine.\",\n                green\n            )\n        )\n\n        scroll.addView(\n         \
+        \   page,\n            ViewGroup.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT,\n           \
+        \     ViewGroup.LayoutParams.WRAP_CONTENT\n            )\n        )\n\n        return scroll\n    }\n\n    private\
+        \ fun panelBlock(): LinearLayout =\n        LinearLayout(this).apply {\n            orientation = LinearLayout.VERTICAL\n\
+        \            setPadding(dp(14), dp(14), dp(14), dp(14))\n            background = rounded(panel, cyan, 22, 1)\n  \
+        \          layoutParams = LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT,\n     \
+        \           ViewGroup.LayoutParams.WRAP_CONTENT\n            ).apply {\n                bottomMargin = dp(10)\n  \
+        \          }\n        }\n\n    private fun section(host: LinearLayout, value: String) {\n        host.addView(\n \
+        \           text(\n                value,\n                10f,\n                gold,\n                true\n   \
+        \         ).apply {\n                setPadding(dp(2), dp(10), 0, dp(6))\n            }\n        )\n    }\n\n    private\
+        \ fun routeCard(\n        title: String,\n        detail: String,\n        accent: Int,\n        destination: Class<out\
+        \ Activity>\n    ): View {\n        return LinearLayout(this).apply {\n            orientation = LinearLayout.VERTICAL\n\
+        \            setPadding(dp(14), dp(11), dp(14), dp(11))\n            background = rounded(card, line, 18, 1)\n   \
+        \         isClickable = true\n            isFocusable = true\n\n            addView(\n                text(\n    \
+        \                \"$title   ›\",\n                    13f,\n                    white,\n                    true\n\
+        \                )\n            )\n\n            addView(\n                text(\n                    detail,\n  \
+        \                  8.8f,\n                    muted,\n                    false\n                ).apply {\n     \
+        \               setPadding(0, dp(4), 0, 0)\n                }\n            )\n\n            addView(\n           \
+        \     View(this@DevelopUgandaGeneralHubActivity).apply {\n                    setBackgroundColor(accent)\n       \
+        \         },\n                LinearLayout.LayoutParams(\n                    dp(42),\n                    dp(2)\n\
+        \                ).apply {\n                    topMargin = dp(8)\n                }\n            )\n\n          \
+        \  setOnClickListener {\n                startActivity(\n                    Intent(\n                        this@DevelopUgandaGeneralHubActivity,\n\
+        \                        destination\n                    )\n                )\n            }\n\n            layoutParams\
+        \ = LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT,\n                ViewGroup.LayoutParams.WRAP_CONTENT\n\
+        \            ).apply {\n                bottomMargin = dp(7)\n            }\n        }\n    }\n\n    private fun infoCard(\n\
+        \        title: String,\n        detail: String,\n        accent: Int\n    ): View {\n        return LinearLayout(this).apply\
+        \ {\n            orientation = LinearLayout.VERTICAL\n            setPadding(dp(14), dp(11), dp(14), dp(11))\n   \
+        \         background = rounded(card, line, 18, 1)\n\n            addView(\n                text(\n               \
+        \     title,\n                    12.5f,\n                    accent,\n                    true\n                )\n\
+        \            )\n\n            addView(\n                text(\n                    detail,\n                    8.8f,\n\
+        \                    muted,\n                    false\n                ).apply {\n                    setPadding(0,\
+        \ dp(5), 0, 0)\n                }\n            )\n        }\n    }\n\n    private fun text(\n        value: String,\n\
+        \        size: Float,\n        color: Int,\n        bold: Boolean\n    ): TextView =\n        TextView(this).apply\
+        \ {\n            text = value\n            textSize = size\n            setTextColor(color)\n            typeface\
+        \ =\n                if (bold) {\n                    Typeface.DEFAULT_BOLD\n                } else {\n          \
+        \          Typeface.DEFAULT\n                }\n            gravity = Gravity.START\n        }\n\n    private fun\
+        \ rounded(\n        fill: Int,\n        stroke: Int,\n        radius: Int,\n        strokeWidth: Int\n    ): GradientDrawable\
+        \ =\n        GradientDrawable().apply {\n            shape = GradientDrawable.RECTANGLE\n            setColor(fill)\n\
+        \            cornerRadius = dp(radius).toFloat()\n            setStroke(dp(strokeWidth), stroke)\n        }\n\n  \
+        \  private fun dp(value: Int): Int =\n        (value * resources.displayMetrics.density).toInt()\n}\nKOTLIN\n\npython3\
+        \ - <<'PY'\nfrom pathlib import Path\nimport re\n\nmanifest_path = Path(\"v172-source/app/src/main/AndroidManifest.xml\"\
+        )\nmanifest = manifest_path.read_text(encoding=\"utf-8\")\n\nold = '''        <activity\n            android:name=\"\
+        .DevelopUgandaNewsroomActivity\"\n            android:screenOrientation=\"portrait\"\n            android:exported=\"\
+        true\">\n\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\"/>\n  \
+        \              <category android:name=\"android.intent.category.LAUNCHER\"/>\n            </intent-filter>\n\n   \
+        \     </activity>'''\n\nnew = '''        <activity\n            android:name=\".DevelopUgandaNewsroomActivity\"\n\
+        \            android:screenOrientation=\"portrait\"\n            android:exported=\"false\"/>\n\n        <activity\n\
+        \            android:name=\".DevelopUgandaGeneralHubActivity\"\n            android:screenOrientation=\"portrait\"\
+        \n            android:exported=\"true\">\n\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\"\
+        />\n                <category android:name=\"android.intent.category.LAUNCHER\"/>\n            </intent-filter>\n\n\
+        \        </activity>'''\n\nif old not in manifest:\n    raise SystemExit(\"V243: launcher block not found\")\n\nmanifest\
+        \ = manifest.replace(old, new, 1)\nmanifest_path.write_text(manifest, encoding=\"utf-8\")\n\ngradle_path = Path(\"\
+        v172-source/app/build.gradle.kts\")\ngradle = gradle_path.read_text(encoding=\"utf-8\")\ngradle = gradle.replace(\n\
+        \    \"versionCode = 24200\",\n    \"versionCode = 24300\",\n    1\n)\ngradle = gradle.replace(\n    'versionName\
+        \ = \"242.0-quality-match-pro\"',\n    'versionName = \"243.0-general-workflow-home\"',\n    1\n)\ngradle_path.write_text(gradle,\
+        \ encoding=\"utf-8\")\n\ncamera_path = Path(\n    \"v172-source/app/src/main/java/com/sentongoharuna/pulse/\"\n  \
+        \  \"DevelopUgandaCameraActivity.kt\"\n)\ncamera = camera_path.read_text(encoding=\"utf-8\")\ncamera = camera.replace('\"\
+        V242\"', '\"V243\"')\ncamera = camera.replace(' • V242\"', ' • V243\"')\ncamera_path.write_text(camera, encoding=\"\
+        utf-8\")\n\nstory_path = Path(\n    \"v172-source/app/src/main/java/com/sentongoharuna/pulse/\"\n    \"DevelopUgandaStoryPackager.kt\"\
+        \n)\nstory = story_path.read_text(encoding=\"utf-8\")\nstory = story.replace(\n    '.put(\"app_version\", \"V242\"\
+        )',\n    '.put(\"app_version\", \"V243\")'\n)\nstory_path.write_text(story, encoding=\"utf-8\")\n\nprint(\"PASS: V243\
+        \ General Workflow Home added; old Newsroom retained.\")\nPY\n\ngrep -q 'class DevelopUgandaGeneralHubActivity' \"\
+        $SRC/DevelopUgandaGeneralHubActivity.kt\"\ngrep -q 'FULL DECK / ALL WORK' \"$SRC/DevelopUgandaGeneralHubActivity.kt\"\
+        \ngrep -q 'DevelopUgandaNewsroomActivity::class.java' \"$SRC/DevelopUgandaGeneralHubActivity.kt\"\ngrep -q 'DevelopUgandaGeneralHubActivity'\
+        \ \"$MANIFEST\"\ngrep -q 'versionCode = 24300' \"$GRADLE\"\ngrep -q 'versionName = \"243.0-general-workflow-home\"\
+        ' \"$GRADLE\"\n\necho \"PASS: V243 Home verified.\"\n"
+    - name: Add V244 Cinema Control Pro
+      run: "set -e\nSRC=\"v172-source/app/src/main/java/com/sentongoharuna/pulse\"\nCAMERA=\"$SRC/DevelopUgandaCameraActivity.kt\"\
+        \nHOME=\"$SRC/DevelopUgandaGeneralHubActivity.kt\"\nGRADLE=\"v172-source/app/build.gradle.kts\"\n\ncat > \"$SRC/DevelopUgandaV244CinemaControl.kt\"\
+        \ <<'KOTLIN'\npackage com.sentongoharuna.pulse\n\nimport android.graphics.Bitmap\nimport android.graphics.Canvas\n\
+        import android.graphics.Color\nimport android.graphics.Paint\nimport android.graphics.Typeface\nimport android.graphics.drawable.GradientDrawable\n\
+        import android.os.Handler\nimport android.os.Looper\nimport android.view.Gravity\nimport android.view.HapticFeedbackConstants\n\
+        import android.view.View\nimport android.view.ViewGroup\nimport android.widget.FrameLayout\nimport android.widget.LinearLayout\n\
+        import android.widget.ScrollView\nimport android.widget.TextView\nimport android.widget.Toast\nimport kotlin.math.roundToInt\n\
+        \nobject DevelopUgandaV244CinemaControl {\n    private const val TAG = \"develop_uganda_v244_cinema_control\"\n\n\
+        \    fun attach(activity: DevelopUgandaCameraActivity, root: FrameLayout) {\n        if (root.findViewWithTag<View>(TAG)\
+        \ != null) return\n        Controller(activity, root).attach()\n    }\n\n    private class Controller(\n        private\
+        \ val activity: DevelopUgandaCameraActivity,\n        private val root: FrameLayout\n    ) {\n        private val\
+        \ handler = Handler(Looper.getMainLooper())\n        private lateinit var marker: View\n        private lateinit var\
+        \ strip: TextView\n        private lateinit var scrim: View\n        private lateinit var drawer: LinearLayout\n \
+        \       private lateinit var falseColor: FalseColorView\n        private lateinit var waveform: WaveformView\n\n \
+        \       private val tick = object : Runnable {\n            override fun run() {\n                if (activity.isFinishing\
+        \ || activity.isDestroyed) return\n                strip.text = activity.v244CinemaStatusText()\n\n              \
+        \  if (falseColor.visibility == View.VISIBLE || waveform.visibility == View.VISIBLE) {\n                    activity.v244PreviewBitmap()?.let\
+        \ { bitmap ->\n                        if (falseColor.visibility == View.VISIBLE) falseColor.submit(bitmap)\n    \
+        \                    if (waveform.visibility == View.VISIBLE) waveform.submit(bitmap)\n                    }\n   \
+        \             }\n                handler.postDelayed(this, 450L)\n            }\n        }\n\n        fun attach()\
+        \ {\n            marker = View(activity).apply {\n                tag = TAG\n                visibility = View.GONE\n\
+        \            }\n            root.addView(marker, FrameLayout.LayoutParams(1, 1))\n            buildMonitors()\n  \
+        \          buildScrim()\n            buildDrawer()\n            buildStatusStrip()\n\n            marker.addOnAttachStateChangeListener(\n\
+        \                object : View.OnAttachStateChangeListener {\n                    override fun onViewAttachedToWindow(v:\
+        \ View) = Unit\n                    override fun onViewDetachedFromWindow(v: View) {\n                        handler.removeCallbacksAndMessages(null)\n\
+        \                    }\n                }\n            )\n            handler.post(tick)\n        }\n\n        private\
+        \ fun buildMonitors() {\n            falseColor = FalseColorView(activity).apply {\n                tag = \"v244_false_color\"\
+        \n                visibility = View.GONE\n                isClickable = false\n            }\n            root.addView(\n\
+        \                falseColor,\n                FrameLayout.LayoutParams(\n                    ViewGroup.LayoutParams.MATCH_PARENT,\n\
+        \                    ViewGroup.LayoutParams.MATCH_PARENT\n                )\n            )\n\n            waveform\
+        \ = WaveformView(activity).apply {\n                tag = \"v244_waveform\"\n                visibility = View.GONE\n\
+        \                isClickable = false\n            }\n            root.addView(\n                waveform,\n      \
+        \          FrameLayout.LayoutParams(dp(146), dp(84)).apply {\n                    gravity = Gravity.START or Gravity.BOTTOM\n\
+        \                    leftMargin = dp(9)\n                    bottomMargin = dp(176)\n                }\n         \
+        \   )\n        }\n\n        private fun buildScrim() {\n            scrim = View(activity).apply {\n             \
+        \   setBackgroundColor(0x55000000)\n                visibility = View.GONE\n                setOnClickListener { setDrawer(false)\
+        \ }\n            }\n            root.addView(\n                scrim,\n                FrameLayout.LayoutParams(\n\
+        \                    ViewGroup.LayoutParams.MATCH_PARENT,\n                    ViewGroup.LayoutParams.MATCH_PARENT\n\
+        \                )\n            )\n        }\n\n        private fun buildStatusStrip() {\n            strip = TextView(activity).apply\
+        \ {\n                tag = \"v244_cinema_status_strip\"\n                text = activity.v244CinemaStatusText()\n\
+        \                textSize = 6.6f\n                setTextColor(Color.WHITE)\n                typeface = Typeface.DEFAULT_BOLD\n\
+        \                gravity = Gravity.CENTER\n                setPadding(dp(6), 0, dp(6), 0)\n                background\
+        \ = rounded(\n                    0xD9031829.toInt(),\n                    0xB873B7D9.toInt(),\n                 \
+        \   12\n                )\n                isClickable = true\n                setOnClickListener {\n            \
+        \        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)\n                    setDrawer(true)\n        \
+        \        }\n            }\n\n            root.addView(\n                strip,\n                FrameLayout.LayoutParams(\n\
+        \                    ViewGroup.LayoutParams.MATCH_PARENT,\n                    dp(30)\n                ).apply {\n\
+        \                    gravity = Gravity.TOP\n                    topMargin = dp(72)\n                    leftMargin\
+        \ = dp(92)\n                    rightMargin = dp(112)\n                }\n            )\n        }\n\n        private\
+        \ fun buildDrawer() {\n            drawer = LinearLayout(activity).apply {\n                tag = \"v244_cinema_drawer\"\
+        \n                orientation = LinearLayout.VERTICAL\n                setPadding(dp(11), dp(12), dp(11), dp(10))\n\
+        \                background = rounded(\n                    0xFC031829.toInt(),\n                    0xFF73B7D9.toInt(),\n\
+        \                    20\n                )\n                visibility = View.GONE\n                elevation = dp(20).toFloat()\n\
+        \            }\n\n            val header = LinearLayout(activity).apply {\n                orientation = LinearLayout.HORIZONTAL\n\
+        \                gravity = Gravity.CENTER_VERTICAL\n            }\n\n            header.addView(\n               \
+        \ TextView(activity).apply {\n                    text = \"V244 • CINEMA CONTROL PRO\"\n                    textSize\
+        \ = 11f\n                    setTextColor(Color.WHITE)\n                    typeface = Typeface.DEFAULT_BOLD\n   \
+        \             },\n                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)\n        \
+        \    )\n            header.addView(\n                card(\"CLOSE ×\", \"Return to camera\") { setDrawer(false) },\n\
+        \                LinearLayout.LayoutParams(dp(96), dp(58))\n            )\n            drawer.addView(header)\n\n\
+        \            drawer.addView(\n                TextView(activity).apply {\n                    text =\n           \
+        \             \"Real Camera2 manual requests only when supported • False Color and Waveform are screen-only.\"\n \
+        \                   textSize = 7.5f\n                    setTextColor(0xFFB8CBD6.toInt())\n                    setPadding(0,\
+        \ dp(6), 0, dp(9))\n                }\n            )\n\n            val body = LinearLayout(activity).apply {\n  \
+        \              orientation = LinearLayout.VERTICAL\n            }\n\n            section(body, \"EXPOSURE\")\n   \
+        \         body.addView(card(\n                \"SHUTTER ANGLE\",\n                \"AUTO → 180° → 90° → 360° • real\
+        \ sensor exposure where supported\"\n            ) { result(activity.v244CycleShutterAngle()) })\n            body.addView(card(\n\
+        \                \"ISO / SENSOR GAIN\",\n                \"AUTO → supported ISO values inside the real sensitivity\
+        \ range\"\n            ) { result(activity.v244CycleIso()) })\n            body.addView(card(\n                \"\
+        WHITE BALANCE\",\n                \"AUTO → DAYLIGHT → CLOUDY → TUNGSTEN → FLUORESCENT\"\n            ) { result(activity.v244CycleWhiteBalance())\
+        \ })\n            body.addView(card(\n                \"RESET AUTO\",\n                \"Return shutter, ISO and white\
+        \ balance to automatic operation\"\n            ) { result(activity.v244ResetCinemaControls()) })\n\n            section(body,\
+        \ \"MONITORING\")\n            body.addView(card(\n                \"FALSE COLOR\",\n                \"Screen-only\
+        \ exposure map for shadows, midtones, skin range and clipping\"\n            ) {\n                falseColor.visibility\
+        \ =\n                    if (falseColor.visibility == View.VISIBLE) View.GONE else View.VISIBLE\n                result(if\
+        \ (falseColor.visibility == View.VISIBLE) \"FALSE COLOR ON\" else \"FALSE COLOR OFF\")\n            })\n         \
+        \   body.addView(card(\n                \"WAVEFORM\",\n                \"Compact screen-only luma waveform\"\n   \
+        \         ) {\n                waveform.visibility =\n                    if (waveform.visibility == View.VISIBLE)\
+        \ View.GONE else View.VISIBLE\n                result(if (waveform.visibility == View.VISIBLE) \"WAVEFORM ON\" else\
+        \ \"WAVEFORM OFF\")\n            })\n            body.addView(card(\n                \"ZEBRA / FOCUS ASSIST\",\n \
+        \               \"Use the existing V238/V242 professional shot assist\"\n            ) {\n                findClickableText(\"\
+        ASSIST\")?.performClick()\n                    ?: result(\"SHOT ASSIST REMAINS IN PRO SETTINGS\")\n            })\n\
+        \n            section(body, \"MASTER + COLOR\")\n            body.addView(card(\n                \"4K MASTER / QUALITY\"\
+        ,\n                \"Open the real quality selector • saved Gallery quality verification remains active\"\n      \
+        \      ) {\n                root.findViewWithTag<View>(\"v237_quality_button\")?.performClick()\n                \
+        \    ?: result(\"4K MASTER REMAINS IN PRO SETTINGS\")\n            })\n            body.addView(card(\n          \
+        \      \"LUT MONITOR / COLOR MASTER\",\n                \"Original CameraX master stays safe • separate V235 17³ LUT\
+        \ master remains available\"\n            ) {\n                root.findViewWithTag<View>(\"develop_uganda_v235_live_grade_panel\"\
+        )?.performClick()\n                    ?: result(\"LUTS REMAIN AT TOP-LEFT\")\n            })\n\n            val scroll\
+        \ = ScrollView(activity).apply {\n                addView(\n                    body,\n                    ViewGroup.LayoutParams(\n\
+        \                        ViewGroup.LayoutParams.MATCH_PARENT,\n                        ViewGroup.LayoutParams.WRAP_CONTENT\n\
+        \                    )\n                )\n            }\n            drawer.addView(\n                scroll,\n \
+        \               LinearLayout.LayoutParams(\n                    ViewGroup.LayoutParams.MATCH_PARENT,\n           \
+        \         0,\n                    1f\n                )\n            )\n            drawer.addView(\n            \
+        \    TextView(activity).apply {\n                    text = \"STATUS STRIP • FORMAT • FPS • SHUTTER • ISO • WB • FOCUS\"\
+        \n                    textSize = 7.1f\n                    setTextColor(0xFF91B6A0.toInt())\n                    typeface\
+        \ = Typeface.DEFAULT_BOLD\n                    setPadding(0, dp(7), 0, 0)\n                }\n            )\n\n  \
+        \          val width =\n                (activity.resources.displayMetrics.widthPixels * 0.86f)\n                \
+        \    .toInt()\n                    .coerceAtMost(dp(420))\n\n            root.addView(\n                drawer,\n\
+        \                FrameLayout.LayoutParams(\n                    width,\n                    ViewGroup.LayoutParams.MATCH_PARENT\n\
+        \                ).apply {\n                    gravity = Gravity.END\n                    topMargin = dp(4)\n   \
+        \                 bottomMargin = dp(4)\n                    rightMargin = dp(4)\n                }\n            )\n\
+        \        }\n\n        private fun setDrawer(open: Boolean) {\n            drawer.visibility = if (open) View.VISIBLE\
+        \ else View.GONE\n            scrim.visibility = if (open) View.VISIBLE else View.GONE\n            strip.visibility\
+        \ = if (open) View.GONE else View.VISIBLE\n\n            if (open) {\n                scrim.bringToFront()\n     \
+        \           drawer.bringToFront()\n            } else {\n                if (falseColor.visibility == View.VISIBLE)\
+        \ falseColor.bringToFront()\n                if (waveform.visibility == View.VISIBLE) waveform.bringToFront()\n  \
+        \              strip.bringToFront()\n            }\n        }\n\n        private fun section(host: LinearLayout, value:\
+        \ String) {\n            host.addView(\n                TextView(activity).apply {\n                    text = value\n\
+        \                    textSize = 8f\n                    setTextColor(0xFFD0B06F.toInt())\n                    typeface\
+        \ = Typeface.DEFAULT_BOLD\n                    setPadding(0, dp(9), 0, dp(4))\n                }\n            )\n\
+        \        }\n\n        private fun card(\n            title: String,\n            detail: String,\n            action:\
+        \ () -> Unit\n        ): LinearLayout =\n            LinearLayout(activity).apply {\n                orientation =\
+        \ LinearLayout.VERTICAL\n                setPadding(dp(11), dp(9), dp(11), dp(9))\n                background = rounded(\n\
+        \                    0xEE092236.toInt(),\n                    0xFF456983.toInt(),\n                    15\n      \
+        \          )\n                isClickable = true\n                isFocusable = true\n                addView(\n \
+        \                   TextView(activity).apply {\n                        text = \"$title   ›\"\n                  \
+        \      textSize = 8.7f\n                        setTextColor(Color.WHITE)\n                        typeface = Typeface.DEFAULT_BOLD\n\
+        \                    }\n                )\n                addView(\n                    TextView(activity).apply\
+        \ {\n                        text = detail\n                        textSize = 7f\n                        setTextColor(0xFFB6C4CE.toInt())\n\
+        \                        setPadding(0, dp(3), 0, 0)\n                    }\n                )\n                setOnClickListener\
+        \ {\n                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)\n                    action()\n\
+        \                }\n                layoutParams =\n                    LinearLayout.LayoutParams(\n             \
+        \           ViewGroup.LayoutParams.MATCH_PARENT,\n                        ViewGroup.LayoutParams.WRAP_CONTENT\n  \
+        \                  ).apply {\n                        bottomMargin = dp(5)\n                    }\n            }\n\
+        \n        private fun result(value: String) {\n            strip.text = activity.v244CinemaStatusText()\n        \
+        \    Toast.makeText(activity, value, Toast.LENGTH_SHORT).show()\n        }\n\n        private fun findClickableText(word:\
+        \ String): View? {\n            var found: View? = null\n            val needle = word.uppercase()\n\n           \
+        \ fun walk(view: View) {\n                if (found != null) return\n                if (view is TextView) {\n   \
+        \                 val value = view.text?.toString()?.uppercase() ?: \"\"\n                    if (value.contains(needle)\
+        \ && view.isClickable) {\n                        found = view\n                        return\n                 \
+        \   }\n                }\n                if (view is ViewGroup) {\n                    for (i in 0 until view.childCount)\
+        \ {\n                        walk(view.getChildAt(i))\n                        if (found != null) return\n       \
+        \             }\n                }\n            }\n\n            walk(root)\n            return found\n        }\n\
+        \n        private fun rounded(fill: Int, stroke: Int, radius: Int): GradientDrawable =\n            GradientDrawable().apply\
+        \ {\n                shape = GradientDrawable.RECTANGLE\n                setColor(fill)\n                cornerRadius\
+        \ = dp(radius).toFloat()\n                setStroke(dp(1), stroke)\n            }\n\n        private fun dp(value:\
+        \ Int): Int =\n            (value * activity.resources.displayMetrics.density).toInt()\n    }\n\n    private class\
+        \ FalseColorView(context: android.content.Context) : View(context) {\n        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)\n\
+        \        private val cols = 20\n        private val rows = 34\n        private var values = IntArray(cols * rows)\n\
+        \n        init {\n            paint.style = Paint.Style.FILL\n            alpha = 0.82f\n        }\n\n        fun\
+        \ submit(bitmap: Bitmap) {\n            if (bitmap.width <= 0 || bitmap.height <= 0) return\n            val scaled\
+        \ = Bitmap.createScaledBitmap(bitmap, cols, rows, true)\n            val next = IntArray(cols * rows)\n\n        \
+        \    for (y in 0 until rows) {\n                for (x in 0 until cols) {\n                    val c = scaled.getPixel(x,\
+        \ y)\n                    val luma =\n                        (\n                            0.2126f * Color.red(c)\
+        \ +\n                            0.7152f * Color.green(c) +\n                            0.0722f * Color.blue(c)\n\
+        \                        ) / 255f\n\n                    next[y * cols + x] =\n                        when {\n  \
+        \                          luma < 0.03f -> 0xFF3A0B56.toInt()\n                            luma < 0.10f -> 0xFF163A9B.toInt()\n\
+        \                            luma < 0.22f -> 0xFF00A6D6.toInt()\n                            luma < 0.42f -> 0xFF35A853.toInt()\n\
+        \                            luma < 0.58f -> 0xFF777777.toInt()\n                            luma < 0.72f -> 0xFFD9829B.toInt()\n\
+        \                            luma < 0.88f -> 0xFFF0C43A.toInt()\n                            luma < 0.97f -> 0xFFFF7A1A.toInt()\n\
+        \                            else -> 0xFFFF2424.toInt()\n                        }\n                }\n          \
+        \  }\n\n            values = next\n            scaled.recycle()\n            invalidate()\n        }\n\n        override\
+        \ fun onDraw(canvas: Canvas) {\n            super.onDraw(canvas)\n            val cw = width.toFloat() / cols\n  \
+        \          val ch = height.toFloat() / rows\n\n            for (y in 0 until rows) {\n                for (x in 0\
+        \ until cols) {\n                    paint.color = values[y * cols + x]\n                    canvas.drawRect(\n  \
+        \                      x * cw,\n                        y * ch,\n                        (x + 1) * cw + 1f,\n    \
+        \                    (y + 1) * ch + 1f,\n                        paint\n                    )\n                }\n\
+        \            }\n\n            paint.color = Color.WHITE\n            paint.typeface = Typeface.DEFAULT_BOLD\n    \
+        \        paint.textSize = 8f * resources.displayMetrics.scaledDensity\n            canvas.drawText(\n            \
+        \    \"FALSE COLOR • SCREEN ONLY\",\n                10f,\n                18f * resources.displayMetrics.density,\n\
+        \                paint\n            )\n        }\n    }\n\n    private class WaveformView(context: android.content.Context)\
+        \ : View(context) {\n        private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG)\n        private val gridPaint\
+        \ = Paint(Paint.ANTI_ALIAS_FLAG)\n        private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG)\n        private val\
+        \ cols = 48\n        private val rows = 24\n        private var luma = FloatArray(cols * rows)\n\n        init {\n\
+        \            background = GradientDrawable().apply {\n                shape = GradientDrawable.RECTANGLE\n       \
+        \         setColor(0xCB031829.toInt())\n                cornerRadius = 12f * resources.displayMetrics.density\n  \
+        \              setStroke(\n                    resources.displayMetrics.density.roundToInt().coerceAtLeast(1),\n \
+        \                   0xFF73B7D9.toInt()\n                )\n            }\n            pointPaint.color = 0xCCF2F5F8.toInt()\n\
+        \            pointPaint.strokeWidth = resources.displayMetrics.density\n            gridPaint.color = 0x5573B7D9\n\
+        \            gridPaint.strokeWidth = resources.displayMetrics.density\n            labelPaint.color = Color.WHITE\n\
+        \            labelPaint.textSize = 7f * resources.displayMetrics.scaledDensity\n            labelPaint.typeface =\
+        \ Typeface.DEFAULT_BOLD\n        }\n\n        fun submit(bitmap: Bitmap) {\n            if (bitmap.width <= 0 || bitmap.height\
+        \ <= 0) return\n            val scaled = Bitmap.createScaledBitmap(bitmap, cols, rows, true)\n            val next\
+        \ = FloatArray(cols * rows)\n\n            for (y in 0 until rows) {\n                for (x in 0 until cols) {\n\
+        \                    val c = scaled.getPixel(x, y)\n                    next[y * cols + x] =\n                   \
+        \     (\n                            (\n                                0.2126f * Color.red(c) +\n               \
+        \                 0.7152f * Color.green(c) +\n                                0.0722f * Color.blue(c)\n          \
+        \                  ) / 255f\n                        ).coerceIn(0f, 1f)\n                }\n            }\n\n    \
+        \        luma = next\n            scaled.recycle()\n            invalidate()\n        }\n\n        override fun onDraw(canvas:\
+        \ Canvas) {\n            super.onDraw(canvas)\n            val d = resources.displayMetrics.density\n            val\
+        \ left = 8f * d\n            val right = width - left\n            val top = 14f * d\n            val bottom = height\
+        \ - 8f * d\n            val uw = (right - left).coerceAtLeast(1f)\n            val uh = (bottom - top).coerceAtLeast(1f)\n\
+        \n            for (i in 0..4) {\n                val y = top + uh * (i / 4f)\n                canvas.drawLine(left,\
+        \ y, right, y, gridPaint)\n            }\n\n            for (x in 0 until cols) {\n                val px = left +\
+        \ uw * (x.toFloat() / (cols - 1).coerceAtLeast(1))\n                for (y in 0 until rows step 2) {\n           \
+        \         val py = bottom - uh * luma[y * cols + x]\n                    canvas.drawPoint(px, py, pointPaint)\n  \
+        \              }\n            }\n\n            canvas.drawText(\"WAVEFORM\", left, 10f * d, labelPaint)\n        }\n\
+        \    }\n}\n\nKOTLIN\n\ncat > /tmp/v244_patch.py <<'PY'\nfrom pathlib import Path\nimport re\n\ncamera_path = Path(\"\
+        v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt\")\ncamera = camera_path.read_text(encoding=\"\
+        utf-8\")\n\nhardware_anchor = \"import android.hardware.SensorManager\\n\"\nhardware_imports = (\n    \"import android.hardware.SensorManager\\\
+        n\"\n    \"import android.hardware.camera2.CameraCharacteristics\\n\"\n    \"import android.hardware.camera2.CaptureRequest\\\
+        n\"\n)\nif hardware_anchor not in camera:\n    raise SystemExit(\"V244: hardware import anchor missing\")\ncamera\
+        \ = camera.replace(hardware_anchor, hardware_imports, 1)\n\ncamera_anchor = \"import androidx.camera.core.ZoomState\\\
+        n\"\ncamera_imports = (\n    \"import androidx.camera.core.ZoomState\\n\"\n    \"import androidx.camera.camera2.interop.Camera2CameraControl\\\
+        n\"\n    \"import androidx.camera.camera2.interop.Camera2CameraInfo\\n\"\n    \"import androidx.camera.camera2.interop.CaptureRequestOptions\\\
+        n\"\n)\nif camera_anchor not in camera:\n    raise SystemExit(\"V244: Camera2 interop import anchor missing\")\ncamera\
+        \ = camera.replace(camera_anchor, camera_imports, 1)\n\nstate_anchor = \"    private var sceneExposureTarget = 0\\\
+        n\"\nstate_code = (\n    \"    private var sceneExposureTarget = 0\\n\\n\"\n    \"    private var v244ShutterAngle\
+        \ = 0\\n\"\n    \"    private var v244Iso = 0\\n\"\n    \"    private var v244WhiteBalanceIndex = 0\\n\"\n    \" \
+        \   private val v244WhiteBalanceLabels = \"\n    \"arrayOf(\\\"AUTO\\\", \\\"DAYLIGHT\\\", \\\"CLOUDY\\\", \\\"TUNGSTEN\\\
+        \", \\\"FLUORESCENT\\\")\\n\"\n)\nif state_anchor not in camera:\n    raise SystemExit(\"V244: state anchor missing\"\
+        )\ncamera = camera.replace(state_anchor, state_code, 1)\n\nattach_pattern = re.compile(\n    r'(DevelopUgandaV242QualityMatchPro\\\
+        .attach\\(\\s*'\n    r'activity\\s*=\\s*this,\\s*root\\s*=\\s*root\\s*\\))',\n    re.S\n)\nmatch = attach_pattern.search(camera)\n\
+        if not match:\n    raise SystemExit(\"V244: V242 attach block missing\")\n\nattach_code = (\n    match.group(1) +\n\
+        \    \"\\n        DevelopUgandaV244CinemaControl.attach(\\n\"\n    \"            activity = this,\\n\"\n    \"   \
+        \         root = root\\n\"\n    \"        )\"\n)\ncamera = camera[:match.start()] + attach_code + camera[match.end():]\n\
+        \nmethod_anchor = \"    private fun enforceImmersiveCameraWindow() {\\n\"\n\nmethods = r\"\"\"    internal fun v244PreviewBitmap():\
+        \ android.graphics.Bitmap? =\n        try {\n            previewView.bitmap\n        } catch (_: Exception) {\n  \
+        \          null\n        }\n\n    internal fun v244CinemaStatusText(): String {\n        val fps = requestedVideoFps().takeIf\
+        \ { it > 0 } ?: 30\n        val shutter =\n            if (v244ShutterAngle > 0) \"${v244ShutterAngle}°\" else \"\
+        SH AUTO\"\n        val iso =\n            if (v244Iso > 0) \"ISO $v244Iso\" else \"ISO AUTO\"\n        val wb =\n\
+        \            v244WhiteBalanceLabels[\n                v244WhiteBalanceIndex.coerceIn(\n                    0,\n  \
+        \                  v244WhiteBalanceLabels.lastIndex\n                )\n            ]\n        val focus =\n     \
+        \       if (focusLockActive) \"AF LOCK\" else \"AF\"\n\n        return \"${qualityDeckLabel()} • ${fps}FPS • $shutter\
+        \ • $iso • WB $wb • $focus\"\n    }\n\n    private fun v244ManualSensorSupported(): Boolean {\n        val cam = camera\
+        \ ?: return false\n\n        return try {\n            val info = Camera2CameraInfo.from(cam.cameraInfo)\n       \
+        \     val values =\n                info.getCameraCharacteristic(\n                    CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES\n\
+        \                ) ?: intArrayOf()\n\n            values.contains(\n                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR\n\
+        \            )\n        } catch (_: Exception) {\n            false\n        }\n    }\n\n    private fun v244SupportedIsoValues():\
+        \ List<Int> {\n        val cam = camera ?: return emptyList()\n\n        return try {\n            val info = Camera2CameraInfo.from(cam.cameraInfo)\n\
+        \            val range =\n                info.getCameraCharacteristic(\n                    CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE\n\
+        \                ) ?: return emptyList()\n\n            listOf(50, 100, 200, 400, 800, 1600, 3200, 6400)\n       \
+        \         .filter { it in range.lower..range.upper }\n                .ifEmpty { listOf(range.lower, range.upper).distinct()\
+        \ }\n        } catch (_: Exception) {\n            emptyList()\n        }\n    }\n\n    private fun v244ApplyCamera2Controls():\
+        \ String {\n        val cam = camera ?: return \"CAMERA NOT READY\"\n\n        if (recording != null) {\n        \
+        \    return \"STOP RECORDING BEFORE CHANGING MANUAL CAMERA CONTROL\"\n        }\n\n        return try {\n        \
+        \    val info = Camera2CameraInfo.from(cam.cameraInfo)\n            val builder = CaptureRequestOptions.Builder()\n\
+        \            val manualRequested = v244ShutterAngle > 0 || v244Iso > 0\n\n            if (manualRequested && v244ManualSensorSupported())\
+        \ {\n                val isoRange =\n                    info.getCameraCharacteristic(\n                        CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE\n\
+        \                    )\n                val exposureRange =\n                    info.getCameraCharacteristic(\n \
+        \                       CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE\n                    )\n\n         \
+        \       if (isoRange == null || exposureRange == null) {\n                    return \"MANUAL SENSOR RANGE NOT EXPOSED\
+        \ BY THIS CAMERA\"\n                }\n\n                val fps = requestedVideoFps().takeIf { it > 0 } ?: 30\n \
+        \               val angle = v244ShutterAngle.takeIf { it > 0 } ?: 180\n                val frameNs = 1_000_000_000L\
+        \ / fps.coerceAtLeast(1)\n                val exposureNs =\n                    (frameNs.toDouble() * angle.toDouble()\
+        \ / 360.0)\n                        .toLong()\n                        .coerceIn(exposureRange.lower, exposureRange.upper)\n\
+        \                val iso =\n                    (v244Iso.takeIf { it > 0 } ?: 200)\n                        .coerceIn(isoRange.lower,\
+        \ isoRange.upper)\n\n                builder.setCaptureRequestOption(\n                    CaptureRequest.CONTROL_AE_MODE,\n\
+        \                    CaptureRequest.CONTROL_AE_MODE_OFF\n                )\n                builder.setCaptureRequestOption(\n\
+        \                    CaptureRequest.SENSOR_EXPOSURE_TIME,\n                    exposureNs\n                )\n   \
+        \             builder.setCaptureRequestOption(\n                    CaptureRequest.SENSOR_SENSITIVITY,\n         \
+        \           iso\n                )\n            } else {\n                if (manualRequested && !v244ManualSensorSupported())\
+        \ {\n                    v244ShutterAngle = 0\n                    v244Iso = 0\n                }\n              \
+        \  builder.setCaptureRequestOption(\n                    CaptureRequest.CONTROL_AE_MODE,\n                    CaptureRequest.CONTROL_AE_MODE_ON\n\
+        \                )\n            }\n\n            val requestedWb =\n                when (v244WhiteBalanceIndex) {\n\
+        \                    1 -> CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT\n                    2 -> CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT\n\
+        \                    3 -> CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT\n                    4 -> CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT\n\
+        \                    else -> CaptureRequest.CONTROL_AWB_MODE_AUTO\n                }\n\n            val availableWb\
+        \ =\n                info.getCameraCharacteristic(\n                    CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES\n\
+        \                ) ?: intArrayOf(CaptureRequest.CONTROL_AWB_MODE_AUTO)\n\n            val finalWb =\n            \
+        \    if (availableWb.contains(requestedWb)) {\n                    requestedWb\n                } else {\n       \
+        \             v244WhiteBalanceIndex = 0\n                    CaptureRequest.CONTROL_AWB_MODE_AUTO\n              \
+        \  }\n\n            builder.setCaptureRequestOption(\n                CaptureRequest.CONTROL_AWB_MODE,\n         \
+        \       finalWb\n            )\n\n            Camera2CameraControl.from(cam.cameraControl)\n                .setCaptureRequestOptions(builder.build())\n\
+        \n            refreshHud()\n\n            if (manualRequested && !v244ManualSensorSupported()) {\n               \
+        \ \"MANUAL SENSOR NOT SUPPORTED • AUTO KEPT\"\n            } else {\n                v244CinemaStatusText()\n    \
+        \        }\n        } catch (_: Exception) {\n            \"CAMERA2 CONTROL UNAVAILABLE • AUTO KEPT\"\n        }\n\
+        \    }\n\n    internal fun v244CycleShutterAngle(): String {\n        if (recording != null) {\n            return\
+        \ \"STOP RECORDING BEFORE CHANGING SHUTTER\"\n        }\n\n        if (!v244ManualSensorSupported()) {\n         \
+        \   v244ShutterAngle = 0\n            return \"MANUAL SHUTTER NOT SUPPORTED • AUTO KEPT\"\n        }\n\n        val\
+        \ values = intArrayOf(0, 180, 90, 360)\n        val current = values.indexOf(v244ShutterAngle).takeIf { it >= 0 }\
+        \ ?: 0\n        v244ShutterAngle = values[(current + 1) % values.size]\n        return v244ApplyCamera2Controls()\n\
+        \    }\n\n    internal fun v244CycleIso(): String {\n        if (recording != null) {\n            return \"STOP RECORDING\
+        \ BEFORE CHANGING ISO\"\n        }\n\n        if (!v244ManualSensorSupported()) {\n            v244Iso = 0\n     \
+        \       return \"MANUAL ISO NOT SUPPORTED • AUTO KEPT\"\n        }\n\n        val supported = v244SupportedIsoValues()\n\
+        \        if (supported.isEmpty()) {\n            v244Iso = 0\n            return \"ISO RANGE NOT EXPOSED • AUTO KEPT\"\
+        \n        }\n\n        val values = listOf(0) + supported\n        val current = values.indexOf(v244Iso).takeIf {\
+        \ it >= 0 } ?: 0\n        v244Iso = values[(current + 1) % values.size]\n        return v244ApplyCamera2Controls()\n\
+        \    }\n\n    internal fun v244CycleWhiteBalance(): String {\n        if (recording != null) {\n            return\
+        \ \"STOP RECORDING BEFORE CHANGING WHITE BALANCE\"\n        }\n\n        v244WhiteBalanceIndex =\n            (v244WhiteBalanceIndex\
+        \ + 1) % v244WhiteBalanceLabels.size\n\n        return v244ApplyCamera2Controls()\n    }\n\n    internal fun v244ResetCinemaControls():\
+        \ String {\n        if (recording != null) {\n            return \"STOP RECORDING BEFORE RESETTING CAMERA CONTROL\"\
+        \n        }\n\n        v244ShutterAngle = 0\n        v244Iso = 0\n        v244WhiteBalanceIndex = 0\n        return\
+        \ v244ApplyCamera2Controls()\n    }\n\n\"\"\"\n\nif method_anchor not in camera:\n    raise SystemExit(\"V244: method\
+        \ anchor missing\")\ncamera = camera.replace(method_anchor, methods + method_anchor, 1)\n\ncamera = camera.replace('\"\
+        V243\"', '\"V244\"')\ncamera = camera.replace(' • V243\"', ' • V244\"')\ncamera_path.write_text(camera, encoding=\"\
+        utf-8\")\n\nhome_path = Path(\n    \"v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaGeneralHubActivity.kt\"\
+        \n)\nhome = home_path.read_text(encoding=\"utf-8\")\nhome = home.replace(\"develop.uganda • V243\", \"develop.uganda\
+        \ • V244\")\nhome = home.replace(\n    \"GENERAL WORKFLOW HOME\",\n    \"GENERAL WORKFLOW HOME • CINEMA CONTROL PRO\"\
+        \n)\nhome_path.write_text(home, encoding=\"utf-8\")\n\nstory_path = Path(\n    \"v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaStoryPackager.kt\"\
+        \n)\nstory = story_path.read_text(encoding=\"utf-8\")\nstory = story.replace('.put(\"app_version\", \"V243\")', '.put(\"\
+        app_version\", \"V244\")')\nstory_path.write_text(story, encoding=\"utf-8\")\n\ngradle_path = Path(\"v172-source/app/build.gradle.kts\"\
+        )\ngradle = gradle_path.read_text(encoding=\"utf-8\")\ngradle = gradle.replace(\"versionCode = 24300\", \"versionCode\
+        \ = 24400\", 1)\ngradle = gradle.replace(\n    'versionName = \"243.0-general-workflow-home\"',\n    'versionName\
+        \ = \"244.0-cinema-control-pro\"',\n    1\n)\ngradle_path.write_text(gradle, encoding=\"utf-8\")\n\nprint(\"PASS:\
+        \ V244 Camera2 cinema controls attached.\")\n\nPY\npython3 /tmp/v244_patch.py\n\ntest -f \"$SRC/DevelopUgandaV244CinemaControl.kt\"\
+        \ngrep -q 'DevelopUgandaV244CinemaControl.attach' \"$CAMERA\"\ngrep -q 'v244CinemaStatusText' \"$CAMERA\"\ngrep -q\
+        \ 'v244CycleShutterAngle' \"$CAMERA\"\ngrep -q 'v244CycleIso' \"$CAMERA\"\ngrep -q 'v244CycleWhiteBalance' \"$CAMERA\"\
+        \ngrep -q 'Camera2CameraControl' \"$CAMERA\"\ngrep -q 'REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR' \"$CAMERA\"\n\
+        grep -q 'v244_false_color' \"$SRC/DevelopUgandaV244CinemaControl.kt\"\ngrep -q 'v244_waveform' \"$SRC/DevelopUgandaV244CinemaControl.kt\"\
+        \ngrep -q 'develop.uganda • V244' \"$HOME\"\ngrep -q 'versionCode = 24400' \"$GRADLE\"\ngrep -q 'versionName = \"\
+        244.0-cinema-control-pro\"' \"$GRADLE\"\necho \"PASS: V244 Cinema Control Pro verified.\"\n"
+    - name: Add V245 Master Quality Lock
+      run: |
+        set -e
+        python3 - <<'PY'
+        from pathlib import Path
+        import re
+        
+        src = Path("v172-source/app/src/main/java/com/sentongoharuna/pulse")
+        camera_path = src / "DevelopUgandaCameraActivity.kt"
+        home_path = src / "DevelopUgandaGeneralHubActivity.kt"
+        story_path = src / "DevelopUgandaStoryPackager.kt"
+        gradle_path = Path("v172-source/app/build.gradle.kts")
+        
+        camera = camera_path.read_text(encoding="utf-8")
+        
+        # V245: MASTER UHD / CINEMA is enforced on every fresh camera launch.
+        guard = '        if (migration.getBoolean("master_initialized", false)) {\n            return\n        }\n\n'
+        if guard in camera:
+            camera = camera.replace(
+                guard,
+                '        // V245 MASTER QUALITY LOCK: re-apply master every launch.\n\n',
+                1,
+            )
+        
+        master_anchor = '        qualityModes.indexOf("MASTER UHD")\n            .takeIf { it >= 0 }\n            ?.let { qualityIndex = it }\n'
+        if master_anchor not in camera:
+            raise SystemExit("V245: MASTER UHD startup anchor missing")
+        
+        # Keep the ordinary QUALITY button inside the high-quality master family.
+        pattern = re.compile(
+            r'(?P<indent>[ \t]*)qualityIndex\s*=\s*'
+            r'\(\s*qualityIndex\s*\+\s*1\s*\)\s*%\s*qualityModes\.size'
+        )
+        
+        def replace_cycle(match):
+            i = match.group("indent")
+            lines = [
+                i + 'val v245MasterModes = listOf("MASTER UHD", "UHD 60", "MASTER HDR")',
+                i + 'val v245CurrentName = qualityModes.getOrNull(qualityIndex) ?: "MASTER UHD"',
+                i + 'val v245Current = v245MasterModes.indexOf(v245CurrentName).takeIf { it >= 0 } ?: 0',
+                i + 'val v245Next = v245MasterModes[(v245Current + 1) % v245MasterModes.size]',
+                i + 'qualityIndex = qualityModes.indexOf(v245Next).takeIf { it >= 0 } ?: qualityIndex',
+            ]
+            return "\n".join(lines)
+        
+        camera, cycle_count = pattern.subn(replace_cycle, camera, count=1)
+        print("V245 quality-cycle replacements:", cycle_count)
+        
+        # Make status and finalized Gallery verification explicit.
+        camera = camera.replace(
+            'return "${qualityDeckLabel()} • ${fps}FPS • $shutter • $iso • WB $wb • $focus"',
+            'return "MASTER LOCK • ${qualityDeckLabel()} • ${fps}FPS • $shutter • $iso • WB $wb • $focus"',
+            1,
+        )
+        camera = camera.replace(
+            '"SAVED $resolutionLabel • FALLBACK"',
+            '"MASTER WARNING • $resolutionLabel FALLBACK"',
+            1,
+        )
+        camera = camera.replace(
+            '"SAVED $resolutionLabel ✓"',
+            '"MASTER VERIFIED • $resolutionLabel ✓"',
+            1,
+        )
+        camera = camera.replace(
+            '"GALLERY MASTER • ${width}×${height} • ${mbps} Mbps"',
+            '"MASTER FILE • ${width}×${height} • ${mbps} Mbps"',
+            1,
+        )
+        
+        # Add a public status helper without multiline Python literals.
+        anchor = "    private fun enforceImmersiveCameraWindow() {\n"
+        helper = (
+            "    internal fun v245MasterQualityStatus(): String {\n"
+            "        val name = qualityModes.getOrNull(qualityIndex) ?: \"MASTER UHD\"\n\n"
+            "        return if (\n"
+            "            name == \"MASTER UHD\" ||\n"
+            "            name == \"UHD 60\" ||\n"
+            "            name == \"MASTER HDR\"\n"
+            "        ) {\n"
+            "            \"MASTER QUALITY LOCK • $name\"\n"
+            "        } else {\n"
+            "            \"MASTER QUALITY WARNING • $name\"\n"
+            "        }\n"
+            "    }\n\n"
+        )
+        if "internal fun v245MasterQualityStatus()" not in camera:
+            if anchor not in camera:
+                raise SystemExit("V245: method anchor missing")
+            camera = camera.replace(anchor, helper + anchor, 1)
+        
+        camera = camera.replace('"V244"', '"V245"')
+        camera = camera.replace(' • V244"', ' • V245"')
+        camera_path.write_text(camera, encoding="utf-8")
+        
+        home = home_path.read_text(encoding="utf-8")
+        home = home.replace("develop.uganda • V244", "develop.uganda • V245")
+        home = home.replace("GENERAL WORKFLOW HOME • CINEMA CONTROL PRO", "GENERAL WORKFLOW HOME • MASTER QUALITY LOCK")
+        home_path.write_text(home, encoding="utf-8")
+        
+        story = story_path.read_text(encoding="utf-8")
+        story = story.replace('.put("app_version", "V244")', '.put("app_version", "V245")')
+        story_path.write_text(story, encoding="utf-8")
+        
+        gradle = gradle_path.read_text(encoding="utf-8")
+        gradle = gradle.replace("versionCode = 24400", "versionCode = 24500", 1)
+        gradle = gradle.replace('versionName = "244.0-cinema-control-pro"', 'versionName = "245.0-master-quality-lock"', 1)
+        gradle_path.write_text(gradle, encoding="utf-8")
+        
+        print("PASS: V245 Master Quality Lock applied.")
+        PY
+
+        CAMERA="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaCameraActivity.kt"
+        HOME="v172-source/app/src/main/java/com/sentongoharuna/pulse/DevelopUgandaGeneralHubActivity.kt"
+        GRADLE="v172-source/app/build.gradle.kts"
+
+        grep -q 'MASTER QUALITY LOCK' "$CAMERA"
+        grep -q 'MASTER VERIFIED' "$CAMERA"
+        grep -q 'MASTER WARNING' "$CAMERA"
+        grep -q 'v245MasterQualityStatus' "$CAMERA"
+        grep -q 'verifyV242GalleryMaster' "$CAMERA"
+        grep -q 'DevelopUgandaV244CinemaControl.attach' "$CAMERA"
+        grep -q 'v242SetZoomNormalized' "$CAMERA"
+        grep -q 'develop.uganda • V245' "$HOME"
+        grep -q 'versionCode = 24500' "$GRADLE"
+        grep -q 'versionName = "245.0-master-quality-lock"' "$GRADLE"
+
+        echo "PASS: V245 verified before Android compilation."
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+    - name: Install Android platform
+      run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: 8.11.1
+    - name: Build V245 APK
+      working-directory: v172-source
+      run: 'set -o pipefail
+
+        gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee v245-build.log
+
+        '
+    - name: Print compiler errors
+      if: failure()
+      working-directory: v172-source
+      run: "grep -Ein '(^e:|error:|unresolved reference|overload resolution ambiguity|expecting|type mismatch|cannot infer|FAILURE:)'\
+        \ \\\n  v245-build.log | head -5000 || true\n"
+    - name: Prepare V245 artifacts
+      run: "cp v172-source/app/build/outputs/apk/debug/app-debug.apk \\\n  DEVELOP-UGANDA-V245-MASTER-QUALITY-LOCK.apk\n\n\
+        cd v172-source\nzip -qr ../DEVELOP-UGANDA-V245-MASTER-QUALITY-LOCK-SOURCE.zip app\ncd ..\n"
+    - name: Upload V245 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: DEVELOP-UGANDA-V245-MASTER-QUALITY-LOCK
+        path: DEVELOP-UGANDA-V245-MASTER-QUALITY-LOCK.apk
+        if-no-files-found: error
+        retention-days: 14
+    - name: Upload V245 source
+      uses: actions/upload-artifact@v4
+      with:
+        name: DEVELOP-UGANDA-V245-MASTER-QUALITY-LOCK-SOURCE
+        path: DEVELOP-UGANDA-V245-MASTER-QUALITY-LOCK-SOURCE.zip
+        if-no-files-found: error
+        retention-days: 14
+    - name: Upload V245 build log if needed
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: V245-MASTER-QUALITY-LOCK-BUILD-LOG
+        path: v172-source/v245-build.log
+        if-no-files-found: warn
+        retention-days: 7
