@@ -26,14 +26,14 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
     private lateinit var contentHost: FrameLayout
 
-    private val gold = 0xFFAEBDEB.toInt()
-    private val cyan = 0xFF8FA8E8.toInt()
-    private val green = 0xFF91B6A0.toInt()
-    private val red = 0xFFC76D73.toInt()
-    private val white = 0xFFF1F3F8.toInt()
-    private val ink = 0xFF031829.toInt()
-    private val card = 0xFF092236.toInt()
-    private val muted = 0xFFAEB7C7.toInt()
+    private val gold = 0xFFFFC21A.toInt()
+    private val cyan = 0xFF77E9FF.toInt()
+    private val green = 0xFF62E889.toInt()
+    private val red = 0xFFFF3B32.toInt()
+    private val white = Color.WHITE
+    private val ink = 0xFF05090C.toInt()
+    private val card = 0xFF10171C.toInt()
+    private val muted = 0xFF9BABAF.toInt()
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -68,7 +68,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
                     dp(8)
                 )
                 setBackgroundColor(
-                    0xFF061D2E.toInt()
+                    0xFF080E12.toInt()
                 )
             }
 
@@ -88,7 +88,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         top.addView(
             label(
-                "UNIFIED LIVE CONTROL DECK • V235\nCOLOR • DIRECTOR • BRAND • QC • ALL RETAINED",
+                "BRIGHT RING DECK • V191",
                 9f,
                 white,
                 true
@@ -140,7 +140,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
                     dp(9)
                 )
                 setBackgroundColor(
-                    0xFF061D2E.toInt()
+                    0xFF080E12.toInt()
                 )
             }
 
@@ -156,7 +156,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "REPORT\nFIELD",
+                "REPORT",
                 gold
             ) {
                 openReportCamera()
@@ -166,7 +166,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "LIVE\nSTUDIO",
+                "LIVE",
                 red
             ) {
                 showLivePage()
@@ -176,7 +176,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "EDIT\nVIDEO",
+                "EDIT",
                 cyan
             ) {
                 openEditor()
@@ -186,7 +186,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         nav.addView(
             navButton(
-                "DESK\nSTORY",
+                "DESK",
                 green
             ) {
                 showNewsroom()
@@ -216,532 +216,9 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             hero(
-                "develop.uganda NEWSROOM",
-                "REPORT • LIVE • EDIT • NEWSROOM"
+                "BRIGHT RING DECK",
+                "REPORT • LIVE • EDIT • DESK • PUBLISH"
             )
-        )
-
-        page.addView(
-            compactStatus(
-                "READY TO REPORT",
-                "FIELD • LIVE • EDIT • STORY DESK",
-                green
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "CAMERA MEMORY",
-                "REPORT + LIVE remember your last HUD and key operating settings",
-                gold
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "QUICK PRESETS",
-                "REPORT: FIELD / OUTDOOR / NIGHT / INTERVIEW / CINEMA   •   LIVE: BREAKING / INTERVIEW / EVENT / COMMUNITY",
-                cyan
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "SAVED VIDEO VISIBILITY",
-                "SHORT TELEMETRY RAIL • WIDER READABLE COLUMN • LIVE BUILD TAG AND BLINKING REC BADGE USE SEPARATE SAFE LANES",
-                green
-            )
-        )
-
-
-        page.addView(
-            compactStatus(
-                "AUTO VIEW • ON-DEVICE SCENE DESCRIPTION",
-                "MAIN REPORT + LIVE PREVIEW SHOW A BRIEF ML KIT DESCRIPTION OF THE CURRENT VIEW • SCREEN-ONLY SO A WRONG AI LABEL IS NOT PERMANENTLY BURNED INTO EVIDENCE FOOTAGE",
-                0xFF62D8C9.toInt()
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "SHOT QUALITY GUARD • REAL SIGNALS",
-                "TOO DARK • MIC CLIPPING • SHAKE HIGH • HORIZON OFF • THERMAL RISK • STORAGE LOW • GPS WEAK • FOCUS NOT CONFIRMED • FIELD PREFLIGHT • RECOVERY JOURNAL • SCREEN-ONLY PEAK/ZEBRA",
-                0xFF62D8C9.toInt()
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "CREATOR CAMERA ENGINE",
-                "V205→V222 INDEPENDENT CAMERAS RETAINED • V217 ADDS FULL-SCREEN CAMERA PREVIEW + POLISHED SAVED-VIDEO HUD • NOTHING DROPPED",
-                cyan
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "V227 • DIRECTOR & QC PRO",
-                "SCREEN-ONLY REAL FACE COMPOSITION FOR PEOPLE/INTERVIEW • PREVIEW LUMA HISTOGRAM • ESTIMATED RECORD TIME • REAL CAMERA DEVICE MAP • SHOT CONTINUITY • INSTANT MP4 QC + REVIEW • V226 FIX2 NEWSROOM INTAKE RETAINED",
-                0xFF91B6A0.toInt()
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "V228 • BRAND & METADATA STUDIO",
-                "CUSTOM TOP NAME / ORGANIZATION • EVERY SAVED-VIDEO METADATA CATEGORY CAN BE ON/OFF • FULL FORENSIC / NEWS / SOCIAL CLEAN / CONSTRUCTION / INTERVIEW / PRIVATE MASTER / CUSTOM • PUBLIC PROFILE HIDES EXACT GPS BY DEFAULT • STORY PACKAGE PRESERVES BRAND/TAG SNAPSHOT",
-                0xFFD0B06F.toInt()
-            )
-        )
-
-        page.addView(
-            launchCard(
-                "V228 • BRAND & METADATA",
-                "Make the camera yours without losing the professional system",
-                "Change the main saved-video name • optional organization • choose exactly which telemetry is visibly burned into NEW recordings • privacy-aware PUBLIC/SOCIAL profile • VERIFIED MASTER defaults to the full V227 experience",
-                0xFFD0B06F.toInt(),
-                "OPEN BRAND & TAG STUDIO"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaBrandMetadataActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            compactStatus(
-                "V233 • UNIFIED LIVE CONTROL DECK",
-                "ORIGINAL VIDEO ALWAYS PRESERVED • REAL MEDIA3 SingleColorLut 17³ COLOR MASTER • AUTO BY CAMERA/SCENE • 13 ORIGINAL DU COLOR PROFILES • OPTIONAL MONITOR APPROXIMATION • STORY PACKAGE COLOR_PROFILE.json",
-                0xFFA793D8.toInt()
-            )
-        )
-
-        page.addView(
-            launchCard(
-                "V233 • COLOR + LIVE CONTROL",
-                "Professional color without pretending a phone sensor is an ARRI / RED / Sony cinema sensor",
-                "DU CINEMA NATURAL • COOL CINEMA • FILM BIAS • EXTENDED VIDEO • SOFT FILM • WARM 709 • NIGHT CINEMA • BLEACH DRAMA • GOLDEN HOUR • CLEAN SOCIAL • CONSTRUCTION • PEOPLE • MONO CINEMA • real separate COLOR_MASTER.mp4",
-                0xFFA793D8.toInt(),
-                "OPEN COLOR STUDIO"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaColorStudioActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V227 • CAMERA HEALTH",
-                "See what this phone actually exposes",
-                "REAL CameraX/Camera2 device IDs + focal lengths • UHD • HLG HDR • stabilization • hardware FPS ranges • JPEG / Ultra HDR / RAW / RAW+JPEG • on-device transcription • thermal/location/storage • H.264/AAC encoder presence",
-                0xFF73B7D9.toInt(),
-                "OPEN CAMERA HEALTH"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaCameraHealthActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            sectionTitle(
-                "INDEPENDENT PRO CAMERAS"
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "SHOT FINDER • ALL CAMERAS ARE INDEPENDENT • PICK BY WHAT YOU ARE FILMING",
-                "PEOPLE → V205   •   BACKLIGHT → V206   •   BUILDINGS → V207   •   WALK/ACTION → V208   •   NIGHT → V209   •   EVERYDAY → V210   •   INTERVIEW AUDIO → V211   •   VERIFIED → V212   •   LONG RECORD → V213   •   CINEMATIC → V214   •   UNSURE → V215   •   SOCIAL POST → V222",
-                cyan
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "V217 FULL FRAME CAMERA",
-                "EVERY CAMERA STILL OPENS DIRECTLY • CAMERA PREVIEW NOW FILLS THE SCREEN BEHIND CONTROLS • RECORDING FORCES FULL FRAME • SAVED HUD IS WIDER AND CLEANER",
-                green
-            )
-        )
-
-        page.addView(
-            launchCard(
-                "V205 • PEOPLE / PORTRAIT FOCUS",
-                "People, portraits and interviews",
-                "Tap subject for AF • long-press persistent AF lock • INTERVIEW + SOCIAL FHD default • focus reticle emphasized • all shared recording/telemetry tools remain",
-                gold,
-                "OPEN V205 FOCUS CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaFocusAssistCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V206 • SUBJECT METERING",
-                "Backlit faces, windows and mixed light",
-                "Long-press metering region • visible reticle • NATURAL default • independent saved settings • exact camera identity burned into V216 output",
-                0xFFD0B06F.toInt(),
-                "OPEN V206 METER CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaMeteringLockCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V207 • BUILDINGS / LEVEL",
-                "Architecture, rooms and straight horizons",
-                "Rotation-vector horizon guide emphasized • LEVEL LOCK / LEVEL NEAR / ADJUST • OUTDOOR default • other modules retained but visually secondary",
-                green,
-                "OPEN V207 HORIZON CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaHorizonCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V208 • WALK / ACTION STEADY",
-                "Walking, vehicles and moving subjects",
-                "ACTION STAB default • real STEADY / MOVING / SHAKE guidance emphasized • DOCUMENTARY default • device stabilization remains real CameraX capability",
-                0xFF71B9A7.toInt(),
-                "OPEN V208 STEADYSHOT CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaSteadyShotCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V209 • NIGHT / LOW LIGHT",
-                "Night streets and dark interiors",
-                "LOW LIGHT + NIGHT defaults • real Android lux sensor emphasized • dark/dim/normal/bright guidance • 30fps advice preserved",
-                0xFF8A86B8.toInt(),
-                "OPEN V209 NIGHT CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaNightIntelligenceCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V210 • EVERYDAY PRO",
-                "Best general-purpose professional camera",
-                "All V204→V215 tools visible together • Social Master capture engine • focus/meter/horizon/motion/lux/audio/thermal/verified-state controls • REPORTER default",
-                cyan,
-                "OPEN V210 ALL-PRO CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaAllProCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V211 • INTERVIEW / AUDIO",
-                "Speech, interviews and events",
-                "CameraX microphone amplitude + peak emphasized • LOW / GOOD / HOT / CLIP RISK • INTERVIEW default • audio track is still recorded normally",
-                green,
-                "OPEN V211 AUDIO CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaAudioGuardCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V212 • VERIFIED REPORT",
-                "Site reports, incidents and evidence capture",
-                "Live CameraX + GPS + sensor + audio state emphasized • NEWS default • V216 filename and SHA-256 integrity metadata identify this exact camera",
-                0xFF73B7D9.toInt(),
-                "OPEN V212 VERIFIED CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaVerifiedCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V213 • LONG RECORD / HEAT SAFE",
-                "Long takes and hot conditions",
-                "Android PowerManager thermal state emphasized • severe+ safe fallback retained • SOCIAL FHD default • thermal state recorded in output",
-                red,
-                "OPEN V213 THERMAL CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaThermalSafeCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V214 • CINEMATIC LOOKS",
-                "Cinematic people, travel and creative shots",
-                "SOCIAL HDR + WARM first-run defaults • subtle look-matched preview • mode accent/purpose • exact quality/scene/look recorded",
-                0xFFA793D8.toInt(),
-                "OPEN V214 SIGNATURE CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaModeSignatureCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V215 • SMART AUTO",
-                "Fast shooting when you do not want to choose settings",
-                "AUTO DIRECTOR enabled on first launch • real lux + shake + thermal choose actual Social FHD / Social 60 / Action Stab / Low Light • never changes mid-recording",
-                0xFF73B7D9.toInt(),
-                "OPEN V215 AUTO CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaAutoDirectorCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V222 • SOCIAL MEDIA CAMERA",
-                "TikTok • Instagram Reels • YouTube Shorts • social posts",
-                "Direct 9:16 SOCIAL FHD camera • compact social HUD • records the normal high-quality original first • then automatically forces a separate H.264/AAC social re-encode • 1080×1920 • 30fps max • 16 Mbps target • 2s keyframes • saves separately in Movies/develop.uganda/SM Posts",
-                0xFF62D8C9.toInt(),
-                "OPEN V222 SM CAMERA"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaSocialMediaCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            compactStatus(
-                "SM CAMERA WORKFLOW",
-                "TAP V222 → RECORD → STOP → ORIGINAL SAVES NORMALLY → SM OPTIMIZING → SM READY → PICK THE SEPARATE SM POSTS VIDEO IN TIKTOK / REELS",
-                0xFF62D8C9.toInt()
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "NOTHING DROPPED",
-                "V205 • V206 • V207 • V208 • V209 • V210 • V211 • V212 • V213 • V214 • V215 • V222 SOCIAL MEDIA CAMERA ALL REMAIN DIRECT-LAUNCH OPTIONS • V223 ADDS AUTO VIEW TO MAIN REPORT/LIVE",
-                gold
-            )
-        )
-
-        val quickLaunch =
-            LinearLayout(this).apply {
-                orientation =
-                    LinearLayout.HORIZONTAL
-
-                setPadding(
-                    0,
-                    dp(4),
-                    0,
-                    dp(8)
-                )
-            }
-
-        quickLaunch.addView(
-            smallClipButton(
-                "REPORT",
-                gold
-            ) {
-                openReportCamera()
-            },
-            LinearLayout.LayoutParams(
-                0,
-                dp(48),
-                1f
-            )
-        )
-
-        quickLaunch.addView(
-            smallClipButton(
-                "LIVE",
-                red
-            ) {
-                openLiveCamera()
-            },
-            LinearLayout.LayoutParams(
-                0,
-                dp(48),
-                1f
-            ).apply {
-                marginStart =
-                    dp(6)
-            }
-        )
-
-        quickLaunch.addView(
-            smallClipButton(
-                "EDIT",
-                cyan
-            ) {
-                openEditor()
-            },
-            LinearLayout.LayoutParams(
-                0,
-                dp(48),
-                1f
-            ).apply {
-                marginStart =
-                    dp(6)
-            }
-        )
-
-        quickLaunch.addView(
-            smallClipButton(
-                "DESK",
-                green
-            ) {
-                showNewsroom()
-            },
-            LinearLayout.LayoutParams(
-                0,
-                dp(48),
-                1f
-            ).apply {
-                marginStart =
-                    dp(6)
-            }
-        )
-
-        page.addView(
-            quickLaunch
-        )
-
-        page.addView(
-            sectionTitle(
-                "AUTO STORY PACKAGE • V227"
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "AFTER A SUCCESSFUL REPORT / LIVE RECORDING",
-                "ORIGINAL PACKAGE COPY • THUMBNAIL • MANIFEST • METADATA • SHA-256 COPY CHECK • CAPTION DRAFT • SOCIAL MASTER WHEN AVAILABLE • OPTIONAL ON-DEVICE TRANSCRIPT / SRT DRAFT",
-                0xFF62D8C9.toInt()
-            )
-        )
-
-        page.addView(
-            launchCard(
-                "V227 • STORY PACKAGES",
-                "Open, share and transcribe completed report packages",
-                "Each package is stored under Download/develop.uganda/Story Packages/<Package ID> • original Gallery video stays untouched • Interview/V211 can request on-device transcript automatically • any package can request transcript manually on Android 13+ when an on-device recognizer exists",
-                0xFF62D8C9.toInt(),
-                "OPEN STORY PACKAGES"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaStoryPackagesActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            sectionTitle(
-                "PROFESSIONAL PHOTO CAMERAS • V225"
-            )
-        )
-
-        page.addView(
-            compactStatus(
-                "CAPABILITY-AWARE STILL PHOTOGRAPHY",
-                "ONLY FORMATS THE SELECTED LENS REPORTS AS SUPPORTED ARE SHOWN • JPEG • ULTRA HDR JPEG_R • RAW DNG • RAW+JPEG • EDGE PEAK / ZEBRA REMAIN SCREEN-ONLY",
-                0xFFD0B06F.toInt()
-            )
-        )
-
-        page.addView(
-            launchCard(
-                "V225 • PHOTO PRO",
-                "General professional still photography",
-                "Maximum-quality CameraX ImageCapture • tap focus • capability-aware JPEG / Ultra HDR / RAW DNG / RAW+JPEG selector • level guide • edge peak / zebra operator assist",
-                0xFFD0B06F.toInt(),
-                "OPEN PHOTO PRO"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaPhotoProCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V225 • BUILDING PHOTO",
-                "Architecture • rooms • property • straight lines",
-                "Level guide emphasized • Ultra HDR preferred only when this lens reports support • otherwise JPEG fallback • maximum-quality capture • RAW options remain selectable when supported",
-                green,
-                "OPEN BUILDING PHOTO"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaBuildingPhotoCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V225 • PEOPLE PHOTO",
-                "People • portraits • interview stills",
-                "Tap-to-focus with CameraX focus confirmation • maximum-quality JPEG default • RAW/HDR choices appear only if the device supports them • peaking optional",
-                gold,
-                "OPEN PEOPLE PHOTO"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaPeoplePhotoCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V225 • NIGHT PHOTO",
-                "Night • dark rooms • low-light stills",
-                "CameraX MAXIMIZE_QUALITY • flash OFF by default • no fake Nightography claim • device-supported RAW/HDR formats remain selectable • zebra/peaking available",
-                0xFF8A86B8.toInt(),
-                "OPEN NIGHT PHOTO"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaNightPhotoCameraActivity::class.java
-                )
-            }
-        )
-
-        page.addView(
-            launchCard(
-                "V225 • VERIFIED PHOTO",
-                "Inspections • site records • evidence-style stills",
-                "JPEG maximum quality • filename identifies VERIFIED PHOTO • metadata JSON includes capture time/GPS/camera • SHA-256 integrity sidecar detects later file changes without claiming authorship",
-                0xFF73B7D9.toInt(),
-                "OPEN VERIFIED PHOTO"
-            ) {
-                openIndependentCamera(
-                    DevelopUgandaVerifiedPhotoCameraActivity::class.java
-                )
-            }
         )
 
         page.addView(
@@ -753,8 +230,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "FIELD REPORT CAMERA",
-                "FIELD REPORT • V216 INDEPENDENT CAMERA SUITE • V205→V222 DIRECT HOME LAUNCHERS • SEPARATE CAMERA ACTIVITIES + PREFERENCES • NOTHING DROPPED • telemetry",
-                "Report ID • reporter/story • GPS/GNSS • compass • weather • audio • camera health",
+                "FIELD REPORT • thick bright ring controls • selected pills fill completely • clearer saved-video narration",
+                "Reporter ID • GPS • compass • weather • telemetry • scenes • looks",
                 gold,
                 "OPEN REPORT CAMERA"
             ) {
@@ -765,8 +242,8 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             launchCard(
                 "LIVE STUDIO",
-                "LIVE STUDIO • SOCIAL 30/60 • SOCIAL HDR • UHD 30/60 • ACTION 30/60 • low-light profile • LIVE graphics",
-                "Signals • reporter identity • output setup • broadcast profiles • pulsing red record ring",
+                "LIVE STUDIO • bright broadcast rings • full-colour selected pills • cleaner ON AIR/lower-third wording",
+                "Blinking LIVE • signal lamps • smaller glowing setting buttons • Reporter ID • lower third • safe recorded graphics • pulsing red record ring",
                 red,
                 "OPEN LIVE STUDIO"
             ) {
@@ -782,9 +259,9 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
         page.addView(
             launchCard(
-                "EDIT + SOCIAL MASTER • OPTIONAL",
-                "Edit normally, then create TikTok or Reels upload masters without touching the original",
-                "GALLERY • FILES • RECENT • LAST CLIP • Media3 preview/edit • TIKTOK MASTER 16 Mbps • REELS MASTER 14 Mbps • original preserved",
+                "EDIT DESK",
+                "Fast social cut",
+                "Open clip • preview • trim • mute export • save • share",
                 cyan,
                 "OPEN EDIT DESK"
             ) {
@@ -802,14 +279,6 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             ) {
                 showNewsroom()
             }
-        )
-
-        page.addView(
-            compactStatus(
-                "REPORTING WORKFLOW",
-                "ASSIGN → CAPTURE → VERIFY → EDIT → SHARE",
-                cyan
-            )
         )
 
         page.addView(
@@ -845,7 +314,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
         page.addView(
             compactStatus(
                 "EDITOR",
-                "V218 • GALLERY / FILES / LAST CLIP • PREVIEW CUT • KEYFRAME-SAFE MP4 REMUX • MUTE • SHARE",
+                "LOSSLESS MP4 TRIM + SHARE",
                 cyan
             )
         )
@@ -1177,7 +646,7 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
 
             background =
                 rounded(
-                    0xFF082033.toInt(),
+                    0xFF0D1418.toInt(),
                     accent,
                     13
                 )
@@ -1616,17 +1085,6 @@ class DevelopUgandaNewsroomActivity : AppCompatActivity() {
             Intent.createChooser(
                 send,
                 "Publish / share story"
-            )
-        )
-    }
-
-    private fun openIndependentCamera(
-        cameraClass: Class<*>
-    ) {
-        startActivity(
-            Intent(
-                this,
-                cameraClass
             )
         )
     }

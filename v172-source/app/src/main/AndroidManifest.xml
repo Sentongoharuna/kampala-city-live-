@@ -10,12 +10,6 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="true"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
-    <queries>
-        <intent>
-            <action android:name="android.speech.RecognitionService"/>
-        </intent>
-    </queries>
-
     <application
         android:theme="@style/AppTheme"
         android:label="develop.uganda"
@@ -29,126 +23,16 @@
 
         <activity
             android:name=".DevelopUgandaLiveActivity"
-            android:screenOrientation="unspecified"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaFocusAssistCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaMeteringLockCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaHorizonCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaSteadyShotCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaNightIntelligenceCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaAllProCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaAudioGuardCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaVerifiedCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaThermalSafeCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaModeSignatureCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaAutoDirectorCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaSocialMediaCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaPhotoProCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaBuildingPhotoCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaPeoplePhotoCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaNightPhotoCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaVerifiedPhotoCameraActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaStoryPackagesActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaStoryPlayerActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaCameraHealthActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaBrandMetadataActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
-
-        <activity
-            android:name=".DevelopUgandaColorStudioActivity"
             android:screenOrientation="portrait"
             android:exported="false"/>
 
         <activity
             android:name=".DevelopUgandaCameraActivity"
-            android:screenOrientation="unspecified"
+            android:screenOrientation="portrait"
             android:exported="false"/>
 
         <activity
-            android:name=".DevelopUgandaHomeActivity"
+            android:name=".DevelopUgandaNewsroomActivity"
             android:screenOrientation="portrait"
             android:exported="true">
 
@@ -158,10 +42,5 @@
             </intent-filter>
 
         </activity>
-
-        <activity
-            android:name=".DevelopUgandaNewsroomActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"/>
     </application>
 </manifest>

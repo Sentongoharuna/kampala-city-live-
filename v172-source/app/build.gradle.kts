@@ -11,8 +11,8 @@ android {
         applicationId = "com.sentongoharuna.pulse"
         minSdk = 23
         targetSdk = 36
-        versionCode = 24010
-        versionName = "240.1-home-hub-recovery"
+        versionCode = 19100
+        versionName = "191.0-bright-ring-deck"
     }
 
     buildTypes {
@@ -36,11 +36,6 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.8.0")
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.activity:activity-ktx:1.11.0")
-    implementation("androidx.media3:media3-common:1.11.0")
-    implementation("androidx.media3:media3-exoplayer:1.11.0")
-    implementation("androidx.media3:media3-ui:1.11.0")
-    implementation("androidx.media3:media3-transformer:1.11.0")
-    implementation("androidx.media3:media3-effect:1.11.0")
     implementation("androidx.camera:camera-core:$camerax")
     implementation("androidx.camera:camera-camera2:$camerax")
     implementation("androidx.camera:camera-lifecycle:$camerax")
@@ -48,6 +43,4 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("androidx.camera:camera-effects:$camerax")
     implementation("com.google.android.gms:play-services-location:21.4.0")
-    implementation("com.google.mlkit:image-labeling:17.0.9")
-    implementation("com.google.mlkit:face-detection:16.1.7")
 }

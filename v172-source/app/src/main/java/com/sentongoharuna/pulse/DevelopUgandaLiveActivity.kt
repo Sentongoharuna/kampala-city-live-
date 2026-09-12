@@ -14,14 +14,11 @@ import android.graphics.drawable.GradientDrawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Environment
 import android.os.Looper
-import android.os.PowerManager
 import android.os.SystemClock
-import android.os.StatFs
 import android.provider.MediaStore
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -39,8 +36,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraEffect
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.AspectRatio
-import androidx.camera.core.DynamicRange
 import androidx.camera.core.Preview
 import androidx.camera.core.SessionConfig
 import androidx.camera.effects.Frame
@@ -55,14 +50,9 @@ import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.label.ImageLabeler
-import com.google.mlkit.vision.label.ImageLabeling
-import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.text.SimpleDateFormat
 import java.io.File
 import java.io.FileOutputStream
-import java.time.Instant
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
@@ -73,15 +63,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
-    private lateinit var livePreviewToneView: View
-    private lateinit var liveDirectorOverlayView: DevelopUgandaDirectorOverlayView
 
     private lateinit var liveBadge: TextView
     private lateinit var liveTitle: TextView
     private lateinit var liveSubTitle: TextView
     private lateinit var livePreviewMeta: TextView
     private lateinit var livePreviewTech: TextView
-    private lateinit var liveAutoViewDescriptionView: TextView
     private lateinit var netLamp: TextView
     private lateinit var gpsLamp: TextView
     private lateinit var micLamp: TextView
@@ -104,73 +91,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private lateinit var markButton: Button
     private lateinit var styleButton: Button
     private lateinit var liveLockButton: Button
-    private lateinit var liveHudSizeButton: Button
-    private lateinit var liveHudContrastButton: Button
-    private lateinit var liveHudBackingButton: Button
-    private lateinit var liveEffectButton: Button
-    private lateinit var liveColorButton: Button
-    private lateinit var livePresetButton: Button
-    private lateinit var liveSafeInfoButton: Button
     private lateinit var countdownView: TextView
-
-    private val liveHudLabels =
-        arrayOf(
-            "COMPACT",
-            "STANDARD",
-            "LARGE"
-        )
-
-    private val liveHudScales =
-        floatArrayOf(
-            1.04f,
-            1.16f,
-            1.28f
-        )
-
-    private var liveHudSizeIndex = 1
-
-    private val liveHudContrastLabels =
-        arrayOf(
-            "SOFT",
-            "BALANCED",
-            "STRONG"
-        )
-
-    private var liveHudContrastIndex = 1
-
-    private val liveHudBackingLabels =
-        arrayOf(
-            "NONE",
-            "SOFT",
-            "STRONG"
-        )
-
-    private var liveHudBackingIndex = 1
-
-    private val liveEffectLabels =
-        arrayOf(
-            "CLEAN",
-            "NATURAL",
-            "WARM",
-            "COOL",
-            "TEAL",
-            "GOLD",
-            "SOFT",
-            "NIGHT"
-        )
-
-    private var liveEffectIndex = 0
-
-    private val livePresetLabels =
-        arrayOf(
-            "CUSTOM",
-            "BREAKING",
-            "INTERVIEW",
-            "EVENT",
-            "COMMUNITY"
-        )
-
-    private var livePresetIndex = 0
     private lateinit var recordButton: LiveRecordButtonView
 
     private lateinit var timerView: TextView
@@ -186,26 +107,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     private var graphicsEnabled = true
 
     private var quality = Quality.FHD
-    private var qualityLabel = "SOCIAL 30"
-
-    private val liveQualityProfiles =
-        arrayOf(
-            "SOCIAL 30",
-            "SOCIAL 60",
-            "UHD 30",
-            "UHD 60",
-            "HDR UHD",
-            "SOCIAL HDR",
-            "ACTION STAB",
-            "ACTION 60",
-            "LOW LIGHT",
-            "HD FAST"
-        )
-
-    private var liveQualityIndex = 0
-    private var liveActiveFpsLabel = "AUTO FPS"
-    private var liveActiveStabilizationLabel = "STAB AUTO"
-    private var liveActiveDynamicRangeLabel = "SDR"
+    private var qualityLabel = "FHD"
 
     private val profiles =
         arrayOf(
@@ -235,34 +137,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         mutableListOf<Long>()
 
     private var recordStartMs = 0L
-    private var liveRecordStartUtc = "--"
     private var liveRecordingName = ""
     private var liveAudioAmplitude = 0.0
-    private var liveAudioPeakAmplitude = 0.0
     private var liveBlinkOn = true
-    private var livePreflightApprovedOnce = false
-    private lateinit var liveAutoViewLabeler: ImageLabeler
-    private var liveAutoViewBusy = false
-    private var liveAutoViewSummary = "AUTO VIEW • analysing scene"
-    private var lastV233LiveColorMonitorKey = ""
-    private var v229LiveColorOverlayLabel = "AUTO"
-
-    private lateinit var livePowerManager: PowerManager
-    @Volatile private var liveThermalStatus =
-        PowerManager.THERMAL_STATUS_NONE
-    private var liveThermalListenerRegistered =
-        false
-
-    private val liveThermalStatusListener =
-        PowerManager.OnThermalStatusChangedListener {
-                status ->
-            liveThermalStatus =
-                status
-
-            runOnUiThread {
-                updateSignals()
-            }
-        }
 
     private var reporterName = "CITIZEN"
     private var storyId = "--"
@@ -270,51 +147,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
     private val uiHandler =
         Handler(Looper.getMainLooper())
-
-    private val liveAutoViewRunnable =
-        object : Runnable {
-            override fun run() {
-                analyzeLiveAutoViewFrame()
-
-                uiHandler.postDelayed(
-                    this,
-                    3500L
-                )
-            }
-        }
-
-    private val liveDirectorRunnable =
-        object : Runnable {
-            override fun run() {
-                if (
-                    ::previewView.isInitialized &&
-                    ::liveDirectorOverlayView.isInitialized &&
-                    previewView.width > 0 &&
-                    previewView.height > 0
-                ) {
-                    val bitmap =
-                        try {
-                            previewView.bitmap
-                        } catch (_: Exception) {
-                            null
-                        }
-
-                    if (
-                        bitmap != null
-                    ) {
-                        liveDirectorOverlayView.submitFrame(
-                            bitmap,
-                            liveDirectorPeopleMode()
-                        )
-                    }
-                }
-
-                uiHandler.postDelayed(
-                    this,
-                    1200L
-                )
-            }
-        }
 
     private val uiTicker =
         object : Runnable {
@@ -330,12 +162,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
         }
 
-    private val red = 0xFFC76D73.toInt()
-    private val green = 0xFF91B6A0.toInt()
-    private val amber = 0xFFAEBDEB.toInt()
-    private val cyan = 0xFF8FA8E8.toInt()
-    private val white = 0xFFF1F3F8.toInt()
-    private val panel = 0xD9082236.toInt()
+    private val red = 0xFFFF3B32.toInt()
+    private val green = 0xFF62E889.toInt()
+    private val amber = 0xFFFFC21A.toInt()
+    private val cyan = 0xFF77E9FF.toInt()
+    private val white = Color.WHITE
+    private val panel = 0x280A0E11.toInt()
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -348,40 +180,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
 
-        livePowerManager =
-            getSystemService(
-                Context.POWER_SERVICE
-            ) as PowerManager
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q
-        ) {
-            liveThermalStatus =
-                livePowerManager.currentThermalStatus
-
-            try {
-                livePowerManager.addThermalStatusListener(
-                    liveThermalStatusListener
-                )
-
-                liveThermalListenerRegistered =
-                    true
-            } catch (_: Exception) {
-                liveThermalListenerRegistered =
-                    false
-            }
-        }
-
         loadLiveIdentity()
-        loadLiveCameraPreferences()
         buildLiveUi()
-        showLiveRecoveryNoticeIfNeeded()
-        startLiveAutoViewDescription()
-        uiHandler.postDelayed(
-            liveDirectorRunnable,
-            1200L
-        )
         requestNeededPermissions()
 
         uiHandler.post(
@@ -394,33 +194,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             null
         )
 
-        if (
-            ::liveAutoViewLabeler.isInitialized
-        ) {
-            try {
-                liveAutoViewLabeler.close()
-            } catch (_: Exception) {
-            }
-        }
-
         recording?.stop()
         recording = null
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q &&
-            liveThermalListenerRegistered
-        ) {
-            try {
-                livePowerManager.removeThermalStatusListener(
-                    liveThermalStatusListener
-                )
-            } catch (_: Exception) {
-            }
-
-            liveThermalListenerRegistered =
-                false
-        }
 
         super.onDestroy()
     }
@@ -472,113 +247,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 ?: "LIVE REPORT"
     }
 
-
-    private fun startLiveAutoViewDescription() {
-        if (
-            ::liveAutoViewLabeler.isInitialized
-        ) {
-            return
-        }
-
-        liveAutoViewLabeler =
-            ImageLabeling.getClient(
-                ImageLabelerOptions.Builder()
-                    .setConfidenceThreshold(
-                        0.62f
-                    )
-                    .build()
-            )
-
-        uiHandler.removeCallbacks(
-            liveAutoViewRunnable
-        )
-
-        uiHandler.postDelayed(
-            liveAutoViewRunnable,
-            1700L
-        )
-    }
-
-    private fun analyzeLiveAutoViewFrame() {
-        if (
-            liveAutoViewBusy ||
-            !::previewView.isInitialized ||
-            previewView.width <= 0 ||
-            previewView.height <= 0
-        ) {
-            return
-        }
-
-        val bitmap =
-            try {
-                previewView.bitmap
-            } catch (_: Exception) {
-                null
-            } ?: return
-
-        liveAutoViewBusy =
-            true
-
-        liveAutoViewLabeler.process(
-            InputImage.fromBitmap(
-                bitmap,
-                0
-            )
-        )
-            .addOnSuccessListener {
-                    labels ->
-                val top =
-                    labels
-                        .sortedByDescending {
-                            it.confidence
-                        }
-                        .filter {
-                            it.confidence >= 0.62f
-                        }
-                        .take(3)
-                        .map {
-                            it.text.trim()
-                        }
-                        .filter {
-                            it.isNotBlank()
-                        }
-
-                liveAutoViewSummary =
-                    if (
-                        top.isEmpty()
-                    ) {
-                        "AUTO VIEW • scene not confidently identified"
-                    } else {
-                        "AUTO VIEW • likely " +
-                            top.joinToString(
-                                " • "
-                            )
-                    }
-
-                if (
-                    ::liveAutoViewDescriptionView.isInitialized
-                ) {
-                    liveAutoViewDescriptionView.text =
-                        liveAutoViewSummary
-                }
-            }
-            .addOnFailureListener {
-                liveAutoViewSummary =
-                    "AUTO VIEW • analysing scene"
-
-                if (
-                    ::liveAutoViewDescriptionView.isInitialized
-                ) {
-                    liveAutoViewDescriptionView.text =
-                        liveAutoViewSummary
-                }
-            }
-            .addOnCompleteListener {
-                liveAutoViewBusy =
-                    false
-            }
-    }
-
     private fun buildLiveUi() {
         root =
             FrameLayout(this).apply {
@@ -593,7 +261,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     PreviewView.ImplementationMode.COMPATIBLE
 
                 scaleType =
-                    PreviewView.ScaleType.FIT_CENTER
+                    PreviewView.ScaleType.FILL_CENTER
             }
 
         root.addView(
@@ -604,43 +272,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
         )
 
-        livePreviewToneView =
-            View(this).apply {
-                isClickable =
-                    false
-
-                isFocusable =
-                    false
-
-                setBackgroundColor(
-                    Color.TRANSPARENT
-                )
-            }
-
-        root.addView(
-            livePreviewToneView,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        liveDirectorOverlayView =
-            DevelopUgandaDirectorOverlayView(
-                this
-            )
-
-        root.addView(
-            liveDirectorOverlayView,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-
         val topPanel =
             LinearLayout(this).apply {
-                tag = "v237_live_top_panel"
                 orientation =
                     LinearLayout.VERTICAL
 
@@ -678,10 +311,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveTitle =
             label(
-                DevelopUgandaBrandMetadataStore.previewTitle(
-                    this,
-                    "V238"
-                ),
+                "develop.uganda",
                 20f,
                 amber,
                 true
@@ -708,12 +338,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         liveSubTitle =
             label(
-                "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY",
+                "LIVE STUDIO • ${profiles[profileIndex]} • READY",
                 10f,
                 white,
                 true
             ).apply {
-                tag = "v237_live_subtitle"
                 setPadding(
                     0,
                     dp(3),
@@ -761,29 +390,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         topPanel.addView(
             livePreviewTech
-        )
-
-        liveAutoViewDescriptionView =
-            label(
-                "AUTO VIEW • analysing scene",
-                8f,
-                0xFF62D8C9.toInt(),
-                true
-            ).apply {
-                tag = "v237_live_autoview"
-                maxLines = 1
-                isSingleLine = true
-
-                setPadding(
-                    0,
-                    dp(2),
-                    0,
-                    dp(3)
-                )
-            }
-
-        topPanel.addView(
-            liveAutoViewDescriptionView
         )
 
         val signalRow =
@@ -842,7 +448,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 white,
                 true
             ).apply {
-                tag = "v237_live_timer"
                 typeface =
                     Typeface.MONOSPACE
 
@@ -915,7 +520,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val liveDeck =
             LinearLayout(this).apply {
-                tag = "v237_live_deck"
                 orientation =
                     LinearLayout.VERTICAL
 
@@ -938,10 +542,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             label(
                 "OUTPUT • LOCAL LIVE CAPTURE • STREAM DESTINATION NOT CONNECTED",
                 9f,
-                0xFFAEB7C7.toInt(),
+                0xFFB7C4CA.toInt(),
                 true
             ).apply {
-                tag = "v237_live_output_status"
                 gravity =
                     Gravity.CENTER
 
@@ -959,7 +562,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row1 =
             LinearLayout(this).apply {
-                tag = "v237_live_row1"
                 orientation =
                     LinearLayout.HORIZONTAL
             }
@@ -976,7 +578,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         qualityButton =
             liveSettingButton(
-                "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}",
+                "QUALITY ▾\nFHD",
                 cyan
             ) {
                 showLiveQualityDropdown(
@@ -1015,7 +617,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row2 =
             LinearLayout(this).apply {
-                tag = "v237_live_row2"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1078,7 +679,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row3 =
             LinearLayout(this).apply {
-                tag = "v237_live_row3"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1135,7 +735,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row4 =
             LinearLayout(this).apply {
-                tag = "v237_live_row4"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1207,7 +806,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val row5 =
             LinearLayout(this).apply {
-                tag = "v237_live_row5"
                 orientation =
                     LinearLayout.HORIZONTAL
 
@@ -1295,172 +893,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             row5
         )
 
-        val displayRow =
-            LinearLayout(this).apply {
-                tag = "v237_live_display_row"
-                orientation =
-                    LinearLayout.HORIZONTAL
-
-                setPadding(
-                    0,
-                    dp(5),
-                    0,
-                    0
-                )
-            }
-
-        liveHudSizeButton =
-            liveSettingButton(
-                "HUD SIZE ▾\n${liveHudLabels[liveHudSizeIndex]}",
-                0xFF6D88A4.toInt()
-            ) {
-                showLiveHudSizeDropdown(
-                    liveHudSizeButton
-                )
-            }.apply {
-                isSelected =
-                    true
-            }
-
-        liveColorButton =
-            liveSettingButton(
-                "COLOR ▾\n${v229LiveColorDeckLabel()}",
-                0xFFA793D8.toInt()
-            ) {
-                showV233LiveColorDropdown(
-                    liveColorButton
-                )
-            }
-
-        liveSafeInfoButton =
-            liveSettingButton(
-                "OUTPUT\nSAFE",
-                0xFF8B9499.toInt()
-            ) {
-                showLiveSafeAreaInfo()
-            }
-
-        liveHudContrastButton =
-            liveSettingButton(
-                "HUD CONTRAST ▾\n${liveHudContrastLabels[liveHudContrastIndex]}",
-                0xFF83799A.toInt()
-            ) {
-                showLiveHudContrastDropdown(
-                    liveHudContrastButton
-                )
-            }.apply {
-                isSelected =
-                    true
-            }
-
-        livePresetButton =
-            liveSettingButton(
-                "PRESET ▾\n${livePresetLabels[livePresetIndex]}",
-                0xFF8B9499.toInt()
-            ) {
-                showLivePresetDropdown(
-                    livePresetButton
-                )
-            }.apply {
-                isSelected =
-                    livePresetIndex !=
-                        0
-            }
-
-        listOf(
-            liveHudSizeButton,
-            liveHudContrastButton,
-            livePresetButton
-        ).forEachIndexed { index, button ->
-            displayRow.addView(
-                button,
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(40),
-                    1f
-                ).apply {
-                    if (index > 0) {
-                        marginStart =
-                            dp(6)
-                    }
-                }
-            )
-        }
-
-        liveDeck.addView(
-            displayRow
-        )
-
-        val outputRow =
-            LinearLayout(this).apply {
-                tag = "v237_live_output_row"
-                orientation =
-                    LinearLayout.HORIZONTAL
-
-                setPadding(
-                    0,
-                    dp(5),
-                    0,
-                    0
-                )
-            }
-
-        liveHudBackingButton =
-            liveSettingButton(
-                "HUD BACKING ▾\n${liveHudBackingLabels[liveHudBackingIndex]}",
-                0xFF6F9C7C.toInt()
-            ) {
-                showLiveHudBackingDropdown(
-                    liveHudBackingButton
-                )
-            }.apply {
-                isSelected =
-                    liveHudBackingIndex !=
-                        0
-            }
-
-        liveEffectButton =
-            liveSettingButton(
-                "VIDEO FX ▾\n${liveEffectLabels[liveEffectIndex]}",
-                0xFF6D88A4.toInt()
-            ) {
-                showLiveEffectDropdown(
-                    liveEffectButton
-                )
-            }.apply {
-                isSelected =
-                    liveEffectIndex !=
-                        0
-            }
-
-        listOf(
-            liveHudBackingButton,
-            liveEffectButton,
-            liveColorButton,
-            liveSafeInfoButton
-        ).forEachIndexed { index, button ->
-            outputRow.addView(
-                button,
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(40),
-                    1f
-                ).apply {
-                    if (index > 0) {
-                        marginStart =
-                            dp(6)
-                    }
-                }
-            )
-        }
-
-        liveDeck.addView(
-            outputRow
-        )
-
         val recordArea =
             FrameLayout(this).apply {
-                tag = "v237_live_record_area"
                 setPadding(
                     0,
                     dp(8),
@@ -1512,35 +946,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         setContentView(
             root
-        )
-        DevelopUgandaLiveGradePanel.attach(
-            activity = this,
-            root = root,
-            previewView = previewView,
-            scopeProvider = { v229LiveColorScope() },
-            hintProvider = { v229LiveColorHint() }
-        )
-        DevelopUgandaUnifiedControlDeck.attach(
-            activity = this,
-            root = root,
-            scopeProvider = { v229LiveColorScope() },
-            hintProvider = { v229LiveColorHint() },
-            mode = DevelopUgandaUnifiedControlDeck.Mode.LIVE
-        )
-        DevelopUgandaFieldIntelligencePanel.attach(
-            activity = this,
-            root = root,
-            previewView = previewView
-        )
-        DevelopUgandaAdaptiveFormatUi.attach(
-            activity = this,
-            root = root,
-            role = DevelopUgandaAdaptiveFormatUi.Role.LIVE
-        )
-        DevelopUgandaOperatorExperience.attach(
-            activity = this,
-            root = root,
-            role = DevelopUgandaOperatorExperience.Role.LIVE
         )
     }
 
@@ -1811,50 +1216,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 )
                 append("\n")
 
-                append("HUD SIZE: ")
-                append(
-                    liveHudLabels[
-                        liveHudSizeIndex
-                    ]
-                )
-                append("\n")
-
-                append("HUD CONTRAST: ")
-                append(
-                    liveHudContrastLabels[
-                        liveHudContrastIndex
-                    ]
-                )
-                append("\n")
-
-                append("HUD BACKING: ")
-                append(
-                    liveHudBackingLabels[
-                        liveHudBackingIndex
-                    ]
-                )
-                append("\n")
-
-                append("VIDEO FX: ")
-                append(
-                    liveEffectLabels[
-                        liveEffectIndex
-                    ]
-                )
-                append("\n")
-
-                append("CREATOR ENGINE: ${liveQualityProfiles[liveQualityIndex]} • $liveActiveFpsLabel • $liveActiveStabilizationLabel • $liveActiveDynamicRangeLabel • 9:16 SOCIAL SAFE\n")
-
-                append("PRESET: ")
-                append(
-                    livePresetLabels[
-                        livePresetIndex
-                    ]
-                )
-                append("\n")
-
-                append("SETTINGS MEMORY: ON\n")
-
                 append("LOWER STYLE: ")
                 append(
                     lowerThirdStyles[
@@ -1977,8 +1338,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
     }
 
     private fun bindCamera() {
-        applyLiveThermalSafeProfileIfNeeded()
-
         val future =
             ProcessCameraProvider.getInstance(
                 this
@@ -1991,37 +1350,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 provider.unbindAll()
 
-                val selector =
-                    if (useFront) {
-                        CameraSelector.DEFAULT_FRONT_CAMERA
-                    } else {
-                        CameraSelector.DEFAULT_BACK_CAMERA
-                    }
-
-                val selectedCameraInfo =
-                    try {
-                        provider.getCameraInfo(
-                            selector
-                        )
-                    } catch (_: Exception) {
-                        null
-                    }
-
-                liveActiveFpsLabel =
-                    if (
-                        liveQualityProfiles[
-                            liveQualityIndex
-                        ] == "LOW LIGHT"
-                    ) {
-                        "AUTO LOW-LIGHT FPS"
-                    } else {
-                        "AUTO FPS"
-                    }
-                liveActiveStabilizationLabel =
-                    "STAB OFF"
-                liveActiveDynamicRangeLabel =
-                    "SDR"
-
                 val preview =
                     Preview.Builder()
                         .build()
@@ -2031,121 +1359,23 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                             )
                         }
 
-                var selectedDynamicRange =
-                    DynamicRange.SDR
-                var enableVideoStabilization =
-                    false
-                var selectedQuality =
-                    liveSelectedQuality()
-
-                if (selectedCameraInfo != null) {
-                    try {
-                        val capabilities =
-                            Recorder.getVideoCapabilities(
-                                selectedCameraInfo
-                            )
-
-                        if (
-                            liveWantsHdr() &&
-                            capabilities.supportedDynamicRanges.contains(
-                                DynamicRange.HLG_10_BIT
-                            )
-                        ) {
-                            val hdrQualities =
-                                capabilities.getSupportedQualities(
-                                    DynamicRange.HLG_10_BIT
-                                )
-
-                            selectedQuality =
-                                when {
-                                    hdrQualities.contains(
-                                        Quality.UHD
-                                    ) -> Quality.UHD
-                                    hdrQualities.contains(
-                                        Quality.FHD
-                                    ) -> Quality.FHD
-                                    hdrQualities.contains(
-                                        Quality.HD
-                                    ) -> Quality.HD
-                                    else -> selectedQuality
-                                }
-
-                            if (hdrQualities.isNotEmpty()) {
-                                selectedDynamicRange =
-                                    DynamicRange.HLG_10_BIT
-                                liveActiveDynamicRangeLabel =
-                                    "HLG10 HDR"
-                            } else {
-                                liveActiveDynamicRangeLabel =
-                                    "SDR HDR-FALLBACK"
-                            }
-                        } else if (liveWantsHdr()) {
-                            liveActiveDynamicRangeLabel =
-                                "SDR HDR-FALLBACK"
-                        }
-
-                        enableVideoStabilization =
-                            liveWantsStabilization() &&
-                                capabilities.isStabilizationSupported
-
-                        liveActiveStabilizationLabel =
-                            if (enableVideoStabilization) {
-                                "STAB ON"
-                            } else if (liveWantsStabilization()) {
-                                "STAB UNSUPPORTED"
-                            } else {
-                                "STAB OFF"
-                            }
-                    } catch (_: Exception) {
-                        liveActiveDynamicRangeLabel =
-                            if (liveWantsHdr()) {
-                                "SDR HDR-FALLBACK"
-                            } else {
-                                "SDR"
-                            }
-                        liveActiveStabilizationLabel =
-                            "STAB AUTO"
-                    }
-                }
-
                 val recorder =
                     Recorder.Builder()
                         .setQualitySelector(
                             QualitySelector.from(
-                                selectedQuality
+                                quality
                             )
-                        )
-                        .setAspectRatio(
-                            AspectRatio.RATIO_16_9
-                        )
-                        .setTargetVideoEncodingBitRate(
-                            liveTargetBitrate()
                         )
                         .build()
 
-                val videoBuilder =
-                    VideoCapture.Builder(
+                videoCapture =
+                    VideoCapture.withOutput(
                         recorder
                     )
 
-                if (
-                    selectedDynamicRange !=
-                    DynamicRange.SDR
-                ) {
-                    videoBuilder.setDynamicRange(
-                        selectedDynamicRange
-                    )
-                }
-
-                if (enableVideoStabilization) {
-                    videoBuilder.setVideoStabilizationEnabled(
-                        true
-                    )
-                }
-
-                videoCapture =
-                    videoBuilder.build()
-
+                // V187: burn-in graphics target the saved VIDEO only.
+                // Preview narration is native screen UI, so it cannot be
+                // clipped by CameraX preview crop/scale transforms.
                 overlayEffect =
                     OverlayEffect(
                         CameraEffect.VIDEO_CAPTURE,
@@ -2156,7 +1386,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     ) { throwable ->
                         toast(
                             "LIVE graphics warning: " +
-                                (throwable.message ?: "unknown")
+                                (
+                                    throwable.message
+                                        ?: "unknown"
+                                    )
                         )
                     }.also { effect ->
                         effect.setOnDrawListener { frame ->
@@ -2167,7 +1400,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         }
                     }
 
-                var session =
+                val session =
                     SessionConfig.Builder(
                         preview,
                         videoCapture!!
@@ -2177,68 +1410,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         )
                         .build()
 
-                if (selectedCameraInfo != null) {
-                    val requestedFps =
-                        liveRequestedFps()
-
-                    if (requestedFps > 0) {
-                        try {
-                            val supportedRanges =
-                                selectedCameraInfo
-                                    .getSupportedFrameRateRanges(
-                                        session
-                                    )
-
-                            val exactRange =
-                                supportedRanges.firstOrNull {
-                                    it.lower == requestedFps &&
-                                        it.upper == requestedFps
-                                }
-
-                            val compatibleRange =
-                                exactRange
-                                    ?: supportedRanges
-                                        .filter {
-                                            it.lower <= requestedFps &&
-                                                it.upper >= requestedFps
-                                        }
-                                        .minByOrNull {
-                                            it.upper - it.lower
-                                        }
-
-                            if (compatibleRange != null) {
-                                session =
-                                    SessionConfig.Builder(
-                                        preview,
-                                        videoCapture!!
-                                    )
-                                        .addEffect(
-                                            overlayEffect!!
-                                        )
-                                        .setFrameRateRange(
-                                            compatibleRange
-                                        )
-                                        .build()
-
-                                liveActiveFpsLabel =
-                                    if (exactRange != null) {
-                                        "${requestedFps} FPS"
-                                    } else {
-                                        "${compatibleRange.lower}-${compatibleRange.upper} FPS FALLBACK"
-                                    }
-                            } else {
-                                liveActiveFpsLabel =
-                                    "AUTO FPS FALLBACK"
-                            }
-                        } catch (_: Exception) {
-                            liveActiveFpsLabel =
-                                "AUTO FPS"
-                        }
+                val selector =
+                    if (useFront) {
+                        CameraSelector.DEFAULT_FRONT_CAMERA
                     } else {
-                        liveActiveFpsLabel =
-                            "AUTO LOW-LIGHT FPS"
+                        CameraSelector.DEFAULT_BACK_CAMERA
                     }
-                }
 
                 camera =
                     provider.bindToLifecycle(
@@ -2247,100 +1424,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         session
                     )
 
-                camera
-                    ?.cameraInfo
-                    ?.exposureState
-                    ?.let { exposure ->
-                        if (
-                            exposure.isExposureCompensationSupported
-                        ) {
-                            camera
-                                ?.cameraControl
-                                ?.setExposureCompensationIndex(
-                                    0.coerceIn(
-                                        exposure.exposureCompensationRange.lower,
-                                        exposure.exposureCompensationRange.upper
-                                    )
-                                )
-                        }
-                    }
-
-                quality =
-                    selectedQuality
-                qualityLabel =
-                    liveQualityProfiles[
-                        liveQualityIndex
-                    ]
-
                 camLamp.setTextColor(
                     green
                 )
-
-                updateTimer()
             },
             ContextCompat.getMainExecutor(
                 this
             )
-        )
-    }
-
-    private fun drawLiveVideoEffect(
-        canvas: Canvas,
-        width: Float,
-        height: Float
-    ) {
-        val color =
-            when (
-                liveEffectLabels[
-                    liveEffectIndex
-                ]
-            ) {
-                "NATURAL" ->
-                    0x05FFF4E8
-
-                "WARM" ->
-                    0x0BFF9555
-
-                "COOL" ->
-                    0x0A3E7EFF
-
-                "TEAL" ->
-                    0x0B00A7A1
-
-                "GOLD" ->
-                    0x0CF2B43C
-
-                "SOFT" ->
-                    0x08FFFFFF
-
-                "NIGHT" ->
-                    0x12092346
-
-                else ->
-                    Color.TRANSPARENT
-            }
-
-        if (
-            color ==
-            Color.TRANSPARENT
-        ) {
-            return
-        }
-
-        val grade =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                this.color =
-                    color
-            }
-
-        canvas.drawRect(
-            0f,
-            0f,
-            width,
-            height,
-            grade
         )
     }
 
@@ -2354,10 +1444,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             frame.cropRect
 
         if (
-            crop.width() <=
-                0 ||
-            crop.height() <=
-                0
+            crop.width() <= 0 ||
+            crop.height() <= 0
         ) {
             return
         }
@@ -2366,6 +1454,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             Color.TRANSPARENT,
             android.graphics.PorterDuff.Mode.CLEAR
         )
+
+        if (
+            !graphicsEnabled
+        ) {
+            return
+        }
 
         val rotation =
             (
@@ -2379,10 +1473,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val finalWidth =
             if (
-                rotation ==
-                    90 ||
-                rotation ==
-                    270
+                rotation == 90 ||
+                rotation == 270
             ) {
                 crop.height().toFloat()
             } else {
@@ -2391,10 +1483,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val finalHeight =
             if (
-                rotation ==
-                    90 ||
-                rotation ==
-                    270
+                rotation == 90 ||
+                rotation == 270
             ) {
                 crop.width().toFloat()
             } else {
@@ -2403,13 +1493,10 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         val l =
             crop.left.toFloat()
-
         val t =
             crop.top.toFloat()
-
         val r =
             crop.right.toFloat()
-
         val b =
             crop.bottom.toFloat()
 
@@ -2500,46 +1587,26 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             matrix
         )
 
-        drawLiveVideoEffect(
-            canvas,
-            finalWidth,
-            finalHeight
-        )
-
-        if (
-            !graphicsEnabled
-        ) {
-            canvas.restore()
-            return
-        }
-
-        val brandConfig =
-            DevelopUgandaBrandMetadataStore
-                .snapshot(
-                    this
-                )
-
         val u =
             minOf(
                 finalWidth,
                 finalHeight
             ) /
-                1000f *
-                liveHudScales[
-                    liveHudSizeIndex
-                ]
+                1000f
 
+        // V186: conservative social-safe margins. V184/V185 used 8% and
+        // the CameraX crop could place the left side outside the saved MP4.
         val safeLeft =
             finalWidth *
-                0.16f
+                0.19f
 
         val safeTop =
             finalHeight *
-                0.075f
+                0.09f
 
         val safeRight =
             finalWidth *
-                0.84f
+                0.81f
 
         val paint =
             Paint(
@@ -2552,20 +1619,15 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     )
 
                 setShadowLayer(
-                    liveHudShadowRadius(
-                        u
-                    ),
-                    0.6f *
-                        u,
-                    0.6f *
-                        u,
-                    liveHudOutlineColor()
+                    3.0f * u,
+                    0.8f * u,
+                    0.8f * u,
+                    0xE0000000.toInt()
                 )
             }
 
         val liveOn =
-            recording !=
-                null
+            recording != null
 
         val blink =
             (
@@ -2575,460 +1637,74 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 2L ==
                 0L
 
-        val brandX =
+        val livePaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            ).apply {
+                color =
+                    red
+
+                alpha =
+                    if (
+                        liveOn &&
+                        !blink
+                    ) {
+                        90
+                    } else {
+                        255
+                    }
+
+                style =
+                    Paint.Style.FILL
+            }
+
+        canvas.drawCircle(
             safeLeft +
-                (
-                    23f *
-                        u
-                    )
+                (9f * u),
+            safeTop -
+                (6f * u),
+            6f * u,
+            livePaint
+        )
 
-        var brandWidth =
-            0f
+        paint.textSize =
+            30f * u
 
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .BRAND
-            )
-        ) {
-            paint.textSize =
-                38f *
-                    u
+        paint.color =
+            amber
 
-            paint.color =
-                amber
+        canvas.drawText(
+            "develop.uganda",
+            safeLeft +
+                (23f * u),
+            safeTop,
+            paint
+        )
 
-            drawStrongLiveText(
-                canvas,
-                brandConfig.displayName,
-                brandX,
-                safeTop,
-                paint
-            )
+        paint.textSize =
+            14.5f * u
 
-            brandWidth =
-                paint.measureText(
-                    brandConfig.displayName
-                )
-
+        paint.color =
             if (
-                brandConfig.organization
-                    .isNotBlank()
+                liveOn
             ) {
-                paint.textSize =
-                    10.8f *
-                        u
-
-                paint.color =
-                    white
-
-                drawFitText(
-                    canvas,
-                    brandConfig.organization,
-                    brandX,
-                    safeTop +
-                        (
-                            15f *
-                                u
-                            ),
-                    safeRight -
-                        brandX,
-                    paint,
-                    8.8f *
-                        u
-                )
-            }
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .VERSION
-            )
-        ) {
-            val buildText =
-                "V238"
-
-            val buildLeft =
-                if (
-                    brandWidth >
-                        0f
-                ) {
-                    brandX +
-                        brandWidth +
-                        (
-                            13f *
-                                u
-                            )
-                } else {
-                    brandX
-                }
-
-            val buildTop =
-                safeTop -
-                    (
-                        25f *
-                            u
-                        )
-
-            val buildRight =
-                buildLeft +
-                    (
-                        72f *
-                            u
-                        )
-
-            val buildBottom =
-                safeTop +
-                    (
-                        4f *
-                            u
-                        )
-
-            val buildPlate =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        0xD9163B5A.toInt()
-
-                    style =
-                        Paint.Style.FILL
-                }
-
-            val buildStroke =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        cyan
-
-                    style =
-                        Paint.Style.STROKE
-
-                    strokeWidth =
-                        1.4f *
-                            u
-                }
-
-            canvas.drawRoundRect(
-                buildLeft,
-                buildTop,
-                buildRight,
-                buildBottom,
-                8f *
-                    u,
-                8f *
-                    u,
-                buildPlate
-            )
-
-            canvas.drawRoundRect(
-                buildLeft,
-                buildTop,
-                buildRight,
-                buildBottom,
-                8f *
-                    u,
-                8f *
-                    u,
-                buildStroke
-            )
-
-            val buildPaint =
-                Paint(
-                    Paint.ANTI_ALIAS_FLAG
-                ).apply {
-                    color =
-                        white
-
-                    textSize =
-                        12.4f *
-                            u
-
-                    typeface =
-                        Typeface.create(
-                            Typeface.MONOSPACE,
-                            Typeface.BOLD
-                        )
-                }
-
-            canvas.drawText(
-                buildText,
-                buildLeft +
-                    (
-                        14f *
-                            u
-                        ),
-                safeTop -
-                    (
-                        6f *
-                            u
-                        ),
-                buildPaint
-            )
-        }
-
-        // LIVE/REC is a broadcast-state indicator, not optional metadata.
-        // Keep it in the separate V227 lane so it never overlaps the brand/build.
-        val badgeLeft =
-            safeRight -
-                (
-                    160f *
-                        u
-                    )
-
-        val badgeTop =
-            safeTop +
-                (
-                    17f *
-                        u
-                    )
-
-        val badgeRight =
-            safeRight
-
-        val badgeBottom =
-            safeTop +
-                (
-                    51f *
-                        u
-                    )
-
-        val badgeGlow =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    Color.argb(
-                        if (
-                            liveOn &&
-                            blink
-                        ) {
-                            95
-                        } else if (
-                            liveOn
-                        ) {
-                            34
-                        } else {
-                            18
-                        },
-                        255,
-                        59,
-                        50
-                    )
-
-                style =
-                    Paint.Style.FILL
-            }
-
-        canvas.drawRoundRect(
-            badgeLeft -
-                (
-                    5f *
-                        u
-                    ),
-            badgeTop -
-                (
-                    5f *
-                        u
-                    ),
-            badgeRight +
-                (
-                    2f *
-                        u
-                    ),
-            badgeBottom +
-                (
-                    5f *
-                        u
-                    ),
-            13f *
-                u,
-            13f *
-                u,
-            badgeGlow
-        )
-
-        val badgeBackground =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    Color.argb(
-                        if (
-                            liveOn &&
-                            blink
-                        ) {
-                            245
-                        } else if (
-                            liveOn
-                        ) {
-                            145
-                        } else {
-                            105
-                        },
-                        184,
-                        48,
-                        44
-                    )
-
-                style =
-                    Paint.Style.FILL
-            }
-
-        canvas.drawRoundRect(
-            badgeLeft,
-            badgeTop,
-            badgeRight,
-            badgeBottom,
-            11f *
-                u,
-            11f *
-                u,
-            badgeBackground
-        )
-
-        val badgeCenterY =
-            (
-                badgeTop +
-                    badgeBottom
-                ) /
-                2f
-
-        val signalDot =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    Color.argb(
-                        if (
-                            liveOn &&
-                            blink
-                        ) {
-                            255
-                        } else {
-                            160
-                        },
-                        255,
-                        255,
-                        255
-                    )
-
-                style =
-                    Paint.Style.FILL
-            }
-
-        canvas.drawCircle(
-            badgeLeft +
-                (
-                    15f *
-                        u
-                    ),
-            badgeCenterY,
-            5.1f *
-                u,
-            signalDot
-        )
-
-        val pulseRing =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    Color.argb(
-                        if (
-                            liveOn &&
-                            blink
-                        ) {
-                            230
-                        } else {
-                            92
-                        },
-                        255,
-                        255,
-                        255
-                    )
-
-                style =
-                    Paint.Style.STROKE
-
-                strokeWidth =
-                    1.5f *
-                        u
-            }
-
-        canvas.drawCircle(
-            badgeLeft +
-                (
-                    15f *
-                        u
-                    ),
-            badgeCenterY,
-            if (
-                liveOn &&
-                blink
-            ) {
-                9.2f *
-                    u
+                red
             } else {
-                7.0f *
-                    u
-            },
-            pulseRing
-        )
-
-        val badgeText =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    Color.argb(
-                        if (
-                            liveOn &&
-                            blink
-                        ) {
-                            255
-                        } else {
-                            188
-                        },
-                        255,
-                        255,
-                        255
-                    )
-
-                textSize =
-                    14.2f *
-                        u
-
-                typeface =
-                    Typeface.create(
-                        Typeface.MONOSPACE,
-                        Typeface.BOLD
-                    )
+                white
             }
 
         canvas.drawText(
             if (
                 liveOn
             ) {
-                "LIVE  •  REC"
+                "ON AIR"
             } else {
-                "LIVE  •  READY"
+                "READY"
             },
-            badgeLeft +
-                (
-                    29f *
-                        u
-                    ),
-            badgeCenterY +
-                (
-                    5f *
-                        u
-                    ),
-            badgeText
+            safeRight -
+                (121f * u),
+            safeTop,
+            paint
         )
 
         val rule =
@@ -3039,244 +1715,53 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     0xB0FF3B32.toInt()
 
                 strokeWidth =
-                    1.5f *
-                        u
+                    1.6f * u
             }
 
         canvas.drawLine(
             safeLeft,
             safeTop +
-                (
-                    63f *
-                        u
-                    ),
+                (13f * u),
             safeRight,
             safeTop +
-                (
-                    63f *
-                        u
-                    ),
+                (12f * u),
             rule
         )
 
-        var rowY =
+        paint.textSize =
+            12f * u
+
+        paint.color =
+            white
+
+        drawFitText(
+            canvas,
+            "${profiles[profileIndex]} • REPORTER $reporterName • STORY $storyId",
+            safeLeft,
             safeTop +
-                (
-                    84f *
-                        u
-                    )
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .CAMERA_MODE
-            ) ||
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .REPORTER
-            )
-        ) {
-            val parts =
-                mutableListOf<String>()
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .CAMERA_MODE
-                )
-            ) {
-                parts.add(
-                    "LIVE PROFILE • ${profiles[profileIndex]}"
-                )
-            }
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .REPORTER
-                )
-            ) {
-                parts.add(
-                    "REPORTER • $reporterName"
-                )
-            }
-
-            paint.textSize =
-                12f *
-                    u
-
-            paint.color =
-                white
-
-            drawFitText(
-                canvas,
-                parts.joinToString(
-                    "   |   "
-                ),
+                (36f * u),
+            safeRight -
                 safeLeft,
-                rowY,
-                safeRight -
-                    safeLeft,
-                paint,
-                10.4f *
-                    u
-            )
-
-            rowY +=
-                20f *
-                    u
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .STORY
-            ) ||
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .AUDIO
-            )
-        ) {
-            val parts =
-                mutableListOf<String>()
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .STORY
-                )
-            ) {
-                parts.add(
-                    "STORY • $storyId"
-                )
-            }
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .AUDIO
-                )
-            ) {
-                parts.add(
-                    if (
-                        audioEnabled
-                    ) {
-                        "AUDIO ON"
-                    } else {
-                        "AUDIO OFF"
-                    }
-                )
-            }
-
-            paint.textSize =
-                13.5f *
-                    u
-
-            paint.color =
-                white
-
-            drawFitText(
-                canvas,
-                parts.joinToString(
-                    "   |   "
-                ),
-                safeLeft,
-                rowY,
-                safeRight -
-                    safeLeft,
-                paint,
-                10.2f *
-                    u
-            )
-
-            rowY +=
-                20f *
-                    u
-        }
-
-        val statusParts =
-            mutableListOf(
-                if (
-                    liveOn
-                ) {
-                    "ON AIR"
-                } else {
-                    "READY"
-                },
-                "TIMECODE • ${liveTimecode()}"
-            )
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .CAMERA_MODE
-            )
-        ) {
-            statusParts.add(
-                "MODE • ${liveQualityProfiles[liveQualityIndex]}"
-            )
-
-            statusParts.add(
-                "LOOK • ${liveEffectLabels[liveEffectIndex]}"
-            )
-
-            statusParts.add(
-                "COLOR • $v229LiveColorOverlayLabel"
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .VERSION
-            )
-        ) {
-            statusParts.add(
-                "V238"
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .THERMAL
-            )
-        ) {
-            statusParts.add(
-                "THERMAL • ${liveThermalStateLabel()}"
-            )
-        }
+            paint,
+            8.5f * u
+        )
 
         paint.textSize =
-            15.4f *
-                u
+            12.8f * u
 
         paint.color =
             cyan
 
         drawFitText(
             canvas,
-            statusParts.joinToString(
-                "   |   "
-            ),
+            "${if (liveOn) "ON AIR" else "READY"} ${liveTimecode()} • ${ZoneId.systemDefault().id} • $qualityLabel • ${if (audioEnabled) "AUDIO ON" else "AUDIO OFF"}",
             safeLeft,
-            rowY,
+            safeTop +
+                (56f * u),
             safeRight -
                 safeLeft,
             paint,
-            10.1f *
-                u
+            8.2f * u
         )
 
         val lowerY =
@@ -3314,13 +1799,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         lowerStyle
                     ) {
                         "MINIMAL" ->
-                            0x8205080A.toInt()
+                            0x6605080A
 
                         "CLEAN" ->
-                            0x8F05080A.toInt()
+                            0x8805080A.toInt()
 
                         else ->
-                            0x8405080A.toInt()
+                            0x9A05080A.toInt()
                     }
 
                 style =
@@ -3328,8 +1813,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             }
 
         val lowerH =
-            102f *
-                u
+            88f * u
 
         canvas.drawRoundRect(
             safeLeft,
@@ -3337,10 +1821,8 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             safeRight,
             lowerY +
                 lowerH,
-            12f *
-                u,
-            12f *
-                u,
+            12f * u,
+            12f * u,
             lowerBg
         )
 
@@ -3352,32 +1834,19 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     lowerAccent
 
                 strokeWidth =
-                    5f *
-                        u
+                    5f * u
             }
 
         canvas.drawLine(
             safeLeft +
-                (
-                    8f *
-                        u
-                    ),
+                (8f * u),
             lowerY +
-                (
-                    10.6f *
-                        u
-                    ),
+                (10.6f * u),
             safeLeft +
-                (
-                    8f *
-                        u
-                    ),
+                (8f * u),
             lowerY +
                 lowerH -
-                (
-                    12.0f *
-                        u
-                    ),
+                (10f * u),
             redRail
         )
 
@@ -3385,8 +1854,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             lowerAccent
 
         paint.textSize =
-            12f *
-                u
+            12f * u
 
         canvas.drawText(
             if (
@@ -3397,15 +1865,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 "LIVE READY • $lowerStyle"
             },
             safeLeft +
-                (
-                    22f *
-                        u
-                    ),
+                (22f * u),
             lowerY +
-                (
-                    24f *
-                        u
-                    ),
+                (24f * u),
             paint
         )
 
@@ -3413,207 +1875,43 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             white
 
         paint.textSize =
-            25.0f *
-                u
+            20f * u
 
         drawFitText(
             canvas,
             headline,
             safeLeft +
-                (
-                    22f *
-                        u
-                    ),
+                (22f * u),
             lowerY +
-                (
-                    60f *
-                        u
-                    ),
+                (51f * u),
             safeRight -
                 safeLeft -
-                (
-                    40f *
-                        u
-                    ),
+                (40f * u),
             paint,
-            13f *
-                u
+            11f * u
         )
 
-        val lowerParts =
-            mutableListOf<String>()
+        paint.color =
+            0xFFD0D8DC.toInt()
 
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .CAMERA_MODE
-            )
-        ) {
-            lowerParts.add(
-                "CAMERA • LIVE STUDIO"
-            )
-        }
+        paint.textSize =
+            10f * u
 
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .REPORTER
-            )
-        ) {
-            lowerParts.add(
-                "REPORTER • $reporterName"
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .STORY
-            )
-        ) {
-            lowerParts.add(
-                "STORY • $storyId"
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .BRAND
-            )
-        ) {
-            lowerParts.add(
-                brandConfig.displayName
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .VERSION
-            )
-        ) {
-            lowerParts.add(
-                "V238"
-            )
-        }
-
-        val credit =
-            brandConfig.creditLine()
-
-        if (
-            credit.isNotBlank()
-        ) {
-            lowerParts.add(
-                credit
-            )
-        }
-
-        if (
-            lowerParts.isNotEmpty()
-        ) {
-            paint.color =
-                0xFFD0D8DC.toInt()
-
-            paint.textSize =
-                10f *
-                    u
-
-            drawFitText(
-                canvas,
-                lowerParts.joinToString(
-                    "   |   "
-                ),
-                safeLeft +
-                    (
-                        22f *
-                            u
-                        ),
-                lowerY +
-                    (
-                        84f *
-                            u
-                        ),
-                safeRight -
-                    safeLeft -
-                    (
-                        40f *
-                            u
-                        ),
-                paint,
-                8.8f *
-                    u
-            )
-        }
+        drawFitText(
+            canvas,
+            "REPORTER $reporterName • STORY $storyId • develop.uganda",
+            safeLeft +
+                (22f * u),
+            lowerY +
+                (72f * u),
+            safeRight -
+                safeLeft -
+                (40f * u),
+            paint,
+            7.8f * u
+        )
 
         canvas.restore()
-    }
-
-
-    private fun drawStrongLiveText(
-        canvas: Canvas,
-        value: String,
-        x: Float,
-        y: Float,
-        paint: Paint
-    ) {
-        drawLiveTextBackplate(
-            canvas,
-            value,
-            x,
-            y,
-            paint
-        )
-
-        val savedStyle =
-            paint.style
-
-        val savedColor =
-            paint.color
-
-        val savedStroke =
-            paint.strokeWidth
-
-        paint.style =
-            Paint.Style.STROKE
-
-        paint.strokeWidth =
-            paint.textSize *
-                liveHudOutlineScale()
-
-        paint.color =
-            liveHudOutlineColor()
-
-        canvas.drawText(
-            value,
-            x,
-            y,
-            paint
-        )
-
-        paint.style =
-            Paint.Style.FILL
-
-        paint.strokeWidth =
-            savedStroke
-
-        paint.color =
-            savedColor
-
-        canvas.drawText(
-            value,
-            x,
-            y,
-            paint
-        )
-
-        paint.style =
-            savedStyle
     }
 
     private fun drawFitText(
@@ -3646,58 +1944,12 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 size
         }
 
-        drawLiveTextBackplate(
-            canvas,
-            value,
-            x,
-            y,
-            paint
-        )
-
-        val savedStyle =
-            paint.style
-
-        val savedColor =
-            paint.color
-
-        val savedStroke =
-            paint.strokeWidth
-
-        paint.style =
-            Paint.Style.STROKE
-
-        paint.strokeWidth =
-            paint.textSize *
-                liveHudOutlineScale()
-
-        paint.color =
-            liveHudOutlineColor()
-
         canvas.drawText(
             value,
             x,
             y,
             paint
         )
-
-        paint.style =
-            Paint.Style.FILL
-
-        paint.strokeWidth =
-            savedStroke
-
-        paint.color =
-            savedColor
-
-        canvas.drawText(
-            value,
-            x,
-            y,
-            paint
-        )
-
-        paint.style =
-            savedStyle
 
         paint.textSize =
             original
@@ -3727,155 +1979,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
         )
     }
 
-    private fun liveSelectedQuality(): Quality {
-        return when (
-            liveQualityProfiles[
-                liveQualityIndex
-            ]
-        ) {
-            "UHD 30",
-            "UHD 60",
-            "HDR UHD" -> Quality.UHD
-            "SOCIAL HDR" -> Quality.FHD
-            "HD FAST" -> Quality.HD
-            else -> Quality.FHD
-        }
-    }
-
-    private fun liveEstimatedRecordingTimeText(): String {
-        return try {
-            val freeBytes =
-                StatFs(
-                    Environment.getExternalStorageDirectory().path
-                ).availableBytes
-
-            val bitsPerSecond =
-                (
-                    liveTargetBitrate()
-                        .toLong() +
-                        320_000L
-                    )
-                    .coerceAtLeast(
-                        1L
-                    )
-
-            val seconds =
-                (
-                    freeBytes *
-                        8L
-                    ) /
-                    bitsPerSecond
-
-            when {
-                seconds <=
-                    0L ->
-                        "EST REC --"
-
-                seconds >=
-                    3600L ->
-                        String.format(
-                            Locale.US,
-                            "EST REC %dh %02dm",
-                            seconds /
-                                3600L,
-                            (
-                                seconds /
-                                    60L
-                                ) %
-                                60L
-                        )
-
-                else ->
-                    String.format(
-                        Locale.US,
-                        "EST REC %dm",
-                        seconds /
-                            60L
-                    )
-            }
-        } catch (_: Exception) {
-            "EST REC --"
-        }
-    }
-
-    private fun liveDirectorPeopleMode(): Boolean {
-        return profiles[
-            profileIndex
-        ] ==
-            "INTERVIEW" ||
-            livePresetLabels[
-                livePresetIndex
-            ] ==
-                "INTERVIEW"
-    }
-
-    private fun liveTargetBitrate(): Int {
-        return when (
-            liveQualityProfiles[
-                liveQualityIndex
-            ]
-        ) {
-            "SOCIAL 30" -> 24_000_000
-            "SOCIAL 60" -> 42_000_000
-            "UHD 30" -> 64_000_000
-            "UHD 60" -> 90_000_000
-            "HDR UHD" -> 72_000_000
-            "SOCIAL HDR" -> 34_000_000
-            "ACTION STAB" -> 30_000_000
-            "ACTION 60" -> 48_000_000
-            "LOW LIGHT" -> 28_000_000
-            "HD FAST" -> 12_000_000
-            else -> 24_000_000
-        }
-    }
-
-    private fun liveRequestedFps(): Int {
-        return when (
-            liveQualityProfiles[
-                liveQualityIndex
-            ]
-        ) {
-            "SOCIAL 60",
-            "UHD 60",
-            "ACTION 60" -> 60
-            "LOW LIGHT" -> 0
-            else -> 30
-        }
-    }
-
-    private fun liveWantsHdr(): Boolean {
-        return liveQualityProfiles[
-            liveQualityIndex
-        ] in
-            setOf(
-                "HDR UHD",
-                "SOCIAL HDR"
-            )
-    }
-
-    private fun liveWantsStabilization(): Boolean {
-        return when (
-            liveQualityProfiles[
-                liveQualityIndex
-            ]
-        ) {
-            "SOCIAL 30",
-            "ACTION STAB",
-            "ACTION 60",
-            "LOW LIGHT" -> true
-            else -> false
-        }
-    }
-
-    private fun syncLiveQualityState() {
-        quality =
-            liveSelectedQuality()
-        qualityLabel =
-            liveQualityProfiles[
-                liveQualityIndex
-            ]
-    }
-
     private fun cycleProfile() {
         if (
             recording != null
@@ -3897,27 +2000,39 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             "PROFILE ▾\n${profiles[profileIndex]}"
 
         liveSubTitle.text =
-            "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
+            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
     }
 
     private fun cycleQuality() {
-        if (recording != null) {
+        if (
+            recording != null
+        ) {
             toast(
                 "Stop LIVE REC before changing quality"
             )
             return
         }
 
-        liveQualityIndex =
-            (liveQualityIndex + 1) %
-                liveQualityProfiles.size
+        if (
+            quality ==
+            Quality.FHD
+        ) {
+            quality =
+                Quality.HD
 
-        syncLiveQualityState()
+            qualityLabel =
+                "HD"
+        } else {
+            quality =
+                Quality.FHD
+
+            qualityLabel =
+                "FHD"
+        }
 
         qualityButton.text =
-            "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}"
+            "QUALITY ▾\n$qualityLabel"
 
-        saveLiveCameraPreferences()
         bindCamera()
     }
 
@@ -3950,407 +2065,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 }
     }
 
-    private data class LivePreflight(
-        val critical: List<String>,
-        val warnings: List<String>,
-        val ready: List<String>
-    )
-
-    private fun liveFreeStorageGb(): Long? {
-        return try {
-            StatFs(
-                Environment.getExternalStorageDirectory().path
-            ).availableBytes /
-                (
-                    1024L *
-                        1024L *
-                        1024L
-                    )
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun liveBatteryPct(): Int? {
-        val batteryManager =
-            getSystemService(
-                BATTERY_SERVICE
-            ) as BatteryManager
-
-        return batteryManager.getIntProperty(
-            BatteryManager.BATTERY_PROPERTY_CAPACITY
-        ).takeIf {
-            it >=
-                0
-        }
-    }
-
-    private fun liveNetworkReady(): Boolean {
-        val cm =
-            getSystemService(
-                Context.CONNECTIVITY_SERVICE
-            ) as ConnectivityManager
-
-        val network =
-            cm.activeNetwork
-                ?: return false
-
-        val caps =
-            cm.getNetworkCapabilities(
-                network
-            ) ?: return false
-
-        return caps.hasCapability(
-            NetworkCapabilities.NET_CAPABILITY_INTERNET
-        )
-    }
-
-    private fun buildLivePreflight(): LivePreflight {
-        val critical =
-            mutableListOf<String>()
-
-        val warnings =
-            mutableListOf<String>()
-
-        val ready =
-            mutableListOf<String>()
-
-        if (
-            camera ==
-                null
-        ) {
-            critical.add(
-                "CAMERA NOT READY"
-            )
-        } else {
-            ready.add(
-                "CAM READY"
-            )
-        }
-
-        val storage =
-            liveFreeStorageGb()
-
-        when {
-            storage ==
-                null ->
-                    warnings.add(
-                        "SPACE UNKNOWN"
-                    )
-
-            storage <=
-                1L ->
-                    critical.add(
-                        "STORAGE CRITICAL ${storage}GB"
-                    )
-
-            storage <=
-                4L ->
-                    warnings.add(
-                        "STORAGE LOW ${storage}GB"
-                    )
-
-            else ->
-                ready.add(
-                    "SPACE ${storage}GB"
-                )
-        }
-
-        val battery =
-            liveBatteryPct()
-
-        when {
-            battery ==
-                null ->
-                    warnings.add(
-                        "BATTERY UNKNOWN"
-                    )
-
-            battery <=
-                3 ->
-                    critical.add(
-                        "BATTERY CRITICAL $battery%"
-                    )
-
-            battery <=
-                10 ->
-                    warnings.add(
-                        "BATTERY LOW $battery%"
-                    )
-
-            else ->
-                ready.add(
-                    "BATTERY $battery%"
-                )
-        }
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q &&
-            liveThermalStatus >=
-                PowerManager.THERMAL_STATUS_CRITICAL
-        ) {
-            critical.add(
-                "THERMAL ${liveThermalStateLabel()}"
-            )
-        } else if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q &&
-            liveThermalStatus >=
-                PowerManager.THERMAL_STATUS_SEVERE
-        ) {
-            warnings.add(
-                "THERMAL ${liveThermalStateLabel()}"
-            )
-        } else {
-            ready.add(
-                "THERMAL ${liveThermalStateLabel()}"
-            )
-        }
-
-        val micReady =
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) ==
-                PackageManager.PERMISSION_GRANTED
-
-        if (
-            audioEnabled &&
-            micReady
-        ) {
-            ready.add(
-                "MIC OK"
-            )
-        } else if (
-            audioEnabled
-        ) {
-            warnings.add(
-                "MIC OFF"
-            )
-        } else {
-            ready.add(
-                "AUDIO DISABLED"
-            )
-        }
-
-        if (
-            liveNetworkReady()
-        ) {
-            ready.add(
-                "NET READY"
-            )
-        } else {
-            warnings.add(
-                "NET OFFLINE"
-            )
-        }
-
-        return LivePreflight(
-            critical =
-                critical.distinct(),
-            warnings =
-                warnings.distinct(),
-            ready =
-                ready.distinct()
-        )
-    }
-
-    private fun runLivePreflightBeforeCountdown(): Boolean {
-        if (
-            livePreflightApprovedOnce
-        ) {
-            livePreflightApprovedOnce =
-                false
-            return true
-        }
-
-        val result =
-            buildLivePreflight()
-
-        if (
-            result.critical.isEmpty() &&
-            result.warnings.isEmpty()
-        ) {
-            outputStatus.text =
-                "PREFLIGHT GOOD • " +
-                    result.ready.joinToString(
-                        " • "
-                    )
-            return true
-        }
-
-        if (
-            result.critical.isNotEmpty()
-        ) {
-            AlertDialog.Builder(
-                this
-            )
-                .setTitle(
-                    "LIVE PREFLIGHT • BLOCKED"
-                )
-                .setMessage(
-                    result.critical.joinToString(
-                        "\n"
-                    ) {
-                        "• $it"
-                    } +
-                        "\n\n" +
-                        result.warnings.joinToString(
-                            "\n"
-                        ) {
-                            "• $it"
-                        }
-                )
-                .setPositiveButton(
-                    "OK",
-                    null
-                )
-                .show()
-            return false
-        }
-
-        AlertDialog.Builder(
-            this
-        )
-            .setTitle(
-                "LIVE RECORDING PREFLIGHT"
-            )
-            .setMessage(
-                result.warnings.joinToString(
-                    "\n"
-                ) {
-                    "• $it"
-                } +
-                    "\n\nReady: " +
-                    result.ready.joinToString(
-                        " • "
-                    )
-            )
-            .setNegativeButton(
-                "CANCEL",
-                null
-            )
-            .setPositiveButton(
-                "START ANYWAY"
-            ) { _, _ ->
-                livePreflightApprovedOnce =
-                    true
-                beginLiveRecordSequence()
-            }
-            .show()
-
-        return false
-    }
-
-    private fun liveRecoveryPrefs() =
-        getSharedPreferences(
-            "develop_uganda_live_recovery",
-            Context.MODE_PRIVATE
-        )
-
-    private fun markLiveJournalStarted() {
-        liveRecoveryPrefs()
-            .edit()
-            .putBoolean(
-                "active",
-                true
-            )
-            .putBoolean(
-                "incomplete",
-                false
-            )
-            .putString(
-                "name",
-                liveRecordingName
-            )
-            .putLong(
-                "started_elapsed",
-                recordStartMs
-            )
-            .apply()
-    }
-
-    private fun markLiveJournalFinished(
-        hadError: Boolean
-    ) {
-        liveRecoveryPrefs()
-            .edit()
-            .putBoolean(
-                "active",
-                false
-            )
-            .putBoolean(
-                "incomplete",
-                hadError
-            )
-            .apply()
-    }
-
-    private fun showLiveRecoveryNoticeIfNeeded() {
-        val prefs =
-            liveRecoveryPrefs()
-
-        if (
-            !prefs.getBoolean(
-                "active",
-                false
-            ) &&
-            !prefs.getBoolean(
-                "incomplete",
-                false
-            )
-        ) {
-            return
-        }
-
-        AlertDialog.Builder(
-            this
-        )
-            .setTitle(
-                "RECOVERED / INCOMPLETE LIVE CLIP"
-            )
-            .setMessage(
-                "The previous LIVE recording did not reach a clean completion record.\n\nFILE • " +
-                    (
-                        prefs.getString(
-                            "name",
-                            "--"
-                        ) ?: "--"
-                        ) +
-                    ".mp4\n\nInspect the Gallery file if present. This journal identifies an interrupted session; it does not claim a damaged video was repaired."
-            )
-            .setNegativeButton(
-                "KEEP NOTICE",
-                null
-            )
-            .setPositiveButton(
-                "ACKNOWLEDGE"
-            ) { _, _ ->
-                prefs.edit()
-                    .putBoolean(
-                        "active",
-                        false
-                    )
-                    .putBoolean(
-                        "incomplete",
-                        false
-                    )
-                    .apply()
-            }
-            .show()
-    }
-
     private fun beginLiveRecordSequence() {
         if (
             countdownRunning
-        ) {
-            return
-        }
-
-        if (
-            recording == null &&
-            !runLivePreflightBeforeCountdown()
         ) {
             return
         }
@@ -4580,7 +2297,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             )
 
         liveRecordingName =
-            "DEVELOP_UGANDA_V236_LIVE_${profiles[profileIndex]}_$stamp"
+            "DEVELOP_UGANDA_LIVE_${profiles[profileIndex]}_$stamp"
 
         liveMarkers.clear()
 
@@ -4656,11 +2373,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         recordStartMs =
                             SystemClock.elapsedRealtime()
 
-                        liveRecordStartUtc =
-                            Instant.now().toString()
-
-                        markLiveJournalStarted()
-
                         recordButton.setRecordingState(
                             true
                         )
@@ -4687,13 +2399,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                                     1.0
                                 )
 
-                        liveAudioPeakAmplitude =
-                            maxOf(
-                                liveAudioPeakAmplitude *
-                                    0.985,
-                                liveAudioAmplitude
-                            )
-
                         if (
                             audioEnabled &&
                             liveAudioAmplitude >
@@ -4714,7 +2419,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                         )
 
                         liveSubTitle.text =
-                            "LIVE STUDIO • ${profiles[profileIndex]} • QC CHECK"
+                            "LIVE STUDIO • ${profiles[profileIndex]} • READY"
 
                         recLamp.setTextColor(
                             0xFF657078.toInt()
@@ -4725,84 +2430,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                         liveAudioAmplitude =
                             0.0
-
-                        liveAudioPeakAmplitude =
-                            0.0
-
-                        markLiveJournalFinished(
-                            event.hasError()
-                        )
-
-                        if (
-                            !event.hasError()
-                        ) {
-                            DevelopUgandaStoryPackager.createVideoPackage(
-                                this@DevelopUgandaLiveActivity,
-                                event.outputResults.outputUri,
-                                DevelopUgandaStoryPackager.StoryMetadata(
-                                    packageId = liveRecordingName.ifBlank {
-                                        "LIVE_${System.currentTimeMillis()}"
-                                    },
-                                    camera = "LIVE STUDIO",
-                                    reporter = reporterName,
-                                    storyId = storyId,
-                                    title = headline,
-                                    place = null,
-                                    latitude = null,
-                                    longitude = null,
-                                    gpsAccuracyM = null,
-                                    startedUtc = liveRecordStartUtc,
-                                    finishedUtc = Instant.now().toString(),
-                                    scene = profiles[profileIndex],
-                                    look = liveEffectLabels[liveEffectIndex],
-                                    quality = qualityLabel,
-                                    autoView = liveAutoViewSummary,
-                                    warnings = buildLivePreflight().warnings,
-                                    sourceKind = "LIVE",
-                                    autoTranscribe =
-                                        profiles[profileIndex] == "INTERVIEW" ||
-                                            livePresetLabels[livePresetIndex] == "INTERVIEW",
-                                    expectSocialMaster = false
-                                )
-                            )
-                        }
-
-                        if (
-                            !event.hasError()
-                        ) {
-                            scheduleV233LiveColorMaster(
-                                event.outputResults.outputUri,
-                                liveRecordingName.ifBlank {
-                                    "LIVE_${System.currentTimeMillis()}"
-                                }
-                            )
-
-                            DevelopUgandaClipQc.inspect(
-                                this@DevelopUgandaLiveActivity,
-                                event.outputResults.outputUri,
-                                liveRecordingName
-                            ) {
-                                    result ->
-                                liveSubTitle.text =
-                                    if (
-                                        result.playableFrame &&
-                                        result.hasVideo &&
-                                        result.sourceReadable
-                                    ) {
-                                        "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
-                                    } else {
-                                        "LIVE STUDIO • ${profiles[profileIndex]} • QC CHECK"
-                                    }
-
-                                DevelopUgandaInstantReviewDialog.show(
-                                    this@DevelopUgandaLiveActivity,
-                                    result,
-                                    liveRecordingName,
-                                    false,
-                                    null
-                                )
-                            }
-                        }
 
                         if (
                             event.hasError()
@@ -5020,267 +2647,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun livePreviewToneColor(): Int {
-        return when (
-            liveEffectLabels[
-                liveEffectIndex
-            ]
-        ) {
-            "WARM" ->
-                0x10FF8A3D.toInt()
-
-            "COOL" ->
-                0x10007AFF.toInt()
-
-            "TEAL" ->
-                0x1000A7A0.toInt()
-
-            "GOLD" ->
-                0x10D6A83A.toInt()
-
-            "SOFT" ->
-                0x0CF0D8D0.toInt()
-
-            "NIGHT" ->
-                0x12173363.toInt()
-
-            "NATURAL" ->
-                0x0600A070.toInt()
-
-            else ->
-                Color.TRANSPARENT
-        }
-    }
-
-    private fun liveModeAccentColor(): Int {
-        return when (
-            liveQualityProfiles[
-                liveQualityIndex
-            ]
-        ) {
-            "SOCIAL 30" ->
-                0xFF8FA8E8.toInt()
-
-            "SOCIAL 60" ->
-                0xFF73B7D9.toInt()
-
-            "SOCIAL HDR" ->
-                0xFFA793D8.toInt()
-
-            "UHD 30" ->
-                0xFFAEBDEB.toInt()
-
-            "UHD 60" ->
-                0xFF7FB8CA.toInt()
-
-            "HDR UHD" ->
-                0xFFD0B06F.toInt()
-
-            "ACTION STAB" ->
-                0xFF91B6A0.toInt()
-
-            "ACTION 60" ->
-                0xFF71B9A7.toInt()
-
-            "LOW LIGHT" ->
-                0xFF8A86B8.toInt()
-
-            "HD FAST" ->
-                0xFFAEB7C7.toInt()
-
-            else ->
-                cyan
-        }
-    }
-
-    private fun updateLiveModePreviewTuning() {
-        if (
-            ::livePreviewToneView.isInitialized
-        ) {
-            livePreviewToneView.setBackgroundColor(
-                livePreviewToneColor()
-            )
-        }
-
-        if (
-            ::liveSubTitle.isInitialized
-        ) {
-            liveSubTitle.setTextColor(
-                liveModeAccentColor()
-            )
-
-            liveSubTitle.text =
-                "LIVE STUDIO • ${profiles[profileIndex]} • ${liveQualityProfiles[liveQualityIndex]} • LOOK ${liveEffectLabels[liveEffectIndex]} • MANUAL LIVE • V217"
-        }
-    }
-
-    private fun liveThermalStateLabel(): String {
-        if (
-            Build.VERSION.SDK_INT <
-                Build.VERSION_CODES.Q
-        ) {
-            return "UNAVAILABLE"
-        }
-
-        return when (
-            liveThermalStatus
-        ) {
-            PowerManager.THERMAL_STATUS_NONE ->
-                "NORMAL"
-
-            PowerManager.THERMAL_STATUS_LIGHT ->
-                "LIGHT"
-
-            PowerManager.THERMAL_STATUS_MODERATE ->
-                "MODERATE"
-
-            PowerManager.THERMAL_STATUS_SEVERE ->
-                "SEVERE"
-
-            PowerManager.THERMAL_STATUS_CRITICAL ->
-                "CRITICAL"
-
-            PowerManager.THERMAL_STATUS_EMERGENCY ->
-                "EMERGENCY"
-
-            PowerManager.THERMAL_STATUS_SHUTDOWN ->
-                "SHUTDOWN"
-
-            else ->
-                "UNKNOWN"
-        }
-    }
-
-    private fun applyLiveThermalSafeProfileIfNeeded() {
-        if (
-            Build.VERSION.SDK_INT <
-                Build.VERSION_CODES.Q ||
-            liveThermalStatus <
-                PowerManager.THERMAL_STATUS_SEVERE ||
-            recording !=
-                null
-        ) {
-            return
-        }
-
-        val current =
-            liveQualityProfiles[
-                liveQualityIndex
-            ]
-
-        val highDemand =
-            current in
-                setOf(
-                    "UHD 30",
-                    "UHD 60",
-                    "HDR UHD",
-                    "SOCIAL HDR",
-                    "ACTION 60"
-                )
-
-        if (!highDemand) {
-            return
-        }
-
-        val safeIndex =
-            liveQualityProfiles.indexOf(
-                "SOCIAL 30"
-            )
-
-        if (
-            safeIndex >=
-                0 &&
-            safeIndex !=
-                liveQualityIndex
-        ) {
-            liveQualityIndex =
-                safeIndex
-
-            syncLiveQualityState()
-
-            if (
-                ::qualityButton.isInitialized
-            ) {
-                qualityButton.text =
-                    "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}"
-            }
-
-            toast(
-                "THERMAL ${liveThermalStateLabel()} • LIVE switched to SOCIAL 30"
-            )
-        }
-    }
-
-    private fun liveVerifiedStateText(): String {
-        return buildString {
-            append("V217 VERIFIED")
-            append(" • ")
-            append(
-                liveQualityProfiles[
-                    liveQualityIndex
-                ]
-            )
-            append(" • LOOK ")
-            append(
-                liveEffectLabels[
-                    liveEffectIndex
-                ]
-            )
-            append(" • ")
-            append(liveActiveFpsLabel)
-            append(" • ")
-            append(liveActiveStabilizationLabel)
-            append(" • ")
-            append(liveActiveDynamicRangeLabel)
-            append(" • AUDIO ")
-            append(liveAudioGuardLabel())
-            append(" • THERMAL ")
-            append(
-                liveThermalStateLabel()
-            )
-        }
-    }
-
-    private fun liveAudioGuardLabel(): String {
-        if (!audioEnabled) {
-            return "OFF"
-        }
-
-        if (
-            recording ==
-                null
-        ) {
-            return "READY"
-        }
-
-        val level =
-            liveAudioAmplitude.coerceIn(
-                0.0,
-                1.0
-            )
-
-        return when {
-            level <
-                0.015 ->
-                    "LOW"
-
-            level <
-                0.70 ->
-                    "GOOD"
-
-            level <
-                0.90 ->
-                    "HOT"
-
-            else ->
-                "CLIP RISK"
-        }
-    }
-
     private fun updateSignals() {
-        refreshV233LiveColorMonitor()
-        updateLiveModePreviewTuning()
-
         netLamp.setTextColor(
             if (
                 isNetworkConnected()
@@ -5416,13 +2783,13 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 }
 
             livePreviewTech.text =
-                "${liveVerifiedStateText()} • TC ${liveTimecode()} • AUDIO ${audioPercent}% • NET ${
+                "TC ${liveTimecode()} • $qualityLabel • MIC ${audioPercent}% • NET ${
                     if (netReady) {
                         "READY"
                     } else {
                         "OFF"
                     }
-                } • HEALTH $health • ${liveEstimatedRecordingTimeText()}"
+                } • HEALTH $health"
         }
     }
 
@@ -5589,294 +2956,17 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 red,
                 cyan,
                 green,
-                0xFFA77B92.toInt(),
+                0xFFFF5AA5.toInt(),
                 amber,
-                0xFF83799A.toInt(),
-                0xFF6D88A4.toInt(),
-                0xFF8B9499.toInt()
+                0xFF8F7CFF.toInt(),
+                0xFF4EA7FF.toInt(),
+                0xFFB7C1C8.toInt()
             )
 
         return palette[
             index %
                 palette.size
         ]
-    }
-
-    private fun v229LiveColorScope(): String =
-        "LIVE_STUDIO"
-
-    private fun v229LiveColorHint(): String {
-        return buildString {
-            append("LIVE • ")
-            append(profiles[profileIndex])
-            append(" • ")
-            append(liveQualityProfiles[liveQualityIndex])
-            append(" • ")
-            append(liveEffectLabels[liveEffectIndex])
-            append(" • ")
-            append(headline)
-        }
-    }
-
-    private fun v229LiveColorResolved(): DevelopUgandaColorEngine.ResolvedSelection =
-        DevelopUgandaColorEngine.resolve(
-            this,
-            v229LiveColorScope(),
-            v229LiveColorHint()
-        )
-
-    private fun v229LiveColorDeckLabel(): String {
-        val value = v229LiveColorResolved()
-        return when {
-            !value.enabled ->
-                "ORIGINAL"
-
-            value.autoResolved ->
-                "AUTO " +
-                    value.label
-                        .removePrefix("DU ")
-                        .take(10)
-
-            else ->
-                value.label
-                    .removePrefix("DU ")
-                    .take(12)
-        }
-    }
-
-    private fun refreshV233LiveColorMonitor() {
-        if (
-            !::previewView.isInitialized ||
-            !::liveColorButton.isInitialized
-        ) {
-            return
-        }
-
-        val value =
-            v229LiveColorResolved()
-
-        v229LiveColorOverlayLabel =
-            if (
-                value.enabled
-            ) {
-                value.label
-            } else {
-                "ORIGINAL"
-            }
-
-        liveColorButton.text =
-            "COLOR ▾\n${v229LiveColorDeckLabel()}"
-
-        liveColorButton.isSelected =
-            value.enabled
-
-        val key =
-            "${value.requestedId}:${value.label}:${value.strength}:${DevelopUgandaColorEngine.monitorEnabled(this)}"
-
-        if (
-            key !=
-                lastV233LiveColorMonitorKey
-        ) {
-            lastV233LiveColorMonitorKey =
-                key
-
-            DevelopUgandaColorEngine.applyPreviewMonitor(
-                previewView,
-                value,
-                v229LiveColorScope()
-            )
-        }
-    }
-
-    private fun showV233LiveColorDropdown(
-        anchor: View
-    ) {
-        if (
-            recording !=
-                null
-        ) {
-            toast(
-                "Choose the V233 color profile before recording"
-            )
-            return
-        }
-
-        val options =
-            DevelopUgandaColorEngine.menuLabels()
-                .toMutableList()
-
-        options.add(
-            "COLOR STUDIO • STRENGTH / MONITOR"
-        )
-
-        showLivePillDropdown(
-            anchor,
-            "V233 PROFESSIONAL COLOR",
-            options.toTypedArray(),
-            DevelopUgandaColorEngine.selectedMenuIndex(
-                this,
-                v229LiveColorScope()
-            )
-        ) {
-                picked ->
-            if (
-                picked >=
-                    options.lastIndex
-            ) {
-                openV233LiveColorStudio()
-                return@showLivePillDropdown
-            }
-
-            DevelopUgandaColorEngine.setSelectedMenuIndex(
-                this,
-                v229LiveColorScope(),
-                picked
-            )
-
-            lastV233LiveColorMonitorKey =
-                ""
-
-            refreshV233LiveColorMonitor()
-
-            toast(
-                "V233 COLOR • ${v229LiveColorResolved().statusLabel()}"
-            )
-        }
-    }
-
-    private fun openV233LiveColorStudio() {
-        startActivity(
-            android.content.Intent(
-                this,
-                DevelopUgandaColorStudioActivity::class.java
-            ).apply {
-                putExtra(
-                    DevelopUgandaColorStudioActivity.EXTRA_SCOPE,
-                    v229LiveColorScope()
-                )
-                putExtra(
-                    DevelopUgandaColorStudioActivity.EXTRA_HINT,
-                    v229LiveColorHint()
-                )
-            }
-        )
-    }
-
-    private fun scheduleV233LiveColorMaster(
-        sourceUri: android.net.Uri,
-        packageId: String
-    ) {
-        val selection =
-            v229LiveColorResolved()
-
-        if (
-            !selection.enabled
-        ) {
-            DevelopUgandaStoryPackager.markColorMasterSkipped(
-                applicationContext,
-                packageId,
-                "ORIGINAL selected • no V233 color master requested"
-            )
-            return
-        }
-
-        val scopeSnapshot =
-            v229LiveColorScope()
-        val hintSnapshot =
-            v229LiveColorHint()
-
-        fun waitForPackage(
-            attempt: Int
-        ) {
-            val entry =
-                DevelopUgandaStoryPackager.listRegistry(
-                    applicationContext
-                )
-                    .firstOrNull {
-                        it.packageId ==
-                            packageId
-                    }
-
-            val busy =
-                entry ==
-                    null ||
-                    entry.state.contains(
-                        "BUILDING",
-                        ignoreCase = true
-                    )
-
-            if (
-                busy &&
-                attempt <
-                    180
-            ) {
-                uiHandler.postDelayed(
-                    {
-                        waitForPackage(
-                            attempt +
-                                1
-                        )
-                    },
-                    1000L
-                )
-                return
-            }
-
-            DevelopUgandaStoryPackager.markColorMasterBuilding(
-                applicationContext,
-                packageId,
-                selection.label,
-                selection.strength
-            )
-
-            DevelopUgandaColorEngine.exportVideoMaster(
-                applicationContext,
-                sourceUri,
-                packageId,
-                scopeSnapshot,
-                hintSnapshot
-            ) {
-                    outcome ->
-                if (
-                    outcome.success &&
-                    outcome.uri !=
-                        null
-                ) {
-                    DevelopUgandaStoryPackager.attachColorMaster(
-                        applicationContext,
-                        packageId,
-                        outcome.uri,
-                        outcome.profileLabel,
-                        outcome.strength,
-                        outcome.width,
-                        outcome.height,
-                        outcome.durationMs,
-                        outcome.bitrate
-                    )
-
-                    runOnUiThread {
-                        toast(
-                            "V233 LIVE COLOR MASTER READY • ${outcome.profileLabel}"
-                        )
-                    }
-                } else {
-                    DevelopUgandaStoryPackager.markColorMasterFailed(
-                        applicationContext,
-                        packageId,
-                        outcome.message
-                    )
-                }
-            }
-        }
-
-        uiHandler.postDelayed(
-            {
-                waitForPackage(
-                    0
-                )
-            },
-            1000L
-        )
     }
 
     private fun showLivePillDropdown(
@@ -6042,15 +3132,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             profileIndex =
                 picked
 
-            markLivePresetCustom()
-
             profileButton.text =
                 "PROFILE ▾\n${profiles[profileIndex]}"
 
             liveSubTitle.text =
-                "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
-
-            saveLiveCameraPreferences()
+                "LIVE STUDIO • ${profiles[profileIndex]} • READY"
         }
     }
 
@@ -6066,19 +3152,30 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
         showLivePillDropdown(
             anchor,
-            "CREATOR QUALITY",
-            liveQualityProfiles,
-            liveQualityIndex
+            "QUALITY",
+            arrayOf(
+                "FHD",
+                "HD"
+            ),
+            if (quality == Quality.FHD) 0 else 1
         ) { picked ->
-            liveQualityIndex =
-                picked
+            quality =
+                if (picked == 0) {
+                    Quality.FHD
+                } else {
+                    Quality.HD
+                }
 
-            syncLiveQualityState()
+            qualityLabel =
+                if (picked == 0) {
+                    "FHD"
+                } else {
+                    "HD"
+                }
 
             qualityButton.text =
-                "QUALITY ▾\n${liveQualityProfiles[liveQualityIndex]}"
+                "QUALITY ▾\n$qualityLabel"
 
-            saveLiveCameraPreferences()
             bindCamera()
         }
     }
@@ -6099,8 +3196,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked ==
                     0
 
-            markLivePresetCustom()
-
             audioButton.text =
                 "AUDIO ▾\n" +
                     if (audioEnabled) {
@@ -6108,8 +3203,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     } else {
                         "OFF"
                     }
-
-            saveLiveCameraPreferences()
         }
     }
 
@@ -6129,8 +3222,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked ==
                     0
 
-            markLivePresetCustom()
-
             graphicsButton.text =
                 "GRAPHICS ▾\n" +
                     if (graphicsEnabled) {
@@ -6138,8 +3229,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     } else {
                         "OFF"
                     }
-
-            saveLiveCameraPreferences()
         }
     }
 
@@ -6258,8 +3347,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                 picked ==
                     0
 
-            markLivePresetCustom()
-
             countdownButton.text =
                 "COUNTDOWN ▾\n" +
                     if (countdownEnabled) {
@@ -6270,8 +3357,6 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
             countdownButton.isSelected =
                 countdownEnabled
-
-            saveLiveCameraPreferences()
         }
     }
 
@@ -6294,760 +3379,9 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
             lowerThirdStyleIndex =
                 picked
 
-            markLivePresetCustom()
-
             styleButton.text =
                 "LOWER STYLE ▾\n${lowerThirdStyles[lowerThirdStyleIndex]}"
-
-            saveLiveCameraPreferences()
         }
-    }
-
-    private fun loadLiveCameraPreferences() {
-        val prefs =
-            getSharedPreferences(
-                "develop_uganda_live_camera",
-                Context.MODE_PRIVATE
-            )
-
-        liveQualityIndex =
-            prefs.getInt(
-                "live_quality_index",
-                liveQualityIndex
-            )
-                .coerceIn(
-                    0,
-                    liveQualityProfiles.lastIndex
-                )
-
-        syncLiveQualityState()
-
-        profileIndex =
-            prefs.getInt(
-                "profile_index",
-                profileIndex
-            )
-                .coerceIn(
-                    0,
-                    profiles.lastIndex
-                )
-
-        lowerThirdStyleIndex =
-            prefs.getInt(
-                "lower_style",
-                lowerThirdStyleIndex
-            )
-                .coerceIn(
-                    0,
-                    lowerThirdStyles.lastIndex
-                )
-
-        liveHudSizeIndex =
-            prefs.getInt(
-                "hud_size",
-                liveHudSizeIndex
-            )
-                .coerceIn(
-                    0,
-                    liveHudLabels.lastIndex
-                )
-
-        liveHudContrastIndex =
-            prefs.getInt(
-                "hud_contrast",
-                liveHudContrastIndex
-            )
-                .coerceIn(
-                    0,
-                    liveHudContrastLabels.lastIndex
-                )
-
-        liveHudBackingIndex =
-            prefs.getInt(
-                "hud_backing",
-                liveHudBackingIndex
-            )
-                .coerceIn(
-                    0,
-                    liveHudBackingLabels.lastIndex
-                )
-
-        liveEffectIndex =
-            prefs.getInt(
-                "video_fx",
-                liveEffectIndex
-            )
-                .coerceIn(
-                    0,
-                    liveEffectLabels.lastIndex
-                )
-
-        livePresetIndex =
-            prefs.getInt(
-                "preset_index",
-                livePresetIndex
-            )
-                .coerceIn(
-                    0,
-                    livePresetLabels.lastIndex
-                )
-
-        audioEnabled =
-            prefs.getBoolean(
-                "audio",
-                audioEnabled
-            )
-
-        graphicsEnabled =
-            prefs.getBoolean(
-                "graphics",
-                graphicsEnabled
-            )
-
-        countdownEnabled =
-            prefs.getBoolean(
-                "countdown",
-                countdownEnabled
-            )
-    }
-
-    private fun saveLiveCameraPreferences() {
-        getSharedPreferences(
-            "develop_uganda_live_camera",
-            Context.MODE_PRIVATE
-        )
-            .edit()
-            .putInt(
-                "live_quality_index",
-                liveQualityIndex
-            )
-            .putInt(
-                "profile_index",
-                profileIndex
-            )
-            .putInt(
-                "lower_style",
-                lowerThirdStyleIndex
-            )
-            .putInt(
-                "hud_size",
-                liveHudSizeIndex
-            )
-            .putInt(
-                "hud_contrast",
-                liveHudContrastIndex
-            )
-            .putInt(
-                "hud_backing",
-                liveHudBackingIndex
-            )
-            .putInt(
-                "video_fx",
-                liveEffectIndex
-            )
-            .putInt(
-                "preset_index",
-                livePresetIndex
-            )
-            .putBoolean(
-                "audio",
-                audioEnabled
-            )
-            .putBoolean(
-                "graphics",
-                graphicsEnabled
-            )
-            .putBoolean(
-                "countdown",
-                countdownEnabled
-            )
-            .apply()
-    }
-
-    private fun liveHudBackingAlpha(): Int {
-        return when (
-            liveHudBackingIndex
-        ) {
-            0 ->
-                0
-
-            2 ->
-                58
-
-            else ->
-                32
-        }
-    }
-
-    private fun drawLiveTextBackplate(
-        canvas: Canvas,
-        value: String,
-        x: Float,
-        y: Float,
-        paint: Paint
-    ) {
-        val alpha =
-            liveHudBackingAlpha()
-
-        if (
-            alpha <=
-            0
-        ) {
-            return
-        }
-
-        val metrics =
-            paint.fontMetrics
-
-        val padX =
-            paint.textSize *
-                0.22f
-
-        val padY =
-            paint.textSize *
-                0.12f
-
-        val background =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    Color.argb(
-                        alpha,
-                        0,
-                        0,
-                        0
-                    )
-
-                style =
-                    Paint.Style.FILL
-            }
-
-        canvas.drawRoundRect(
-            x -
-                padX,
-            y +
-                metrics.ascent -
-                padY,
-            x +
-                paint.measureText(
-                    value
-                ) +
-                padX,
-            y +
-                metrics.descent +
-                padY,
-            paint.textSize *
-                0.22f,
-            paint.textSize *
-                0.22f,
-            background
-        )
-    }
-
-    private fun liveHudOutlineScale(): Float {
-        return when (
-            liveHudContrastIndex
-        ) {
-            0 ->
-                0.014f
-
-            2 ->
-                0.032f
-
-            else ->
-                0.022f
-        }
-    }
-
-    private fun liveHudOutlineColor(): Int {
-        return when (
-            liveHudContrastIndex
-        ) {
-            0 ->
-                0x26000000
-
-            2 ->
-                0x52000000
-
-            else ->
-                0x38000000
-        }
-    }
-
-    private fun liveHudShadowRadius(
-        u: Float
-    ): Float {
-        return when (
-            liveHudContrastIndex
-        ) {
-            0 ->
-                0.35f * u
-
-            2 ->
-                1.0f * u
-
-            else ->
-                0.65f * u
-        }
-    }
-
-    private fun showLiveEffectDropdown(
-        anchor: View
-    ) {
-        if (
-            recording !=
-            null
-        ) {
-            toast(
-                "Stop LIVE REC before changing video effect"
-            )
-            return
-        }
-
-        showLivePillDropdown(
-            anchor,
-            "SAVED VIDEO EFFECT",
-            liveEffectLabels,
-            liveEffectIndex
-        ) { picked ->
-            liveEffectIndex =
-                picked
-
-            markLivePresetCustom()
-
-            liveEffectButton.text =
-                "VIDEO FX ▾\n${liveEffectLabels[liveEffectIndex]}"
-
-            liveEffectButton.isSelected =
-                liveEffectIndex !=
-                    0
-
-            saveLiveCameraPreferences()
-
-            toast(
-                "VIDEO FX ${liveEffectLabels[liveEffectIndex]}"
-            )
-        }
-    }
-
-    private fun showLiveHudBackingDropdown(
-        anchor: View
-    ) {
-        showLivePillDropdown(
-            anchor,
-            "RECORDED HUD BACKING",
-            liveHudBackingLabels,
-            liveHudBackingIndex
-        ) { picked ->
-            liveHudBackingIndex =
-                picked
-
-            markLivePresetCustom()
-
-            liveHudBackingButton.text =
-                "HUD BACKING ▾\n${liveHudBackingLabels[liveHudBackingIndex]}"
-
-            liveHudBackingButton.isSelected =
-                liveHudBackingIndex !=
-                    0
-
-            saveLiveCameraPreferences()
-
-            toast(
-                "LIVE backing ${liveHudBackingLabels[liveHudBackingIndex]}"
-            )
-        }
-    }
-
-    private fun markLivePresetCustom() {
-        if (
-            livePresetIndex !=
-            0
-        ) {
-            livePresetIndex =
-                0
-
-            if (
-                ::livePresetButton.isInitialized
-            ) {
-                livePresetButton.text =
-                    "PRESET ▾\nCUSTOM"
-
-                livePresetButton.isSelected =
-                    false
-            }
-        }
-    }
-
-    private fun liveArrayIndex(
-        values: Array<String>,
-        wanted: String,
-        fallback: Int = 0
-    ): Int {
-        val index =
-            values.indexOf(
-                wanted
-            )
-
-        return if (
-            index >=
-            0
-        ) {
-            index
-        } else {
-            fallback.coerceIn(
-                0,
-                values.lastIndex
-            )
-        }
-    }
-
-    private fun applyLivePreset(
-        picked: Int
-    ) {
-        livePresetIndex =
-            picked.coerceIn(
-                0,
-                livePresetLabels.lastIndex
-            )
-
-        when (
-            livePresetLabels[
-                livePresetIndex
-            ]
-        ) {
-            "BREAKING" -> {
-                profileIndex =
-                    liveArrayIndex(
-                        profiles,
-                        "BREAKING"
-                    )
-
-                lowerThirdStyleIndex =
-                    liveArrayIndex(
-                        lowerThirdStyles,
-                        "BREAKING"
-                    )
-
-                liveHudSizeIndex =
-                    1
-
-                liveHudContrastIndex =
-                    2
-
-                audioEnabled =
-                    true
-
-                graphicsEnabled =
-                    true
-
-                countdownEnabled =
-                    true
-
-                liveHudBackingIndex =
-                    1
-
-                liveEffectIndex =
-                    liveEffectLabels.indexOf(
-                        "CLEAN"
-                    ).coerceAtLeast(
-                        0
-                    )
-            }
-
-            "INTERVIEW" -> {
-                profileIndex =
-                    liveArrayIndex(
-                        profiles,
-                        "INTERVIEW"
-                    )
-
-                lowerThirdStyleIndex =
-                    liveArrayIndex(
-                        lowerThirdStyles,
-                        "CLEAN"
-                    )
-
-                liveHudSizeIndex =
-                    0
-
-                liveHudContrastIndex =
-                    1
-
-                audioEnabled =
-                    true
-
-                graphicsEnabled =
-                    true
-
-                countdownEnabled =
-                    false
-
-                liveHudBackingIndex =
-                    1
-
-                liveEffectIndex =
-                    liveEffectLabels.indexOf(
-                        "NATURAL"
-                    ).coerceAtLeast(
-                        0
-                    )
-            }
-
-            "EVENT" -> {
-                profileIndex =
-                    liveArrayIndex(
-                        profiles,
-                        "EVENT"
-                    )
-
-                lowerThirdStyleIndex =
-                    liveArrayIndex(
-                        lowerThirdStyles,
-                        "CLEAN"
-                    )
-
-                liveHudSizeIndex =
-                    1
-
-                liveHudContrastIndex =
-                    1
-
-                audioEnabled =
-                    true
-
-                graphicsEnabled =
-                    true
-
-                countdownEnabled =
-                    true
-
-                liveHudBackingIndex =
-                    1
-
-                liveEffectIndex =
-                    liveEffectLabels.indexOf(
-                        "WARM"
-                    ).coerceAtLeast(
-                        0
-                    )
-            }
-
-            "COMMUNITY" -> {
-                profileIndex =
-                    liveArrayIndex(
-                        profiles,
-                        "COMMUNITY"
-                    )
-
-                lowerThirdStyleIndex =
-                    liveArrayIndex(
-                        lowerThirdStyles,
-                        "MINIMAL"
-                    )
-
-                liveHudSizeIndex =
-                    1
-
-                liveHudContrastIndex =
-                    1
-
-                audioEnabled =
-                    true
-
-                graphicsEnabled =
-                    true
-
-                countdownEnabled =
-                    true
-            }
-
-            else -> {
-                // CUSTOM leaves current values untouched.
-
-                liveHudBackingIndex =
-                    1
-
-                liveEffectIndex =
-                    liveEffectLabels.indexOf(
-                        "NATURAL"
-                    ).coerceAtLeast(
-                        0
-                    )
-            }
-        }
-
-        livePresetButton.text =
-            "PRESET ▾\n${livePresetLabels[livePresetIndex]}"
-
-        livePresetButton.isSelected =
-            livePresetIndex !=
-                0
-
-        profileButton.text =
-            "PROFILE ▾\n${profiles[profileIndex]}"
-
-        styleButton.text =
-            "LOWER STYLE ▾\n${lowerThirdStyles[lowerThirdStyleIndex]}"
-
-        liveHudSizeButton.text =
-            "HUD SIZE ▾\n${liveHudLabels[liveHudSizeIndex]}"
-
-        liveHudContrastButton.text =
-            "HUD CONTRAST ▾\n${liveHudContrastLabels[liveHudContrastIndex]}"
-
-        liveHudBackingButton.text =
-            "HUD BACKING ▾\n${liveHudBackingLabels[liveHudBackingIndex]}"
-
-        liveHudBackingButton.isSelected =
-            liveHudBackingIndex !=
-                0
-
-        liveEffectButton.text =
-            "VIDEO FX ▾\n${liveEffectLabels[liveEffectIndex]}"
-
-        liveEffectButton.isSelected =
-            liveEffectIndex !=
-                0
-
-        audioButton.text =
-            "AUDIO ▾\n" +
-                if (
-                    audioEnabled
-                ) {
-                    "ON"
-                } else {
-                    "OFF"
-                }
-
-        graphicsButton.text =
-            "GRAPHICS ▾\n" +
-                if (
-                    graphicsEnabled
-                ) {
-                    "ON"
-                } else {
-                    "OFF"
-                }
-
-        countdownButton.text =
-            "COUNTDOWN ▾\n" +
-                if (
-                    countdownEnabled
-                ) {
-                    "3 SEC"
-                } else {
-                    "OFF"
-                }
-
-        countdownButton.isSelected =
-            countdownEnabled
-
-        liveSubTitle.text =
-            "LIVE STUDIO • ${profiles[profileIndex]} • CONTINUOUS AF/AE/AWB • READY"
-
-        saveLiveCameraPreferences()
-
-        toast(
-            "LIVE preset ${livePresetLabels[livePresetIndex]}"
-        )
-    }
-
-    private fun showLivePresetDropdown(
-        anchor: View
-    ) {
-        if (
-            recording !=
-            null
-        ) {
-            toast(
-                "Stop LIVE REC before changing preset"
-            )
-            return
-        }
-
-        showLivePillDropdown(
-            anchor,
-            "LIVE PRESET",
-            livePresetLabels,
-            livePresetIndex
-        ) { picked ->
-            applyLivePreset(
-                picked
-            )
-        }
-    }
-
-    private fun showLiveHudContrastDropdown(
-        anchor: View
-    ) {
-        showLivePillDropdown(
-            anchor,
-            "RECORDED HUD CONTRAST",
-            liveHudContrastLabels,
-            liveHudContrastIndex
-        ) { picked ->
-            liveHudContrastIndex =
-                picked
-
-            markLivePresetCustom()
-
-            liveHudContrastButton.text =
-                "HUD CONTRAST ▾\n${liveHudContrastLabels[liveHudContrastIndex]}"
-
-            liveHudContrastButton.isSelected =
-                true
-
-            saveLiveCameraPreferences()
-
-            toast(
-                "LIVE contrast ${liveHudContrastLabels[liveHudContrastIndex]}"
-            )
-        }
-    }
-
-    private fun showLiveHudSizeDropdown(
-        anchor: View
-    ) {
-        showLivePillDropdown(
-            anchor,
-            "RECORDED HUD SIZE",
-            liveHudLabels,
-            liveHudSizeIndex
-        ) { picked ->
-            liveHudSizeIndex =
-                picked
-
-            markLivePresetCustom()
-
-            liveHudSizeButton.text =
-                "HUD SIZE ▾\n${liveHudLabels[liveHudSizeIndex]}"
-
-            liveHudSizeButton.isSelected =
-                true
-
-            saveLiveCameraPreferences()
-
-            toast(
-                "LIVE HUD ${liveHudLabels[liveHudSizeIndex]}"
-            )
-        }
-    }
-
-    private fun showLiveSafeAreaInfo() {
-        AlertDialog.Builder(this)
-            .setTitle(
-                "LIVE OUTPUT SAFE AREA"
-            )
-            .setMessage(
-                "The operator controls stay screen-only. Saved-video branding, ON AIR status and lower-third graphics remain inside the protected 9:16 output area."
-            )
-            .setPositiveButton(
-                "OK",
-                null
-            )
-            .show()
     }
 
     private fun signal(
@@ -7175,11 +3509,11 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    3.8f *
+                    4.2f *
                         density
 
                 color =
-                    0xFFD9DEE8.toInt()
+                    accent
             }
 
         private val idleFill =
@@ -7190,7 +3524,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.FILL
 
                 color =
-                    0x52000000
+                    0x24000000
             }
 
         private val pressedFill =
@@ -7202,7 +3536,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
 
                 color =
                     Color.argb(
-                        90,
+                        82,
                         Color.red(
                             accent
                         ),
@@ -7223,7 +3557,7 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.FILL
 
                 color =
-                    0xFFAEBDEB.toInt()
+                    accent
             }
 
         private val glow =
@@ -7234,18 +3568,18 @@ class DevelopUgandaLiveActivity : AppCompatActivity() {
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    4.8f *
+                    5.5f *
                         density
 
                 color =
-                    0xFFAEBDEB.toInt()
+                    accent
 
                 setShadowLayer(
-                    3.0f *
+                    7f *
                         density,
                     0f,
                     0f,
-                    0x66AEBDEB
+                    accent
                 )
             }
 

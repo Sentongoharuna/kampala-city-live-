@@ -20,7 +20,6 @@ import android.location.Address
 import android.location.Geocoder
 import android.location.GnssStatus
 import android.location.LocationManager
-import android.media.MediaMetadataRetriever
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -30,7 +29,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.os.StatFs
 import android.os.SystemClock
 import android.provider.MediaStore
@@ -50,8 +48,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraEffect
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.AspectRatio
-import androidx.camera.core.DynamicRange
 import androidx.camera.core.ExposureState
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
@@ -75,36 +71,13 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.effect.Brightness
-import androidx.media3.effect.Presentation
-import androidx.media3.transformer.AudioEncoderSettings
-import androidx.media3.transformer.Composition
-import androidx.media3.transformer.DefaultEncoderFactory
-import androidx.media3.transformer.EditedMediaItem
-import androidx.media3.transformer.EditedMediaItemSequence
-import androidx.media3.transformer.Effects
-import androidx.media3.transformer.ExportException
-import androidx.media3.transformer.ExportResult
-import androidx.media3.transformer.Transformer
-import androidx.media3.transformer.VideoEncoderSettings
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.label.ImageLabeler
-import com.google.mlkit.vision.label.ImageLabeling
-import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
@@ -120,8 +93,7 @@ import kotlin.math.log10
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-@OptIn(UnstableApi::class)
-open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
+class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListener {
 
     private companion object {
         const val ACTION_SCENE = 1
@@ -141,17 +113,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         const val ACTION_INTEGRITY = 15
         const val ACTION_CAPABILITIES = 16
         const val ACTION_CLEAN = 17
-        const val ACTION_HUD_SIZE = 18
-        const val ACTION_HUD_CONTRAST = 19
-        const val ACTION_REPORT_PRESET = 20
-        const val ACTION_HUD_BACKING = 21
-        const val ACTION_AUTO_DIRECTOR = 22
-        const val ACTION_SHOT_ASSIST = 23
-        const val ACTION_DIRECTOR = 24
-        const val ACTION_CONTINUITY = 25
-        const val ACTION_HEALTH = 26
-        const val ACTION_BRAND_METADATA = 27
-        const val ACTION_COLOR_ENGINE = 28
     }
 
 
@@ -173,18 +134,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var previewNavView: TextView
     private lateinit var previewSystemView: TextView
     private lateinit var previewHealthView: TextView
-    private lateinit var cameraExperienceBannerView: TextView
-    private lateinit var autoViewDescriptionView: TextView
-    private lateinit var shotQualityGuardView: TextView
-    private lateinit var shotAssistView: DevelopUgandaShotAssistView
-    private lateinit var directorOverlayView: DevelopUgandaDirectorOverlayView
-    private lateinit var focusReticleView: TextView
-    private lateinit var horizonGuardView: TextView
-    private lateinit var motionGuardView: TextView
-    private lateinit var lightAdvisorView: TextView
-    private lateinit var audioGuardView: TextView
-    private lateinit var thermalGuardView: TextView
-    private lateinit var previewModeToneView: View
 
     private lateinit var brandView: TextView
     private lateinit var statusView: TextView
@@ -202,7 +151,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var lookButton: Button
     private lateinit var qualityButton: Button
     private lateinit var captureModeButton: Button
-    private lateinit var colorButton: Button
     private lateinit var identityButton: Button
     private lateinit var viewModeButton: Button
     private lateinit var settingsButton: Button
@@ -225,69 +173,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private lateinit var integrityButton: Button
     private lateinit var capabilitiesButton: Button
     private lateinit var cleanModeButton: Button
-    private lateinit var hudSizeButton: Button
-    private lateinit var hudContrastButton: Button
-    private lateinit var hudBackingButton: Button
-    private lateinit var reportPresetButton: Button
-    private lateinit var autoDirectorButton: Button
-    private lateinit var assistButton: Button
-    private lateinit var directorButton: Button
-    private lateinit var continuityButton: Button
-    private lateinit var healthButton: Button
-    private lateinit var brandMetadataButton: Button
-    private lateinit var reportDisplayRow: LinearLayout
-    private lateinit var reportOutputRow: LinearLayout
-    private lateinit var reportDirectorRow: LinearLayout
-
-    private val reportPresetLabels =
-        arrayOf(
-            "CUSTOM",
-            "FIELD",
-            "OUTDOOR",
-            "NIGHT",
-            "INTERVIEW",
-            "CINEMA"
-        )
-
-    private var reportPresetIndex = 0
-
-    private var autoDirectorEnabled = false
-    private var autoDirectorLastSwitchMs = 0L
-    private var autoDirectorReason = "MANUAL"
-
-    private val reportHudLabels =
-        arrayOf(
-            "COMPACT",
-            "STANDARD",
-            "LARGE"
-        )
-
-    private val reportHudScales =
-        floatArrayOf(
-            1.04f,
-            1.16f,
-            1.28f
-        )
-
-    private var reportHudSizeIndex = 1
-
-    private val reportHudContrastLabels =
-        arrayOf(
-            "SOFT",
-            "BALANCED",
-            "STRONG"
-        )
-
-    private var reportHudContrastIndex = 1
-
-    private val reportHudBackingLabels =
-        arrayOf(
-            "NONE",
-            "SOFT",
-            "STRONG"
-        )
-
-    private var reportHudBackingIndex = 1
 
     private var halfPreviewMode = false
     private var detailedSettingsVisible = false
@@ -304,94 +189,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var gestureStartExposure = 0
     private var gestureMoved = false
     private var lastPreviewTapMs = 0L
-    private var focusLongPressTriggered = false
-    private var focusLockActive = false
-    private var focusAttempted = false
-    private var focusSuccessful: Boolean? = null
-    private var preflightApprovedOnce = false
-    private var shotAssistModeIndex = DevelopUgandaShotAssistView.MODE_OFF
-    private val shotAssistModeLabels = arrayOf("OFF", "PEAK", "ZEBRA", "BOTH")
-    private val recordingWarningsSeen = linkedSetOf<String>()
-    private lateinit var autoViewLabeler: ImageLabeler
-    private var autoViewBusy = false
-    private var autoViewSummary = "AUTO VIEW • analysing scene"
-
-    private val directorRunnable =
-        object : Runnable {
-            override fun run() {
-                if (
-                    ::directorOverlayView.isInitialized
-                ) {
-                    directorOverlayView.visibility =
-                        if (
-                            directorEnabled &&
-                            !cleanModeEnabled
-                        ) {
-                            View.VISIBLE
-                        } else {
-                            View.GONE
-                        }
-                }
-
-                if (
-                    directorEnabled &&
-                    !cleanModeEnabled &&
-                    ::previewView.isInitialized &&
-                    ::directorOverlayView.isInitialized &&
-                    previewView.width > 0 &&
-                    previewView.height > 0
-                ) {
-                    val bitmap =
-                        try {
-                            previewView.bitmap
-                        } catch (_: Exception) {
-                            null
-                        }
-
-                    if (
-                        bitmap != null
-                    ) {
-                        directorOverlayView.submitFrame(
-                            bitmap,
-                            isDirectorPeopleMode()
-                        )
-                    }
-                }
-
-                uiHandler.postDelayed(
-                    this,
-                    1100L
-                )
-            }
-        }
-
-    private val hideFocusReticleRunnable =
-        Runnable {
-            if (
-                ::focusReticleView.isInitialized &&
-                !focusLockActive
-            ) {
-                focusReticleView.visibility =
-                    View.GONE
-            }
-        }
-
-    private val focusLockRunnable =
-        Runnable {
-            if (
-                !gestureMoved &&
-                !operatorLocked &&
-                ::previewView.isInitialized
-            ) {
-                focusLongPressTriggered =
-                    true
-
-                togglePersistentFocusLock(
-                    gestureDownX,
-                    gestureDownY
-                )
-            }
-        }
 
     private val autoHideRunnable =
         Runnable {
@@ -411,12 +208,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var imageCapture: ImageCapture? = null
     private var recording: Recording? = null
     private var overlayEffect: OverlayEffect? = null
-    private var automaticSocialTransformer: Transformer? = null
-    private var automaticSocialExportActive = false
-    private var selectedCameraDeviceId: String? = null
-    private var directorEnabled = true
-    private var lastV233ColorMonitorKey = ""
-    private var v229ColorOverlayLabel = "AUTO"
     private var useFront = false
     private var torchOn = false
 
@@ -438,24 +229,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         "COOL",
         "TEAL",
         "GOLD",
-        "SOFT",
-        "SUNSET",
-        "BLUE HOUR",
         "NIGHT",
         "MONO"
     )
-    // V203 capability-driven recording profiles.
-    // SOCIAL FHD remains the safest upload master for TikTok/Instagram.
     private val qualityModes = listOf(
         "SOCIAL FHD",
-        "SOCIAL 60",
         "MASTER UHD",
-        "UHD 60",
-        "MASTER HDR",
-        "SOCIAL HDR",
-        "ACTION STAB",
-        "ACTION 60",
-        "LOW LIGHT",
         "FAST HD"
     )
     private val captureModes = listOf(
@@ -468,34 +247,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var captureModeIndex = 0
     private var sceneExposureTarget = 0
 
-    private var activeVideoFpsLabel = "AUTO FPS"
-    private var activeVideoStabilizationLabel = "STAB AUTO"
-    private var activeVideoDynamicRangeLabel = "SDR"
-    private var activeVideoAspectLabel = "9:16 SOCIAL SAFE"
-
     private val weather = WeatherRepository()
     private lateinit var telemetryRecorder: TelemetryRecorder
     private lateinit var fused: FusedLocationProviderClient
     private lateinit var sensorManager: SensorManager
     private var rotationVectorSensor: Sensor? = null
-    private var ambientLightSensor: Sensor? = null
-    private lateinit var powerManager: PowerManager
-    @Volatile private var thermalStatus =
-        PowerManager.THERMAL_STATUS_NONE
-    private var thermalListenerRegistered = false
-
-    private val thermalStatusListener =
-        PowerManager.OnThermalStatusChangedListener {
-                status ->
-            thermalStatus =
-                status
-
-            runOnUiThread {
-                updateThermalGuard()
-                refreshHud()
-            }
-        }
-
     private lateinit var locationManager: LocationManager
 
     @Volatile private var lat: Double? = null
@@ -513,26 +269,15 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     @Volatile private var compassAzimuthDeg: Float? = null
     @Volatile private var phonePitchDeg: Float? = null
     @Volatile private var phoneRollDeg: Float? = null
-    @Volatile private var cameraShakeScore = 0f
-    @Volatile private var lastMotionSampleMs = 0L
-    @Volatile private var ambientLux: Float? = null
     @Volatile private var gnssSatellitesVisible = -1
     @Volatile private var gnssSatellitesUsed = -1
     @Volatile private var audioAmplitude = 0.0
-    @Volatile private var audioPeakAmplitude = 0.0
     @Volatile private var audioStateLabel = "MIC READY"
 
     private var gnssCallbackHolder: Any? = null
     private var reporterName = "CITIZEN"
     private var storyId = ""
     private var reportId = ""
-    private var cameraExperienceId =
-        "V210_ALL_PRO"
-
-    protected open fun defaultCameraExperienceId(): String {
-        return "V210_ALL_PRO"
-    }
-
     private var reportDisplayMode = "FIELD REPORT"
     private var clipSequence = 0
     private var recordStartUtc = "--"
@@ -544,49 +289,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private var baseName = ""
 
     private val uiHandler = Handler(Looper.getMainLooper())
-
-    private val shotAssistRunnable =
-        object : Runnable {
-            override fun run() {
-                if (
-                    shotAssistModeIndex !=
-                        DevelopUgandaShotAssistView.MODE_OFF &&
-                    ::previewView.isInitialized &&
-                    ::shotAssistView.isInitialized
-                ) {
-                    val bitmap =
-                        try {
-                            previewView.bitmap
-                        } catch (_: Exception) {
-                            null
-                        }
-
-                    if (bitmap != null) {
-                        shotAssistView.submitFrame(
-                            bitmap
-                        )
-                    }
-                }
-
-                uiHandler.postDelayed(
-                    this,
-                    700L
-                )
-            }
-        }
-
-
-    private val autoViewRunnable =
-        object : Runnable {
-            override fun run() {
-                analyzeAutoViewFrame()
-
-                uiHandler.postDelayed(
-                    this,
-                    3500L
-                )
-            }
-        }
     private val clock = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     private val tick = object : Runnable {
@@ -685,46 +387,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             sensorManager.getDefaultSensor(
                 Sensor.TYPE_ROTATION_VECTOR
             )
-
-        ambientLightSensor =
-            sensorManager.getDefaultSensor(
-                Sensor.TYPE_LIGHT
-            )
-
-        powerManager =
-            getSystemService(
-                Context.POWER_SERVICE
-            ) as PowerManager
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q
-        ) {
-            thermalStatus =
-                powerManager.currentThermalStatus
-        }
-
         locationManager =
             getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        cameraExperienceId =
-            intent.getStringExtra(
-                "develop_uganda_camera_experience"
-            )
-                ?.trim()
-                ?.uppercase(
-                    Locale.US
-                )
-                ?.takeIf {
-                    it.isNotBlank()
-                }
-                ?: defaultCameraExperienceId()
-
         loadReporterIdentity()
-        loadReportCameraPreferences()
-        applyIndependentCameraDefaultsIfNeeded()
-        recordingWarningsSeen.clear()
-
         reportId = newReportId()
 
         reportDisplayMode =
@@ -732,50 +398,13 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 ?.trim()
                 ?.uppercase(Locale.US)
                 ?.takeIf { it.isNotBlank() }
-                ?: cameraExperienceDisplayName()
+                ?: "FIELD REPORT"
 
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        enforceImmersiveCameraWindow()
 
         buildUi()
-        showRecordingRecoveryNoticeIfNeeded()
-        startAutoViewDescription()
-        startShotAssistLoop()
-        startDirectorLoop()
         requestPermissionsAndStart()
         uiHandler.post(tick)
-    }
-
-    private fun enforceImmersiveCameraWindow() {
-        WindowCompat.setDecorFitsSystemWindows(
-            window,
-            false
-        )
-
-        WindowInsetsControllerCompat(
-            window,
-            window.decorView
-        ).apply {
-            hide(
-                WindowInsetsCompat.Type.systemBars()
-            )
-
-            systemBarsBehavior =
-                WindowInsetsControllerCompat
-                    .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-    }
-
-    override fun onWindowFocusChanged(
-        hasFocus: Boolean
-    ) {
-        super.onWindowFocusChanged(
-            hasFocus
-        )
-
-        if (hasFocus) {
-            enforceImmersiveCameraWindow()
-        }
     }
 
     private fun buildUi() {
@@ -786,9 +415,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         previewView = PreviewView(this).apply {
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
 
-            // V217: full-frame operator camera.
-            // The camera image fills the phone behind all controls.
-            // Gallery output remains the authoritative CameraX recording.
+            // V181: show the full 9:16 recording canvas in the live camera.
+            // FILL_CENTER was cropping the left/right sides of the preview,
+            // even though the exported video was correct. FIT_START keeps the
+            // entire recorded frame visible and places any spare screen space
+            // below it, where the operator controls already live.
             scaleType = PreviewView.ScaleType.FILL_CENTER
         }
 
@@ -800,409 +431,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
         )
 
-        previewModeToneView =
-            View(this).apply {
-                isClickable =
-                    false
-
-                isFocusable =
-                    false
-
-                setBackgroundColor(
-                    Color.TRANSPARENT
-                )
-            }
-
-        root.addView(
-            previewModeToneView,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        shotAssistView =
-            DevelopUgandaShotAssistView(
-                this
-            ).apply {
-                setAssistMode(
-                    shotAssistModeIndex
-                )
-
-                isClickable =
-                    false
-
-                isFocusable =
-                    false
-            }
-
-        root.addView(
-            shotAssistView,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-
-
-        directorOverlayView =
-            DevelopUgandaDirectorOverlayView(
-                this
-            ).apply {
-                setDirectorEnabled(
-                    directorEnabled
-                )
-
-                isClickable =
-                    false
-
-                isFocusable =
-                    false
-            }
-
-        root.addView(
-            directorOverlayView,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-
-
-        focusReticleView =
-            TextView(this).apply {
-                text =
-                    "AF"
-
-                textSize =
-                    8.5f
-
-                setTextColor(
-                    Color.WHITE
-                )
-
-                gravity =
-                    Gravity.CENTER
-
-                typeface =
-                    Typeface.DEFAULT_BOLD
-
-                visibility =
-                    View.GONE
-
-                background =
-                    GradientDrawable().apply {
-                        shape =
-                            GradientDrawable.RECTANGLE
-
-                        cornerRadius =
-                            dp(12).toFloat()
-
-                        setColor(
-                            0x26031829
-                        )
-
-                        setStroke(
-                            dp(2),
-                            0xFFDCE4F7.toInt()
-                        )
-                    }
-            }
-
-        root.addView(
-            focusReticleView,
-            FrameLayout.LayoutParams(
-                dp(76),
-                dp(76)
-            )
-        )
-
-        horizonGuardView =
-            TextView(this).apply {
-                tag = "v239_legacy_horizon"
-                text =
-                    "━━━━━━━━  LEVEL --  ━━━━━━━━"
-
-                textSize =
-                    8.6f
-
-                gravity =
-                    Gravity.CENTER
-
-                typeface =
-                    Typeface.MONOSPACE
-
-                setTextColor(
-                    0xFFAEB7C7.toInt()
-                )
-
-                setShadowLayer(
-                    1.1f,
-                    0.3f,
-                    0.3f,
-                    0x66000000
-                )
-
-                visibility =
-                    View.VISIBLE
-            }
-
-        root.addView(
-            horizonGuardView,
-            FrameLayout.LayoutParams(
-                dp(270),
-                dp(34),
-                Gravity.CENTER
-            )
-        )
-
-        motionGuardView =
-            TextView(this).apply {
-                tag = "v239_legacy_motion"
-                text =
-                    "STEADYSHOT • --"
-
-                textSize =
-                    8.0f
-
-                gravity =
-                    Gravity.CENTER
-
-                typeface =
-                    Typeface.MONOSPACE
-
-                setTextColor(
-                    0xFFAEB7C7.toInt()
-                )
-
-                setPadding(
-                    dp(9),
-                    dp(4),
-                    dp(9),
-                    dp(4)
-                )
-
-                background =
-                    GradientDrawable().apply {
-                        shape =
-                            GradientDrawable.RECTANGLE
-
-                        cornerRadius =
-                            dp(14).toFloat()
-
-                        setColor(
-                            0x42031829
-                        )
-
-                        setStroke(
-                            dp(1),
-                            0x607A91A4
-                        )
-                    }
-            }
-
-        val motionParams =
-            FrameLayout.LayoutParams(
-                dp(170),
-                dp(30),
-                Gravity.CENTER
-            ).apply {
-                topMargin =
-                    dp(54)
-            }
-
-        root.addView(
-            motionGuardView,
-            motionParams
-        )
-
-        lightAdvisorView =
-            TextView(this).apply {
-                tag = "v239_legacy_light"
-                text =
-                    "LIGHT • SENSOR --"
-
-                textSize =
-                    7.8f
-
-                gravity =
-                    Gravity.CENTER
-
-                typeface =
-                    Typeface.MONOSPACE
-
-                setTextColor(
-                    0xFFAEB7C7.toInt()
-                )
-
-                setPadding(
-                    dp(9),
-                    dp(4),
-                    dp(9),
-                    dp(4)
-                )
-
-                background =
-                    GradientDrawable().apply {
-                        shape =
-                            GradientDrawable.RECTANGLE
-
-                        cornerRadius =
-                            dp(14).toFloat()
-
-                        setColor(
-                            0x42031829
-                        )
-
-                        setStroke(
-                            dp(1),
-                            0x607A91A4
-                        )
-                    }
-            }
-
-        val lightParams =
-            FrameLayout.LayoutParams(
-                dp(220),
-                dp(30),
-                Gravity.CENTER
-            ).apply {
-                topMargin =
-                    dp(92)
-            }
-
-        root.addView(
-            lightAdvisorView,
-            lightParams
-        )
-
-        audioGuardView =
-            TextView(this).apply {
-                tag = "v239_legacy_audio"
-                text =
-                    "AUDIO • MIC READY"
-
-                textSize =
-                    7.8f
-
-                gravity =
-                    Gravity.CENTER
-
-                typeface =
-                    Typeface.MONOSPACE
-
-                setTextColor(
-                    0xFFAEB7C7.toInt()
-                )
-
-                setPadding(
-                    dp(9),
-                    dp(4),
-                    dp(9),
-                    dp(4)
-                )
-
-                background =
-                    GradientDrawable().apply {
-                        shape =
-                            GradientDrawable.RECTANGLE
-
-                        cornerRadius =
-                            dp(14).toFloat()
-
-                        setColor(
-                            0x42031829
-                        )
-
-                        setStroke(
-                            dp(1),
-                            0x607A91A4
-                        )
-                    }
-            }
-
-        val audioGuardParams =
-            FrameLayout.LayoutParams(
-                dp(220),
-                dp(30),
-                Gravity.CENTER
-            ).apply {
-                topMargin =
-                    dp(130)
-            }
-
-        root.addView(
-            audioGuardView,
-            audioGuardParams
-        )
-
-        thermalGuardView =
-            TextView(this).apply {
-                tag = "v239_legacy_thermal"
-                text =
-                    "THERMAL • NORMAL"
-
-                textSize =
-                    7.8f
-
-                gravity =
-                    Gravity.CENTER
-
-                typeface =
-                    Typeface.MONOSPACE
-
-                setTextColor(
-                    0xFF91B6A0.toInt()
-                )
-
-                setPadding(
-                    dp(9),
-                    dp(4),
-                    dp(9),
-                    dp(4)
-                )
-
-                background =
-                    GradientDrawable().apply {
-                        shape =
-                            GradientDrawable.RECTANGLE
-
-                        cornerRadius =
-                            dp(14).toFloat()
-
-                        setColor(
-                            0x42031829
-                        )
-
-                        setStroke(
-                            dp(1),
-                            0x607A91A4
-                        )
-                    }
-            }
-
-        val thermalGuardParams =
-            FrameLayout.LayoutParams(
-                dp(220),
-                dp(30),
-                Gravity.CENTER
-            ).apply {
-                topMargin =
-                    dp(168)
-            }
-
-        root.addView(
-            thermalGuardView,
-            thermalGuardParams
-        )
-
         // V187 PREVIEW HUD:
         // CameraX output graphics are no longer used for the PREVIEW target.
         // This panel is drawn in phone-screen coordinates, so develop.uganda
         // and every narration line remain inside the visible camera screen.
         previewNarrationPanel =
             LinearLayout(this).apply {
-                tag = "v239_legacy_narration"
                 orientation =
                     LinearLayout.VERTICAL
 
@@ -1230,12 +464,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         previewBrandView =
             hud(
-                DevelopUgandaBrandMetadataStore.previewTitle(
-                    this,
-                    "V239"
-                ),
+                "develop.uganda",
                 13.8f,
-                0xFFD8B85B.toInt(),
+                0xFFFFC21A.toInt(),
                 bold = true
             )
 
@@ -1266,83 +497,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             previewBrandRow
         )
 
-        cameraExperienceBannerView =
-            hud(
-                cameraExperienceDisplayName(),
-                7.5f,
-                cameraExperienceAccentColor(),
-                bold = true
-            ).apply {
-                maxLines = 2
-                setPadding(
-                    dp(7),
-                    dp(2),
-                    dp(7),
-                    dp(2)
-                )
-                background =
-                    GradientDrawable().apply {
-                        shape =
-                            GradientDrawable.RECTANGLE
-                        cornerRadius =
-                            dp(9).toFloat()
-                        setColor(
-                            0x52031829
-                        )
-                        setStroke(
-                            dp(1),
-                            cameraExperienceAccentColor()
-                        )
-                    }
-            }
-
-        previewNarrationPanel.addView(
-            cameraExperienceBannerView,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(27)
-            )
-        )
-
-        autoViewDescriptionView =
-            hud(
-                "AUTO VIEW • analysing scene",
-                7.2f,
-                0xFF62D8C9.toInt(),
-                bold = true
-            ).apply {
-                maxLines = 1
-                isSingleLine = true
-            }
-
-        previewNarrationPanel.addView(
-            autoViewDescriptionView,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(24)
-            )
-        )
-
-        shotQualityGuardView =
-            hud(
-                "SHOT GUARD • READY",
-                7.0f,
-                0xFF91B6A0.toInt(),
-                bold = true
-            ).apply {
-                maxLines =
-                    2
-            }
-
-        previewNarrationPanel.addView(
-            shotQualityGuardView,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(30)
-            )
-        )
-
-
         previewIdentityView =
             hud(
                 "",
@@ -1363,7 +517,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             hud(
                 "",
                 5.8f,
-                0xFFD8B85B.toInt(),
+                0xFFFFC21A.toInt(),
                 bold = true
             )
 
@@ -1372,42 +526,34 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "",
                 5.8f,
                 Color.WHITE
-           ,
-                bold = true
             )
 
         previewGpsView =
             hud(
                 "",
                 5.6f,
-                0xFF83C7D4.toInt()
-           ,
-                bold = true
+                0xFF7FE8FF.toInt()
             )
 
         previewNavView =
             hud(
                 "",
                 5.6f,
-                0xFF83C7D4.toInt()
-           ,
-                bold = true
+                0xFF7FE8FF.toInt()
             )
 
         previewSystemView =
             hud(
                 "",
                 5.4f,
-                0xFF83B995.toInt()
-           ,
-                bold = true
+                0xFF76E39A.toInt()
             )
 
         previewHealthView =
             hud(
                 "",
                 5.7f,
-                0xFF83B995.toInt(),
+                0xFF76E39A.toInt(),
                 bold = true
             )
 
@@ -1474,7 +620,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         brandView = hud(
             "develop.uganda",
             10f,
-            0xFFD8B85B.toInt(),
+            0xFFFFC21A.toInt(),
             bold = true
         )
         statusView = hud(
@@ -1491,27 +637,26 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         formatView = hud(
             "SOCIAL FHD • DEVICE FPS",
             7f,
-            0xFFD8B85B.toInt()
+            0xFFFFC21A.toInt()
         )
         locationView = hud(
             "GPS acquiring…",
             6f,
-            0xFF83C7D4.toInt()
+            0xFF7FE8FF.toInt()
         )
         weatherView = hud(
             "WX --",
             6f,
-            0xFF9FD9FF.toInt()
+            0xFF8ECFFF.toInt()
         )
         systemView = hud(
             "MIC READY • NET -- • BAT -- • FREE --",
             6f,
-            0xFF83B995.toInt()
+            0xFF76E39A.toInt()
         )
 
         // ORBIT DECK: a custom floating control system. No large black panel.
         bottomDeck = LinearLayout(this).apply {
-            tag = "v237_camera_deck"
             orientation = LinearLayout.VERTICAL
             setPadding(
                 dp(10),
@@ -1523,17 +668,16 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
 
         modeRow = row().apply {
-            tag = "v237_camera_mode_row"
             gravity = Gravity.CENTER
         }
 
         sceneButton = deckButton(
             "SCENE ▾\n${sceneModes[sceneIndex]}",
-            0xFFD8B85B.toInt()
+            0xFFFFC21A.toInt()
         )
         lookButton = deckButton(
             "LOOK ▾\n${lookModes[lookIndex]}",
-            0xFF83C7D4.toInt()
+            0xFF7FE8FF.toInt()
         )
         qualityButton = deckButton(
             "FORMAT ▾\n${qualityDeckLabel()}",
@@ -1541,25 +685,14 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         )
         captureModeButton = deckButton(
             "CAPTURE ▾\n${captureModes[captureModeIndex]}",
-            0xFF83B995.toInt()
+            0xFF76E39A.toInt()
         )
-        colorButton = deckButton(
-            "COLOR ▾\n${v229ColorDeckLabel()}",
-            0xFFA793D8.toInt()
-        )
-
-        sceneButton.tag = "v237_scene_button"
-        lookButton.tag = "v237_look_button"
-        qualityButton.tag = "v237_quality_button"
-        captureModeButton.tag = "v237_capture_button"
-        colorButton.tag = "v237_color_button"
 
         listOf(
             sceneButton,
             lookButton,
             qualityButton,
-            captureModeButton,
-            colorButton
+            captureModeButton
         ).forEachIndexed { index, button ->
             modeRow.addView(
                 button,
@@ -1584,12 +717,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         bottomDeck.addView(modeRow)
 
         identityRow = row().apply {
-            tag = "v237_camera_identity_row"
             gravity = Gravity.CENTER
         }
         identityButton = deckButton(
             identityButtonText(),
-            0xFFD8B85B.toInt()
+            0xFFFFC21A.toInt()
         )
         identityRow.addView(
             identityButton,
@@ -1604,28 +736,27 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         // V185: FIELD REPORT camera has its own role-specific view and
         // settings controls. These are deliberately separate from LIVE STUDIO.
         reportToolsRow = row().apply {
-            tag = "v237_camera_tools_row"
             gravity = Gravity.CENTER
         }
 
         viewModeButton = deckButton(
-            "VIEW\nFULL SCREEN",
-            0xFF83B995.toInt()
+            "VIEW ▾\nFULL",
+            0xFF76E39A.toInt()
         )
 
         settingsButton = deckButton(
             "SETTINGS\nREPORT",
-            0xFF83C7D4.toInt()
+            0xFF7FE8FF.toInt()
         )
 
         guidesButton = deckButton(
             "GUIDES ▾\nON",
-            0xFFD8B85B.toInt()
+            0xFFFFC21A.toInt()
         )
 
         resetButton = deckButton(
             "RESET\nCAM",
-            0xFFB66B67.toInt()
+            0xFFFF8A84.toInt()
         )
 
         listOf(
@@ -1653,7 +784,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         // V188: compact operator controls for the FIELD REPORT role.
         reportAdvancedRow =
             row().apply {
-                tag = "v237_camera_advanced_row"
                 gravity =
                     Gravity.CENTER
             }
@@ -1661,7 +791,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         autoUiButton =
             deckButton(
                 "AUTO UI ▾\nON",
-                0xFF83B995.toInt()
+                0xFF76E39A.toInt()
             ).apply {
                 isSelected = true
             }
@@ -1669,13 +799,13 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         lockButton =
             deckButton(
                 "LOCK ▾\nOFF",
-                0xFFD8B85B.toInt()
+                0xFFFFC21A.toInt()
             )
 
         integrityButton =
             deckButton(
                 "VERIFY ▾\nSHA-256",
-                0xFF83C7D4.toInt()
+                0xFF7FE8FF.toInt()
             ).apply {
                 isSelected = true
             }
@@ -1689,32 +819,26 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         cleanModeButton =
             deckButton(
                 "CLEAN ▾\nOFF",
-                0xFF83B995.toInt()
+                0xFF76E39A.toInt()
             )
-
-        assistButton =
-            deckButton(
-                "ASSIST ▾\n${shotAssistModeLabels[shotAssistModeIndex]}",
-                0xFF62D8C9.toInt()
-            )
-
 
         listOf(
             autoUiButton,
             lockButton,
-            cleanModeButton,
-            assistButton
+            integrityButton,
+            capabilitiesButton,
+            cleanModeButton
         ).forEachIndexed { index, button ->
             reportAdvancedRow.addView(
                 button,
                 LinearLayout.LayoutParams(
                     0,
-                    dp(34),
+                    dp(31),
                     1f
                 ).apply {
                     if (index > 0) {
                         marginStart =
-                            dp(7)
+                            dp(4)
                     }
                 }
             )
@@ -1724,227 +848,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             reportAdvancedRow
         )
 
-        reportDisplayRow =
-            row().apply {
-                tag = "v237_camera_display_row"
-                gravity =
-                    Gravity.CENTER
-
-                setPadding(
-                    0,
-                    dp(4),
-                    0,
-                    0
-                )
-            }
-
-        hudSizeButton =
-            deckButton(
-                "HUD SIZE ▾\n${reportHudLabels[reportHudSizeIndex]}",
-                0xFF6D88A4.toInt()
-            ).apply {
-                isSelected =
-                    true
-            }
-
-        listOf(
-            integrityButton,
-            capabilitiesButton,
-            hudSizeButton
-        ).forEachIndexed { index, button ->
-            reportDisplayRow.addView(
-                button,
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(34),
-                    1f
-                ).apply {
-                    if (index > 0) {
-                        marginStart =
-                            dp(7)
-                    }
-                }
-            )
-        }
-
-        bottomDeck.addView(
-            reportDisplayRow
-        )
-
-        reportOutputRow =
-            row().apply {
-                tag = "v237_camera_output_row"
-                gravity =
-                    Gravity.CENTER
-
-                setPadding(
-                    0,
-                    dp(4),
-                    0,
-                    0
-                )
-            }
-
-        hudContrastButton =
-            deckButton(
-                "HUD CONTRAST ▾\n${reportHudContrastLabels[reportHudContrastIndex]}",
-                0xFF83799A.toInt()
-            ).apply {
-                isSelected =
-                    true
-            }
-
-        hudBackingButton =
-            deckButton(
-                "HUD BACKING ▾\n${reportHudBackingLabels[reportHudBackingIndex]}",
-                0xFF6F9C7C.toInt()
-            ).apply {
-                isSelected =
-                    reportHudBackingIndex !=
-                        0
-            }
-
-        reportPresetButton =
-            deckButton(
-                "PRESET ▾\n${reportPresetLabels[reportPresetIndex]}",
-                0xFF8B9499.toInt()
-            ).apply {
-                isSelected =
-                    reportPresetIndex !=
-                        0
-            }
-
-        autoDirectorButton =
-            deckButton(
-                "AUTO DIRECTOR ▾\n" +
-                    if (
-                        autoDirectorEnabled
-                    ) {
-                        "ON"
-                    } else {
-                        "OFF"
-                    },
-                0xFF73B7D9.toInt()
-            ).apply {
-                isSelected =
-                    autoDirectorEnabled
-            }
-
-        listOf(
-            hudContrastButton,
-            hudBackingButton,
-            reportPresetButton,
-            autoDirectorButton
-        ).forEachIndexed { index, button ->
-            reportOutputRow.addView(
-                button,
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(34),
-                    1f
-                ).apply {
-                    if (index > 0) {
-                        marginStart =
-                            dp(6)
-                    }
-                }
-            )
-        }
-
-        bottomDeck.addView(
-            reportOutputRow
-        )
-
-        reportDirectorRow =
-            row().apply {
-                tag = "v237_camera_director_row"
-                gravity =
-                    Gravity.CENTER
-
-                setPadding(
-                    0,
-                    dp(4),
-                    0,
-                    0
-                )
-            }
-
-        directorButton =
-            deckButton(
-                "DIRECTOR ▾\n" +
-                    if (
-                        directorEnabled
-                    ) {
-                        "ON"
-                    } else {
-                        "OFF"
-                    },
-                0xFF91B6A0.toInt()
-            ).apply {
-                isSelected =
-                    directorEnabled
-            }
-
-        continuityButton =
-            deckButton(
-                "MATCH LAST\nSHOT",
-                0xFFAEBDEB.toInt()
-            ).apply {
-                isSelected =
-                    DevelopUgandaContinuityMemory.load(
-                        this@DevelopUgandaCameraActivity,
-                        cameraExperienceId
-                    ) != null
-            }
-
-        healthButton =
-            deckButton(
-                "CAMERA\nHEALTH",
-                0xFF73B7D9.toInt()
-            )
-
-        brandMetadataButton =
-            deckButton(
-                "BRAND\nTAGS",
-                0xFFD0B06F.toInt()
-            )
-
-        listOf(
-            directorButton,
-            continuityButton,
-            healthButton,
-            brandMetadataButton
-        ).forEachIndexed {
-                index,
-                button ->
-            reportDirectorRow.addView(
-                button,
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(34),
-                    1f
-                ).apply {
-                    if (
-                        index >
-                            0
-                    ) {
-                        marginStart =
-                            dp(7)
-                    }
-                }
-            )
-        }
-
-        bottomDeck.addView(
-            reportDirectorRow
-        )
-
         settingsSummaryView = hud(
             reportSettingsSummary(),
             5.9f,
             0xFFC9D7DD.toInt()
         ).apply {
-            tag = "v237_camera_settings_summary"
             visibility = View.GONE
             setPadding(
                 dp(8),
@@ -1959,18 +867,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     cornerRadius =
                         dp(10).toFloat()
                     setColor(
-                        0xC4082236.toInt()
+                        0x5A071014
                     )
                     setStroke(
                         dp(1),
-                        0x80D9DEE8.toInt()
+                        0x607FE8FF
                     )
                 }
         }
 
         bottomDeck.addView(settingsSummaryView)
 
-        zoomRow = row().apply { tag = "v237_camera_zoom_row" }
+        zoomRow = row()
         zoomRow.addView(
             hud(
                 "ZOOM",
@@ -1981,7 +889,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             wrap(48, 28)
         )
         zoomSeek = SeekBar(this).apply {
-            tag = "v238_zoom_seek"
             max = 100
         }
         zoomRow.addView(
@@ -1994,7 +901,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         )
         bottomDeck.addView(zoomRow)
 
-        exposureRow = row().apply { tag = "v237_camera_exposure_row" }
+        exposureRow = row()
         exposureRow.addView(
             hud(
                 "EXP",
@@ -2005,7 +912,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             wrap(48, 28)
         )
         exposureSeek = SeekBar(this).apply {
-            tag = "v238_exposure_seek"
             max = 12
             progress = 6
         }
@@ -2020,13 +926,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         bottomDeck.addView(exposureRow)
 
         actionRow = row().apply {
-            tag = "v237_camera_action_row"
             gravity = Gravity.CENTER
         }
 
         lensButton = deckButton(
-            "LENS ▾\n${currentLensDeckLabel()}",
-            0xFF83C7D4.toInt()
+            "LENS ▾\nBACK",
+            0xFF7FE8FF.toInt()
         )
         torchButton = deckButton(
             "LIGHT ▾\nOFF",
@@ -2097,74 +1002,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         setContentView(root)
 
-        DevelopUgandaLiveGradePanel.attach(
-            activity = this,
-            root = root,
-            previewView = previewView,
-            scopeProvider = { v229ColorScope() },
-            hintProvider = { v229ColorHint() }
-        )
-        DevelopUgandaUnifiedControlDeck.attach(
-            activity = this,
-            root = root,
-            scopeProvider = { v229ColorScope() },
-            hintProvider = { v229ColorHint() },
-            mode = DevelopUgandaUnifiedControlDeck.Mode.REPORT
-        )
-        DevelopUgandaFieldIntelligencePanel.attach(
-            activity = this,
-            root = root,
-            previewView = previewView
-        )
-        DevelopUgandaAdaptiveFormatUi.attach(
-            activity = this,
-            root = root,
-            role = DevelopUgandaAdaptiveFormatUi.Role.REPORT
-        )
-        DevelopUgandaOperatorExperience.attach(
-            activity = this,
-            root = root,
-            role = DevelopUgandaOperatorExperience.Role.REPORT
-        )
-        DevelopUgandaProCameraHud.attach(
-            activity = this,
-            root = root,
-            previewView = previewView,
-            tcProvider = { tc() },
-            formatProvider = { DevelopUgandaFieldIntelligencePanel.activeFormatLabel(this) },
-            qualityProvider = { qualityDeckLabel() },
-            fpsProvider = { activeVideoFpsLabel },
-            lensProvider = { currentLensDeckLabel() },
-            exposureProvider = {
-                camera?.cameraInfo?.exposureState?.exposureCompensationIndex ?: sceneExposureTarget
-            },
-            zoomProvider = {
-                camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: 1f
-            },
-            minZoomProvider = {
-                camera?.cameraInfo?.zoomState?.value?.minZoomRatio ?: 1f
-            },
-            maxZoomProvider = {
-                camera?.cameraInfo?.zoomState?.value?.maxZoomRatio ?: 1f
-            },
-            audioProvider = { Pair(audioAmplitude, audioPeakAmplitude) },
-            focusProvider = { focusAssistLabel() },
-            lockProvider = { operatorLocked },
-            onFocusToggle = {
-                val x = previewView.width.coerceAtLeast(1) / 2f
-                val y = previewView.height.coerceAtLeast(1) / 2f
-                togglePersistentFocusLock(x, y)
-            },
-            onLockToggle = { toggleReportOperatorLock() },
-            onAutoReset = { resetReportCameraSettings() },
-            onSettings = { showReportDetailedSettings() },
-            onZoomRatio = { ratio ->
-                try {
-                    camera?.cameraControl?.setZoomRatio(ratio)
-                } catch (_: Exception) {
-                }
-            }
-        )
         sceneButton.setOnTouchListener(
             DeckTouchListener(ACTION_SCENE)
         )
@@ -2179,10 +1016,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         captureModeButton.setOnTouchListener(
             DeckTouchListener(ACTION_CAPTURE_MODE)
-        )
-
-        colorButton.setOnTouchListener(
-            DeckTouchListener(ACTION_COLOR_ENGINE)
         )
 
         identityButton.setOnTouchListener(
@@ -2223,46 +1056,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         cleanModeButton.setOnTouchListener(
             DeckTouchListener(ACTION_CLEAN)
-        )
-
-        hudSizeButton.setOnTouchListener(
-            DeckTouchListener(ACTION_HUD_SIZE)
-        )
-
-        hudContrastButton.setOnTouchListener(
-            DeckTouchListener(ACTION_HUD_CONTRAST)
-        )
-
-        hudBackingButton.setOnTouchListener(
-            DeckTouchListener(ACTION_HUD_BACKING)
-        )
-
-        reportPresetButton.setOnTouchListener(
-            DeckTouchListener(ACTION_REPORT_PRESET)
-        )
-
-        autoDirectorButton.setOnTouchListener(
-            DeckTouchListener(ACTION_AUTO_DIRECTOR)
-        )
-
-        assistButton.setOnTouchListener(
-            DeckTouchListener(ACTION_SHOT_ASSIST)
-        )
-
-        directorButton.setOnTouchListener(
-            DeckTouchListener(ACTION_DIRECTOR)
-        )
-
-        continuityButton.setOnTouchListener(
-            DeckTouchListener(ACTION_CONTINUITY)
-        )
-
-        healthButton.setOnTouchListener(
-            DeckTouchListener(ACTION_HEALTH)
-        )
-
-        brandMetadataButton.setOnTouchListener(
-            DeckTouchListener(ACTION_BRAND_METADATA)
         )
 
         lensButton.setOnTouchListener(
@@ -2319,24 +1112,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     gestureMoved =
                         false
 
-                    focusLongPressTriggered =
-                        false
-
-                    showFocusReticle(
-                        event.x,
-                        event.y,
-                        false
-                    )
-
-                    uiHandler.removeCallbacks(
-                        focusLockRunnable
-                    )
-
-                    uiHandler.postDelayed(
-                        focusLockRunnable,
-                        650L
-                    )
-
                     true
                 }
 
@@ -2361,18 +1136,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         ) {
                             gestureMoved =
                                 true
-
-                            uiHandler.removeCallbacks(
-                                focusLockRunnable
-                            )
-
-                            if (
-                                ::focusReticleView.isInitialized &&
-                                !focusLockActive
-                            ) {
-                                focusReticleView.visibility =
-                                    View.GONE
-                            }
                         }
 
                         val cam =
@@ -2469,13 +1232,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 }
 
                 MotionEvent.ACTION_UP -> {
-                    uiHandler.removeCallbacks(
-                        focusLockRunnable
-                    )
-
                     if (
-                        !gestureMoved &&
-                        !focusLongPressTriggered
+                        !gestureMoved
                     ) {
                         val now =
                             SystemClock.elapsedRealtime()
@@ -2490,14 +1248,15 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                                 recording ==
                                 null
                             ) {
-                                selectedCameraDeviceId =
-                                    null
-
                                 useFront =
                                     !useFront
 
                                 lensButton.text =
-                                    "LENS\n${currentLensDeckLabel()}"
+                                    if (useFront) {
+                                        "LENS\nFRONT"
+                                    } else {
+                                        "LENS\nBACK"
+                                    }
 
                                 bindCamera()
                                 toast(
@@ -2505,8 +1264,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                                 )
                             }
                         } else {
-                            releaseFocusLockForTap()
-
                             tapToFocus(
                                 event.x,
                                 event.y
@@ -2520,12 +1277,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     true
                 }
 
-                MotionEvent.ACTION_CANCEL -> {
-                    uiHandler.removeCallbacks(
-                        focusLockRunnable
-                    )
+                MotionEvent.ACTION_CANCEL ->
                     true
-                }
 
                 else ->
                     true
@@ -2533,58 +1286,107 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
     }
 
-    private fun enforceFullFramePreview() {
+    private fun togglePreviewMode() {
         halfPreviewMode =
-  false
+            !halfPreviewMode
+
+        val previewHeight =
+            if (halfPreviewMode) {
+                (
+                    resources.displayMetrics.heightPixels *
+                        0.50f
+                    ).roundToInt()
+            } else {
+                ViewGroup.LayoutParams.MATCH_PARENT
+            }
+
+        val previewParams =
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                previewHeight
+            ).apply {
+                gravity = Gravity.TOP
+            }
 
         previewView.layoutParams =
-  FrameLayout.LayoutParams(
-      ViewGroup.LayoutParams.MATCH_PARENT,
-      ViewGroup.LayoutParams.MATCH_PARENT
-  ).apply {
-      gravity =
-          Gravity.TOP
-  }
+            previewParams
 
+        // FULL intentionally fills under every control including the red
+        // record button. HALF shows the complete 9:16 camera frame in the
+        // upper half and leaves a dedicated operator/settings area below.
         previewView.scaleType =
-  PreviewView.ScaleType.FILL_CENTER
+            if (halfPreviewMode) {
+                PreviewView.ScaleType.FIT_CENTER
+            } else {
+                PreviewView.ScaleType.FILL_CENTER
+            }
+
+        val guideParams =
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                previewHeight
+            ).apply {
+                gravity = Gravity.TOP
+            }
 
         guidesView.layoutParams =
-  FrameLayout.LayoutParams(
-      ViewGroup.LayoutParams.MATCH_PARENT,
-      ViewGroup.LayoutParams.MATCH_PARENT
-  ).apply {
-      gravity =
-          Gravity.TOP
-  }
+            guideParams
 
-        if (::viewModeButton.isInitialized) {
-  viewModeButton.text =
-      "VIEW\nFULL SCREEN"
+        viewModeButton.text =
+            "VIEW ▾\n" +
+                if (halfPreviewMode) {
+                    "HALF"
+                } else {
+                    "FULL"
+                }
+
+        if (
+            ::previewNarrationPanel.isInitialized
+        ) {
+            val hudParams =
+                previewNarrationPanel.layoutParams as
+                    FrameLayout.LayoutParams
+
+            hudParams.topMargin =
+                if (halfPreviewMode) {
+                    dp(34)
+                } else {
+                    dp(44)
+                }
+
+            previewNarrationPanel.layoutParams =
+                hudParams
+
+            previewBrandView.textSize =
+                if (halfPreviewMode) {
+                    11.6f
+                } else {
+                    13.8f
+                }
         }
 
-        if (::previewNarrationPanel.isInitialized) {
-  val hudParams =
-      previewNarrationPanel.layoutParams as
-          FrameLayout.LayoutParams
-
-  hudParams.topMargin =
-      dp(44)
-
-  previewNarrationPanel.layoutParams =
-      hudParams
-
-  previewBrandView.textSize =
-      13.8f
+        if (halfPreviewMode) {
+            detailedSettingsVisible =
+                true
+            settingsSummaryView.visibility =
+                View.VISIBLE
+        } else {
+            settingsSummaryView.visibility =
+                if (detailedSettingsVisible) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
         }
-    }
 
-    private fun togglePreviewMode() {
-        enforceFullFramePreview()
-        enforceImmersiveCameraWindow()
+        refreshReportSettingsSummary()
 
         toast(
-  "Full-screen camera view"
+            if (halfPreviewMode) {
+                "Half-screen report view"
+            } else {
+                "Full-screen camera behind controls"
+            }
         )
     }
 
@@ -2643,8 +1445,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 } else {
                     "OFF"
                 }
-
-        saveReportCameraPreferences()
 
         toast(
             if (previewGuidesEnabled) {
@@ -2745,10 +1545,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     qualityIndex
                 ]
             )
-            append(" • COLOR ")
-            append(
-                v229ColorResolved().statusLabel()
-            )
             append("\n")
 
             append("LENS ")
@@ -2790,33 +1586,8 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     "OFF"
                 }
             )
-            append(" • HUD ")
-            append(
-                reportHudLabels[
-                    reportHudSizeIndex
-                ]
-            )
-            append(" / ")
-            append(
-                reportHudContrastLabels[
-                    reportHudContrastIndex
-                ]
-            )
-            append(" / BACKING ")
-            append(
-                reportHudBackingLabels[
-                    reportHudBackingIndex
-                ]
-            )
-            append(" • PRESET ")
-            append(
-                reportPresetLabels[
-                    reportPresetIndex
-                ]
-            )
-            append(" • SETTINGS MEMORY ON")
             append(" • SWIPE ZOOM/EXP • DOUBLE TAP LENS")
-            append(" • SOCIAL CAMERA 1080P/HIGH BITRATE • DEVICE AE/AF/AWB • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
+            append(" • TELEMETRY BURN-IN ON • GPS/GNSS • COMPASS • WEATHER • LEVEL • MIC • NET • BAT • STORAGE")
             append("\n")
 
             append("REPORT ID ")
@@ -2862,7 +1633,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             showReportOperatorControlsTemporarily()
         }
 
-        saveReportCameraPreferences()
         refreshReportSettingsSummary()
     }
 
@@ -2912,7 +1682,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         integrityButton.isSelected =
             integrityEnabled
 
-        saveReportCameraPreferences()
         refreshReportSettingsSummary()
     }
 
@@ -2934,9 +1703,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             identityRow,
             reportToolsRow,
             reportAdvancedRow,
-            reportDisplayRow,
-            reportOutputRow,
-            reportDirectorRow,
             zoomRow,
             exposureRow
         ).forEach {
@@ -3092,595 +1858,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             .show()
     }
 
-
-    private fun isSocialMediaCamera(): Boolean {
-        return cameraExperienceId ==
-            "V222_SOCIAL"
-    }
-
-    private fun exportAutomaticSocialMaster(
-        inputUri: Uri,
-        storyPackageId: String
-    ) {
-        if (
-            !isSocialMediaCamera() ||
-            automaticSocialExportActive
-        ) {
-            return
-        }
-
-        automaticSocialExportActive =
-            true
-
-        runOnUiThread {
-            if (
-                ::statusView.isInitialized
-            ) {
-                statusView.text =
-                    "SM OPTIMIZING"
-
-                statusView.setTextColor(
-                    0xFF62D8C9.toInt()
-                )
-            }
-
-            toast(
-                "SM Camera • creating social-ready copy"
-            )
-        }
-
-        val exportDir =
-            File(
-                cacheDir,
-                "v222_social_camera_exports"
-            ).apply {
-                mkdirs()
-            }
-
-        val temp =
-            File(
-                exportDir,
-                "sm_${System.currentTimeMillis()}.mp4"
-            )
-
-        if (
-            temp.exists()
-        ) {
-            temp.delete()
-        }
-
-        val sourceItem =
-            MediaItem.Builder()
-                .setUri(
-                    inputUri
-                )
-                .build()
-
-        val socialEffects =
-            Effects(
-                emptyList(),
-                listOf(
-                    Presentation.createForWidthAndHeight(
-                        1080,
-                        1920,
-                        Presentation.LAYOUT_SCALE_TO_FIT
-                    ),
-
-                    // Deliberately non-zero so Media3 cannot transmux the
-                    // camera bitstream unchanged. This forces a real encode.
-                    Brightness(
-                        0.0001f
-                    )
-                )
-            )
-
-        val edited =
-            EditedMediaItem.Builder(
-                sourceItem
-            )
-                .setFrameRate(
-                    30
-                )
-                .setEffects(
-                    socialEffects
-                )
-                .build()
-
-        val sequence =
-            EditedMediaItemSequence.withAudioAndVideoFrom(
-                listOf(
-                    edited
-                )
-            )
-
-        val compositionBuilder =
-            Composition.Builder(
-                listOf(
-                    sequence
-                )
-            )
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q
-        ) {
-            compositionBuilder.setHdrMode(
-                Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL
-            )
-        }
-
-        val composition =
-            compositionBuilder
-                .build()
-
-        val videoSettings =
-            VideoEncoderSettings.Builder()
-                .setBitrate(
-                    16_000_000
-                )
-                .setiFrameIntervalSeconds(
-                    2f
-                )
-                .build()
-
-        val audioSettings =
-            AudioEncoderSettings.Builder()
-                .setBitrate(
-                    256_000
-                )
-                .build()
-
-        val encoderFactory =
-            DefaultEncoderFactory.Builder(
-                this
-            )
-                .setRequestedVideoEncoderSettings(
-                    videoSettings
-                )
-                .setRequestedAudioEncoderSettings(
-                    audioSettings
-                )
-                .build()
-
-        val listener =
-            object :
-                Transformer.Listener {
-
-                override fun onCompleted(
-                    composition: Composition,
-                    result: ExportResult
-                ) {
-                    automaticSocialTransformer =
-                        null
-
-                    Thread {
-                        try {
-                            val verification =
-                                verifyAutomaticSocialMaster(
-                                    temp
-                                )
-
-                            val socialUri =
-                                publishAutomaticSocialMaster(
-                                    temp
-                                )
-
-                            DevelopUgandaStoryPackager.attachSocialMaster(
-                                this@DevelopUgandaCameraActivity,
-                                storyPackageId,
-                                socialUri
-                            )
-
-                            temp.delete()
-
-                            automaticSocialExportActive =
-                                false
-
-                            runOnUiThread {
-                                if (
-                                    ::statusView.isInitialized
-                                ) {
-                                    statusView.text =
-                                        "SM READY"
-
-                                    statusView.setTextColor(
-                                        0xFF62D8C9.toInt()
-                                    )
-                                }
-
-                                toast(
-                                    "SM READY • develop.uganda / SM Posts • $verification"
-                                )
-                            }
-                        } catch (
-                            e: Exception
-                        ) {
-                            automaticSocialExportActive =
-                                false
-
-                            temp.delete()
-
-                            runOnUiThread {
-                                if (
-                                    ::statusView.isInitialized
-                                ) {
-                                    statusView.text =
-                                        "SM EXPORT ERROR"
-
-                                    statusView.setTextColor(
-                                        0xFFFF5A54.toInt()
-                                    )
-                                }
-
-                                toast(
-                                    "SM optimization failed • original video is safe"
-                                )
-                            }
-                        }
-                    }.start()
-                }
-
-                override fun onError(
-                    composition: Composition,
-                    result: ExportResult,
-                    exception: ExportException
-                ) {
-                    automaticSocialTransformer =
-                        null
-
-                    automaticSocialExportActive =
-                        false
-
-                    temp.delete()
-
-                    runOnUiThread {
-                        if (
-                            ::statusView.isInitialized
-                        ) {
-                            statusView.text =
-                                "SM EXPORT ERROR"
-
-                            statusView.setTextColor(
-                                0xFFFF5A54.toInt()
-                            )
-                        }
-
-                        DevelopUgandaStoryPackager.markSocialMasterFailed(
-                            this@DevelopUgandaCameraActivity,
-                            storyPackageId,
-                            "Media3 social export failed"
-                        )
-
-                        toast(
-                            "SM optimization failed • original video is safe"
-                        )
-                    }
-                }
-            }
-
-        automaticSocialTransformer =
-            Transformer.Builder(
-                this
-            )
-                .setEncoderFactory(
-                    encoderFactory
-                )
-                .setVideoMimeType(
-                    MimeTypes.VIDEO_H264
-                )
-                .setAudioMimeType(
-                    MimeTypes.AUDIO_AAC
-                )
-                .addListener(
-                    listener
-                )
-                .build()
-                .also {
-                    it.start(
-                        composition,
-                        temp.absolutePath
-                    )
-                }
-    }
-
-    private fun verifyAutomaticSocialMaster(
-        temp: File
-    ): String {
-        if (
-            !temp.exists() ||
-            temp.length() <=
-                0L
-        ) {
-            error(
-                "SM output is empty"
-            )
-        }
-
-        val retriever =
-            MediaMetadataRetriever()
-
-        return try {
-            retriever.setDataSource(
-                temp.absolutePath
-            )
-
-            val width =
-                retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
-                )
-                    ?.toIntOrNull()
-                    ?: 0
-
-            val height =
-                retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
-                )
-                    ?.toIntOrNull()
-                    ?: 0
-
-            val totalBitrate =
-                retriever.extractMetadata(
-                    MediaMetadataRetriever.METADATA_KEY_BITRATE
-                )
-                    ?.toLongOrNull()
-                    ?: 0L
-
-            if (
-                width !=
-                    1080 ||
-                height !=
-                    1920
-            ) {
-                error(
-                    "Unexpected SM dimensions ${width}×${height}"
-                )
-            }
-
-            if (
-                totalBitrate >
-                    21_600_000L
-            ) {
-                error(
-                    "SM bitrate remained too close to original"
-                )
-            }
-
-            if (
-                totalBitrate <
-                    4_000_000L
-            ) {
-                error(
-                    "SM bitrate unexpectedly low"
-                )
-            }
-
-            val mbps =
-                String.format(
-                    Locale.US,
-                    "%.1f",
-                    totalBitrate /
-                        1_000_000.0
-                )
-
-            "1080×1920 • $mbps Mbps"
-        } finally {
-            try {
-                retriever.release()
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    private fun publishAutomaticSocialMaster(
-        temp: File
-    ): Uri {
-        val stamp =
-            SimpleDateFormat(
-                "yyyyMMdd_HHmmss",
-                Locale.US
-            ).format(
-                Date()
-            )
-
-        val name =
-            "DEVELOP_UGANDA_V222_SM_POST_" +
-                stamp +
-                ".mp4"
-
-        val values =
-            ContentValues().apply {
-                put(
-                    MediaStore.Video.Media.DISPLAY_NAME,
-                    name
-                )
-
-                put(
-                    MediaStore.Video.Media.MIME_TYPE,
-                    "video/mp4"
-                )
-
-                if (
-                    Build.VERSION.SDK_INT >=
-                        Build.VERSION_CODES.Q
-                ) {
-                    put(
-                        MediaStore.Video.Media.RELATIVE_PATH,
-                        "Movies/develop.uganda/SM Posts"
-                    )
-
-                    put(
-                        MediaStore.Video.Media.IS_PENDING,
-                        1
-                    )
-                }
-            }
-
-        val uri =
-            contentResolver.insert(
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                values
-            ) ?: error(
-                "Could not create SM Posts video"
-            )
-
-        try {
-            contentResolver.openOutputStream(
-                uri,
-                "w"
-            )?.use { output ->
-                FileInputStream(
-                    temp
-                ).use { input ->
-                    input.copyTo(
-                        output,
-                        1024 * 1024
-                    )
-                }
-            } ?: error(
-                "Could not write SM Posts video"
-            )
-
-            if (
-                Build.VERSION.SDK_INT >=
-                    Build.VERSION_CODES.Q
-            ) {
-                contentResolver.update(
-                    uri,
-                    ContentValues().apply {
-                        put(
-                            MediaStore.Video.Media.IS_PENDING,
-                            0
-                        )
-                    },
-                    null,
-                    null
-                )
-            }
-
-            return uri
-        } catch (
-            e: Exception
-        ) {
-            try {
-                contentResolver.delete(
-                    uri,
-                    null,
-                    null
-                )
-            } catch (_: Exception) {
-            }
-
-            throw e
-        }
-    }
-
-
-    private fun startAutoViewDescription() {
-        if (
-            ::autoViewLabeler.isInitialized
-        ) {
-            return
-        }
-
-        autoViewLabeler =
-            ImageLabeling.getClient(
-                ImageLabelerOptions.Builder()
-                    .setConfidenceThreshold(
-                        0.62f
-                    )
-                    .build()
-            )
-
-        uiHandler.removeCallbacks(
-            autoViewRunnable
-        )
-
-        uiHandler.postDelayed(
-            autoViewRunnable,
-            1700L
-        )
-    }
-
-    private fun analyzeAutoViewFrame() {
-        if (
-            autoViewBusy ||
-            !::previewView.isInitialized ||
-            previewView.width <= 0 ||
-            previewView.height <= 0
-        ) {
-            return
-        }
-
-        val bitmap =
-            try {
-                previewView.bitmap
-            } catch (_: Exception) {
-                null
-            } ?: return
-
-        autoViewBusy =
-            true
-
-        autoViewLabeler.process(
-            InputImage.fromBitmap(
-                bitmap,
-                0
-            )
-        )
-            .addOnSuccessListener {
-                    labels ->
-                val top =
-                    labels
-                        .sortedByDescending {
-                            it.confidence
-                        }
-                        .filter {
-                            it.confidence >= 0.62f
-                        }
-                        .take(3)
-                        .map {
-                            it.text.trim()
-                        }
-                        .filter {
-                            it.isNotBlank()
-                        }
-
-                autoViewSummary =
-                    if (
-                        top.isEmpty()
-                    ) {
-                        "AUTO VIEW • scene not confidently identified"
-                    } else {
-                        "AUTO VIEW • likely " +
-                            top.joinToString(
-                                " • "
-                            )
-                    }
-
-                if (
-                    ::autoViewDescriptionView.isInitialized
-                ) {
-                    autoViewDescriptionView.text =
-                        autoViewSummary
-                }
-            }
-            .addOnFailureListener {
-                autoViewSummary =
-                    "AUTO VIEW • analysing scene"
-
-                if (
-                    ::autoViewDescriptionView.isInitialized
-                ) {
-                    autoViewDescriptionView.text =
-                        autoViewSummary
-                }
-            }
-            .addOnCompleteListener {
-                autoViewBusy =
-                    false
-            }
-    }
-
     private fun createIntegrityRecord(
         videoUri: Uri,
         finishedUtc: String
@@ -3709,23 +1886,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             alt
         val accSnapshot =
             accuracy
-        val qualitySnapshot =
-            qualityModes[
-                qualityIndex
-            ]
-
-        val modePurposeSnapshot =
-            reportModePurposeLabel()
-
-        val autoDirectorSnapshot =
-            autoDirectorStateText()
-
-        val cameraExperienceIdSnapshot =
-            cameraExperienceId
-
-        val cameraExperienceLabelSnapshot =
-            cameraExperienceDisplayName()
-
         val sceneSnapshot =
             sceneModes[
                 sceneIndex
@@ -3734,12 +1894,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             lookModes[
                 lookIndex
             ]
-
-        val colorProfileSnapshot =
-            v229ColorResolved().statusLabel()
-
-        val thermalSnapshot =
-            thermalStateLabel()
 
         Thread {
             try {
@@ -3797,15 +1951,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         put(
                             "app_version",
-                            "V239"
-                        )
-                        put(
-                            "camera_engine",
-                            "V217 FULL FRAME HUD + V221 SHOT FINDER"
-                        )
-                        put(
-                            "camera_modules",
-                            "V204,V205,V206,V207,V208,V209,V210,V211,V212,V213,V214,V215,V216,V217"
+                            "V188"
                         )
                         put(
                             "report_id",
@@ -3836,36 +1982,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             sha256
                         )
                         put(
-                            "quality_mode",
-                            qualitySnapshot
-                        )
-                        put(
-                            "mode_purpose",
-                            modePurposeSnapshot
-                        )
-                        put(
-                            "auto_director",
-                            autoDirectorSnapshot
-                        )
-                        put(
-                            "camera_experience_id",
-                            cameraExperienceIdSnapshot
-                        )
-                        put(
-                            "camera_experience_label",
-                            cameraExperienceLabelSnapshot
-                        )
-                        put(
                             "scene",
                             sceneSnapshot
                         )
                         put(
                             "look",
                             lookSnapshot
-                        )
-                        put(
-                            "color_profile",
-                            colorProfileSnapshot
                         )
                         put(
                             "latitude",
@@ -3882,10 +2004,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         put(
                             "gps_accuracy_m",
                             accSnapshot
-                        )
-                        put(
-                            "thermal_status",
-                            thermalSnapshot
                         )
                         put(
                             "note",
@@ -3993,11 +2111,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             resources.configuration
                 .screenWidthDp
 
-        val scale =
-            reportHudScales[
-                reportHudSizeIndex
-            ]
-
         val brandSize =
             when {
                 widthDp <= 360 ->
@@ -4008,8 +2121,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                 else ->
                     13.8f
-            } *
-                scale
+            }
 
         val rowSize =
             when {
@@ -4021,8 +2133,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                 else ->
                     6.1f
-            } *
-                scale
+            }
 
         previewBrandView.textSize =
             brandSize
@@ -4069,9 +2180,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 identityRow,
                 reportToolsRow,
                 reportAdvancedRow,
-                reportDisplayRow,
-                reportOutputRow,
-                reportDirectorRow,
                 zoomRow,
                 exposureRow
             ).forEach {
@@ -4134,1516 +2242,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             } else {
                 "Full report controls"
             }
-        )
-    }
-
-    private data class FieldPreflight(
-        val critical: List<String>,
-        val warnings: List<String>,
-        val ready: List<String>
-    )
-
-    private fun shotQualityWarnings(): List<String> {
-        val warnings =
-            mutableListOf<String>()
-
-        ambientLux?.let {
-            if (
-                it <
-                    25f
-            ) {
-                warnings.add(
-                    "TOO DARK"
-                )
-            }
-        }
-
-        if (
-            recording !=
-                null &&
-            audioPeakAmplitude >=
-                0.90
-        ) {
-            warnings.add(
-                "MIC CLIPPING"
-            )
-        }
-
-        if (
-            cameraShakeScore >
-                22f
-        ) {
-            warnings.add(
-                "SHAKE HIGH"
-            )
-        }
-
-        phoneRollDeg?.let {
-            if (
-                kotlin.math.abs(
-                    it
-                ) >
-                    3.0f
-            ) {
-                warnings.add(
-                    "HORIZON OFF"
-                )
-            }
-        }
-
-        if (
-            isThermalSevereOrWorse()
-        ) {
-            warnings.add(
-                "THERMAL RISK"
-            )
-        }
-
-        freeStorageGb()?.let {
-            if (
-                it <=
-                    4L
-            ) {
-                warnings.add(
-                    "STORAGE LOW"
-                )
-            }
-        }
-
-        val gpsAge =
-            if (
-                lastGpsUpdateMs >
-                    0L
-            ) {
-                System.currentTimeMillis() -
-                    lastGpsUpdateMs
-            } else {
-                Long.MAX_VALUE
-            }
-
-        if (
-            accuracy ==
-                null ||
-            (
-                accuracy ?: 999f
-                ) >
-                50f ||
-            gpsAge >
-                10_000L
-        ) {
-            warnings.add(
-                "GPS WEAK"
-            )
-        }
-
-        if (
-            focusAttempted &&
-            focusSuccessful ==
-                false
-        ) {
-            warnings.add(
-                "SUBJECT NOT FOCUSED"
-            )
-        }
-
-        return warnings.distinct()
-    }
-
-    private fun updateShotQualityGuard() {
-        if (
-            !::shotQualityGuardView.isInitialized
-        ) {
-            return
-        }
-
-        val warnings =
-            shotQualityWarnings()
-
-        if (recording != null) {
-            recordingWarningsSeen.addAll(
-                warnings
-            )
-        }
-
-        shotQualityGuardView.text =
-            if (
-                warnings.isEmpty()
-            ) {
-                "SHOT GUARD • READY"
-            } else {
-                "SHOT GUARD • " +
-                    warnings.joinToString(
-                        " • "
-                    )
-            }
-
-        shotQualityGuardView.setTextColor(
-            if (
-                warnings.isEmpty()
-            ) {
-                0xFF91B6A0.toInt()
-            } else if (
-                warnings.any {
-                    it ==
-                        "MIC CLIPPING" ||
-                    it ==
-                        "THERMAL RISK"
-                }
-            ) {
-                0xFFC76D73.toInt()
-            } else {
-                0xFFD0B06F.toInt()
-            }
-        )
-    }
-
-    private fun fieldPreflight(): FieldPreflight {
-        val critical =
-            mutableListOf<String>()
-
-        val warnings =
-            mutableListOf<String>()
-
-        val ready =
-            mutableListOf<String>()
-
-        if (
-            camera ==
-                null
-        ) {
-            critical.add(
-                "CAMERA NOT READY"
-            )
-        } else {
-            ready.add(
-                "CAM READY"
-            )
-        }
-
-        val storage =
-            freeStorageGb()
-
-        when {
-            storage ==
-                null ->
-                    warnings.add(
-                        "SPACE UNKNOWN"
-                    )
-
-            storage <=
-                1L ->
-                    critical.add(
-                        "STORAGE CRITICAL ${storage}GB"
-                    )
-
-            storage <=
-                4L ->
-                    warnings.add(
-                        "STORAGE LOW ${storage}GB"
-                    )
-
-            else ->
-                ready.add(
-                    "SPACE ${storage}GB"
-                )
-        }
-
-        val battery =
-            batteryPct()
-
-        when {
-            battery ==
-                null ->
-                    warnings.add(
-                        "BATTERY UNKNOWN"
-                    )
-
-            battery <=
-                3 ->
-                    critical.add(
-                        "BATTERY CRITICAL $battery%"
-                    )
-
-            battery <=
-                10 ->
-                    warnings.add(
-                        "BATTERY LOW $battery%"
-                    )
-
-            else ->
-                ready.add(
-                    "BATTERY $battery%"
-                )
-        }
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q &&
-            thermalStatus >=
-                PowerManager.THERMAL_STATUS_CRITICAL
-        ) {
-            critical.add(
-                "THERMAL ${thermalStateLabel()}"
-            )
-        } else if (
-            isThermalSevereOrWorse()
-        ) {
-            warnings.add(
-                "THERMAL ${thermalStateLabel()}"
-            )
-        } else {
-            ready.add(
-                "THERMAL ${thermalStateLabel()}"
-            )
-        }
-
-        val micReady =
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) ==
-                PackageManager.PERMISSION_GRANTED
-
-        if (
-            micReady
-        ) {
-            ready.add(
-                "MIC OK"
-            )
-        } else {
-            warnings.add(
-                "MIC OFF"
-            )
-        }
-
-        val gpsAge =
-            if (
-                lastGpsUpdateMs >
-                    0L
-            ) {
-                System.currentTimeMillis() -
-                    lastGpsUpdateMs
-            } else {
-                Long.MAX_VALUE
-            }
-
-        if (
-            accuracy !=
-                null &&
-            (
-                accuracy ?: 999f
-                ) <=
-                50f &&
-            gpsAge <=
-                10_000L
-        ) {
-            ready.add(
-                "GPS FIX"
-            )
-        } else {
-            warnings.add(
-                "GPS WEAK"
-            )
-        }
-
-        if (
-            isSocialMediaCamera()
-        ) {
-            if (
-                automaticSocialExportActive
-            ) {
-                warnings.add(
-                    "SOCIAL EXPORT BUSY"
-                )
-            } else {
-                ready.add(
-                    "SOCIAL MASTER READY"
-                )
-            }
-        }
-
-        shotQualityWarnings()
-            .filterNot {
-                it in
-                    setOf(
-                        "STORAGE LOW",
-                        "GPS WEAK",
-                        "THERMAL RISK"
-                    )
-            }
-            .forEach {
-                if (
-                    it !in
-                        warnings
-                ) {
-                    warnings.add(
-                        it
-                    )
-                }
-            }
-
-        return FieldPreflight(
-            critical =
-                critical.distinct(),
-            warnings =
-                warnings.distinct(),
-            ready =
-                ready.distinct()
-        )
-    }
-
-    private fun runFieldPreflightBeforeRecording(): Boolean {
-        if (
-            preflightApprovedOnce
-        ) {
-            preflightApprovedOnce =
-                false
-            return true
-        }
-
-        val result =
-            fieldPreflight()
-
-        val readyText =
-            result.ready.joinToString(
-                " • "
-            )
-
-        if (
-            result.critical.isEmpty() &&
-            result.warnings.isEmpty()
-        ) {
-            if (
-                ::shotQualityGuardView.isInitialized
-            ) {
-                shotQualityGuardView.text =
-                    "PREFLIGHT GOOD • $readyText"
-                shotQualityGuardView.setTextColor(
-                    0xFF91B6A0.toInt()
-                )
-            }
-
-            return true
-        }
-
-        if (
-            result.critical.isNotEmpty()
-        ) {
-            AlertDialog.Builder(
-                this
-            )
-                .setTitle(
-                    "RECORDING PREFLIGHT • BLOCKED"
-                )
-                .setMessage(
-                    buildString {
-                        append(
-                            "Critical condition:\n"
-                        )
-
-                        result.critical.forEach {
-                            append(
-                                "• $it\n"
-                            )
-                        }
-
-                        if (
-                            result.warnings.isNotEmpty()
-                        ) {
-                            append(
-                                "\nWarnings:\n"
-                            )
-
-                            result.warnings.forEach {
-                                append(
-                                    "• $it\n"
-                                )
-                            }
-                        }
-
-                        append(
-                            "\nReady: $readyText"
-                        )
-                    }
-                )
-                .setPositiveButton(
-                    "OK",
-                    null
-                )
-                .show()
-
-            return false
-        }
-
-        AlertDialog.Builder(
-            this
-        )
-            .setTitle(
-                "FIELD RECORDING PREFLIGHT"
-            )
-            .setMessage(
-                buildString {
-                    append(
-                        "Warnings:\n"
-                    )
-
-                    result.warnings.forEach {
-                        append(
-                            "• $it\n"
-                        )
-                    }
-
-                    append(
-                        "\nReady: $readyText"
-                    )
-                }
-            )
-            .setNegativeButton(
-                "CANCEL",
-                null
-            )
-            .setPositiveButton(
-                "RECORD ANYWAY"
-            ) { _, _ ->
-                preflightApprovedOnce =
-                    true
-                toggleRecording()
-            }
-            .show()
-
-        return false
-    }
-
-    private fun recordingJournalPrefs() =
-        getSharedPreferences(
-            "develop_uganda_recording_recovery",
-            Context.MODE_PRIVATE
-        )
-
-    private fun markRecordingJournalStarted() {
-        recordingJournalPrefs()
-            .edit()
-            .putBoolean(
-                "active",
-                true
-            )
-            .putBoolean(
-                "incomplete",
-                false
-            )
-            .putString(
-                "base_name",
-                baseName
-            )
-            .putString(
-                "report_id",
-                reportId
-            )
-            .putString(
-                "camera",
-                cameraExperienceShortLabel()
-            )
-            .putString(
-                "started_utc",
-                recordStartUtc
-            )
-            .apply()
-    }
-
-    private fun markRecordingJournalFinished(
-        hadError: Boolean
-    ) {
-        recordingJournalPrefs()
-            .edit()
-            .putBoolean(
-                "active",
-                false
-            )
-            .putBoolean(
-                "incomplete",
-                hadError
-            )
-            .putString(
-                "last_result",
-                if (
-                    hadError
-                ) {
-                    "INCOMPLETE"
-                } else {
-                    "FINALIZED"
-                }
-            )
-            .apply()
-    }
-
-    private fun showRecordingRecoveryNoticeIfNeeded() {
-        val prefs =
-            recordingJournalPrefs()
-
-        val active =
-            prefs.getBoolean(
-                "active",
-                false
-            )
-
-        val incomplete =
-            prefs.getBoolean(
-                "incomplete",
-                false
-            )
-
-        if (
-            !active &&
-            !incomplete
-        ) {
-            return
-        }
-
-        val name =
-            prefs.getString(
-                "base_name",
-                "--"
-            ) ?: "--"
-
-        val cameraName =
-            prefs.getString(
-                "camera",
-                "--"
-            ) ?: "--"
-
-        val started =
-            prefs.getString(
-                "started_utc",
-                "--"
-            ) ?: "--"
-
-        val itemFound =
-            try {
-                contentResolver.query(
-                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                    arrayOf(
-                        MediaStore.Video.Media._ID
-                    ),
-                    "${MediaStore.Video.Media.DISPLAY_NAME} LIKE ?",
-                    arrayOf(
-                        "$name%"
-                    ),
-                    "${MediaStore.Video.Media.DATE_ADDED} DESC"
-                )?.use {
-                    it.moveToFirst()
-                } ?: false
-            } catch (_: Exception) {
-                false
-            }
-
-        AlertDialog.Builder(
-            this
-        )
-            .setTitle(
-                "RECOVERED / INCOMPLETE CLIP"
-            )
-            .setMessage(
-                buildString {
-                    append(
-                        "The previous recording session did not reach a clean completion record.\n\n"
-                    )
-                    append(
-                        "CAMERA • $cameraName\n"
-                    )
-                    append(
-                        "START • $started\n"
-                    )
-                    append(
-                        "FILE • $name.mp4\n\n"
-                    )
-                    append(
-                        if (
-                            itemFound
-                        ) {
-                            "A Gallery item with this name exists. Inspect/play it before relying on it. develop.uganda does not claim a damaged MP4 was repaired."
-                        } else {
-                            "No matching Gallery item was confirmed. The recovery journal preserves the recording identity so the loss is not silent."
-                        }
-                    )
-                }
-            )
-            .setNegativeButton(
-                "KEEP NOTICE",
-                null
-            )
-            .setPositiveButton(
-                "ACKNOWLEDGE"
-            ) { _, _ ->
-                prefs.edit()
-                    .putBoolean(
-                        "active",
-                        false
-                    )
-                    .putBoolean(
-                        "incomplete",
-                        false
-                    )
-                    .apply()
-            }
-            .show()
-    }
-
-    private fun startShotAssistLoop() {
-        uiHandler.removeCallbacks(
-            shotAssistRunnable
-        )
-
-        uiHandler.postDelayed(
-            shotAssistRunnable,
-            900L
-        )
-    }
-
-    private fun cycleShotAssist() {
-        shotAssistModeIndex =
-            (
-                shotAssistModeIndex +
-                    1
-                ) %
-                shotAssistModeLabels.size
-
-        if (
-            ::shotAssistView.isInitialized
-        ) {
-            shotAssistView.setAssistMode(
-                shotAssistModeIndex
-            )
-        }
-
-        if (
-            ::assistButton.isInitialized
-        ) {
-            assistButton.text =
-                "ASSIST ▾\n${shotAssistModeLabels[shotAssistModeIndex]}"
-
-            assistButton.isSelected =
-                shotAssistModeIndex !=
-                    DevelopUgandaShotAssistView.MODE_OFF
-        }
-
-        toast(
-            when (
-                shotAssistModeIndex
-            ) {
-                DevelopUgandaShotAssistView.MODE_PEAK ->
-                    "Edge peaking ON • screen only"
-
-                DevelopUgandaShotAssistView.MODE_ZEBRA ->
-                    "Exposure zebra ON • screen only"
-
-                DevelopUgandaShotAssistView.MODE_BOTH ->
-                    "Peak + zebra ON • screen only"
-
-                else ->
-                    "Shot assist OFF"
-            }
-        )
-    }
-
-    private fun isDirectorPeopleMode(): Boolean {
-        return cameraExperienceId in
-            setOf(
-                "V205_FOCUS",
-                "V211_AUDIO"
-            ) ||
-            sceneModes[
-                sceneIndex
-            ] ==
-                "INTERVIEW"
-    }
-
-    private fun startDirectorLoop() {
-        uiHandler.removeCallbacks(
-            directorRunnable
-        )
-
-        uiHandler.postDelayed(
-            directorRunnable,
-            1100L
-        )
-    }
-
-    private fun toggleDirectorGuidance() {
-        directorEnabled =
-            !directorEnabled
-
-        if (
-            ::directorOverlayView.isInitialized
-        ) {
-            directorOverlayView.setDirectorEnabled(
-                directorEnabled
-            )
-
-            directorOverlayView.visibility =
-                if (
-                    directorEnabled
-                ) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
-        }
-
-        if (
-            ::directorButton.isInitialized
-        ) {
-            directorButton.text =
-                "DIRECTOR ▾\n" +
-                    if (
-                        directorEnabled
-                    ) {
-                        "ON"
-                    } else {
-                        "OFF"
-                    }
-
-            directorButton.isSelected =
-                directorEnabled
-        }
-
-        saveReportCameraPreferences()
-
-        toast(
-            if (
-                directorEnabled
-            ) {
-                "Director + preview histogram ON"
-            } else {
-                "Director guidance OFF"
-            }
-        )
-    }
-
-    private fun estimatedRecordingTimeText(): String {
-        return try {
-            val freeBytes =
-                StatFs(
-                    Environment.getExternalStorageDirectory().path
-                ).availableBytes
-
-            val bitsPerSecond =
-                (
-                    targetVideoBitrate()
-                        .toLong() +
-                        320_000L
-                    )
-                    .coerceAtLeast(
-                        1L
-                    )
-
-            val seconds =
-                (
-                    freeBytes *
-                        8L
-                    ) /
-                    bitsPerSecond
-
-            when {
-                seconds <=
-                    0L ->
-                        "EST REC --"
-
-                seconds >=
-                    3600L ->
-                        String.format(
-                            Locale.US,
-                            "EST REC %dh %02dm",
-                            seconds /
-                                3600L,
-                            (
-                                seconds /
-                                    60L
-                                ) %
-                                60L
-                        )
-
-                else ->
-                    String.format(
-                        Locale.US,
-                        "EST REC %dm",
-                        seconds /
-                            60L
-                    )
-            }
-        } catch (_: Exception) {
-            "EST REC --"
-        }
-    }
-
-    private fun currentLensDeckLabel(): String {
-        val selected =
-            selectedCameraDeviceId
-
-        return if (
-            !selected.isNullOrBlank()
-        ) {
-            "ID " +
-                selected.takeLast(
-                    7
-                )
-        } else if (
-            useFront
-        ) {
-            "FRONT"
-        } else {
-            "BACK"
-        }
-    }
-
-    private fun showRealCameraDevicePicker() {
-        val p =
-            provider
-
-        if (
-            p ==
-                null
-        ) {
-            toast(
-                "Camera map is still loading"
-            )
-
-            return
-        }
-
-        val devices =
-            DevelopUgandaLensIntelligence.devices(
-                p
-            )
-
-        if (
-            devices.isEmpty()
-        ) {
-            toast(
-                "No additional CameraX device IDs were exposed"
-            )
-
-            return
-        }
-
-        AlertDialog.Builder(
-            this
-        )
-            .setTitle(
-                "REAL CAMERAS EXPOSED BY ANDROID"
-            )
-            .setMessage(
-                "These are actual CameraX / Camera2 devices exposed by this phone. develop.uganda does not invent 0.5× / 1× / 3× lens buttons."
-            )
-            .setItems(
-                devices
-                    .map {
-                        it.label()
-                    }
-                    .toTypedArray()
-            ) {
-                    _,
-                    which ->
-                val picked =
-                    devices[
-                        which
-                    ]
-
-                selectedCameraDeviceId =
-                    picked.cameraId
-
-                useFront =
-                    picked.facing ==
-                        "FRONT"
-
-                saveReportCameraPreferences()
-
-                bindCamera()
-
-                toast(
-                    "Selected ${picked.shortLabel()}"
-                )
-            }
-            .setNegativeButton(
-                "CANCEL",
-                null
-            )
-            .show()
-    }
-
-    private fun saveV227ContinuitySnapshot() {
-        val cam =
-            camera
-
-        val zoom =
-            cam
-                ?.cameraInfo
-                ?.zoomState
-                ?.value
-                ?.zoomRatio
-                ?: 1f
-
-        val exposure =
-            cam
-                ?.cameraInfo
-                ?.exposureState
-                ?.exposureCompensationIndex
-                ?: sceneExposureTarget
-
-        DevelopUgandaContinuityMemory.save(
-            this,
-            cameraExperienceId,
-            DevelopUgandaContinuityMemory.Snapshot(
-                sceneIndex =
-                    sceneIndex,
-                lookIndex =
-                    lookIndex,
-                qualityIndex =
-                    qualityIndex,
-                presetIndex =
-                    reportPresetIndex,
-                useFront =
-                    useFront,
-                cameraDeviceId =
-                    selectedCameraDeviceId,
-                zoomRatio =
-                    zoom,
-                exposureCompensation =
-                    exposure,
-                savedUtc =
-                    Instant.now().toString()
-            )
-        )
-
-        if (
-            ::continuityButton.isInitialized
-        ) {
-            continuityButton.text =
-                "MATCH LAST\nREADY"
-
-            continuityButton.isSelected =
-                true
-        }
-    }
-
-    private fun matchLastShotContinuity() {
-        if (
-            recording !=
-                null
-        ) {
-            toast(
-                "Stop recording before matching the last shot"
-            )
-
-            return
-        }
-
-        val snapshot =
-            DevelopUgandaContinuityMemory.load(
-                this,
-                cameraExperienceId
-            )
-
-        if (
-            snapshot ==
-                null
-        ) {
-            toast(
-                "No previous shot is stored for this camera"
-            )
-
-            return
-        }
-
-        sceneIndex =
-            snapshot.sceneIndex
-                .coerceIn(
-                    0,
-                    sceneModes.lastIndex
-                )
-
-        lookIndex =
-            snapshot.lookIndex
-                .coerceIn(
-                    0,
-                    lookModes.lastIndex
-                )
-
-        qualityIndex =
-            snapshot.qualityIndex
-                .coerceIn(
-                    0,
-                    qualityModes.lastIndex
-                )
-
-        reportPresetIndex =
-            snapshot.presetIndex
-                .coerceIn(
-                    0,
-                    reportPresetLabels.lastIndex
-                )
-
-        useFront =
-            snapshot.useFront
-
-        selectedCameraDeviceId =
-            snapshot.cameraDeviceId
-                ?.takeIf {
-                    DevelopUgandaLensIntelligence.hasCamera(
-                        provider,
-                        it
-                    )
-                }
-
-        sceneExposureTarget =
-            snapshot.exposureCompensation
-
-        saveReportCameraPreferences()
-
-        bindCamera()
-
-        uiHandler.postDelayed(
-            {
-                val cam =
-                    camera
-
-                val zoomState =
-                    cam
-                        ?.cameraInfo
-                        ?.zoomState
-                        ?.value
-
-                if (
-                    cam !=
-                        null &&
-                    zoomState !=
-                        null
-                ) {
-                    val ratio =
-                        snapshot.zoomRatio
-                            .coerceIn(
-                                zoomState.minZoomRatio,
-                                zoomState.maxZoomRatio
-                            )
-
-                    cam.cameraControl
-                        .setZoomRatio(
-                            ratio
-                        )
-
-                    val span =
-                        (
-                            zoomState.maxZoomRatio -
-                                zoomState.minZoomRatio
-                            )
-                            .coerceAtLeast(
-                                0.01f
-                            )
-
-                    zoomSeek.progress =
-                        (
-                            (
-                                ratio -
-                                    zoomState.minZoomRatio
-                                ) /
-                                span *
-                                100f
-                            )
-                            .roundToInt()
-                            .coerceIn(
-                                0,
-                                100
-                            )
-                }
-
-                val exposure =
-                    cam
-                        ?.cameraInfo
-                        ?.exposureState
-
-                if (
-                    cam !=
-                        null &&
-                    exposure !=
-                        null &&
-                    exposure.isExposureCompensationSupported
-                ) {
-                    val value =
-                        snapshot.exposureCompensation
-                            .coerceIn(
-                                exposure.exposureCompensationRange.lower,
-                                exposure.exposureCompensationRange.upper
-                            )
-
-                    cam.cameraControl
-                        .setExposureCompensationIndex(
-                            value
-                        )
-
-                    sceneExposureTarget =
-                        value
-
-                    exposureSeek.progress =
-                        (
-                            value +
-                                6
-                            )
-                            .coerceIn(
-                                0,
-                                12
-                            )
-                }
-
-                refreshHud()
-
-                toast(
-                    "MATCH LAST SHOT • restored controllable settings"
-                )
-            },
-            500L
-        )
-    }
-
-    private fun v229ColorHint(): String {
-        return buildString {
-            append(cameraExperienceId)
-            append(" • ")
-            append(cameraExperienceDisplayName())
-            append(" • ")
-            append(sceneModes[sceneIndex])
-            append(" • ")
-            append(lookModes[lookIndex])
-            append(" • ")
-            append(qualityModes[qualityIndex])
-            append(" • ")
-            append(reportDisplayMode)
-        }
-    }
-
-    private fun v229ColorScope(): String =
-        cameraExperienceId.ifBlank {
-            "REPORT"
-        }
-
-    private fun v229ColorResolved(): DevelopUgandaColorEngine.ResolvedSelection =
-        DevelopUgandaColorEngine.resolve(
-            this,
-            v229ColorScope(),
-            v229ColorHint()
-        )
-
-    private fun v229ColorDeckLabel(): String {
-        val value = v229ColorResolved()
-        return when {
-            !value.enabled ->
-                "ORIGINAL"
-
-            value.autoResolved ->
-                "AUTO " +
-                    value.label
-                        .removePrefix("DU ")
-                        .take(10)
-
-            else ->
-                value.label
-                    .removePrefix("DU ")
-                    .take(12)
-        }
-    }
-
-    private fun refreshV233ColorMonitor() {
-        if (
-            !::previewView.isInitialized ||
-            !::colorButton.isInitialized
-        ) {
-            return
-        }
-
-        val value = v229ColorResolved()
-        v229ColorOverlayLabel =
-            if (value.enabled) {
-                value.label
-            } else {
-                "ORIGINAL"
-            }
-
-        val key =
-            "${value.requestedId}:${value.label}:${value.strength}:${DevelopUgandaColorEngine.monitorEnabled(this)}"
-
-        colorButton.text =
-            "COLOR ▾\n${v229ColorDeckLabel()}"
-
-        colorButton.isSelected =
-            value.enabled
-
-        if (
-            key !=
-                lastV233ColorMonitorKey
-        ) {
-            lastV233ColorMonitorKey =
-                key
-
-            DevelopUgandaColorEngine.applyPreviewMonitor(
-                previewView,
-                value,
-                v229ColorScope()
-            )
-        }
-    }
-
-    private fun showV233ColorDropdown(
-        anchor: View
-    ) {
-        if (
-            recording !=
-                null
-        ) {
-            toast(
-                "Choose the V233 color profile before recording"
-            )
-            return
-        }
-
-        val base =
-            DevelopUgandaColorEngine.menuLabels()
-                .toMutableList()
-
-        base.add(
-            "COLOR STUDIO • STRENGTH / MONITOR"
-        )
-
-        val selected =
-            DevelopUgandaColorEngine.selectedMenuIndex(
-                this,
-                v229ColorScope()
-            )
-
-        showReportPillDropdown(
-            anchor,
-            "V233 PROFESSIONAL COLOR",
-            base.toTypedArray(),
-            selected
-        ) {
-                picked ->
-            if (
-                picked >=
-                    base.lastIndex
-            ) {
-                openV233ColorStudio()
-                return@showReportPillDropdown
-            }
-
-            DevelopUgandaColorEngine.setSelectedMenuIndex(
-                this,
-                v229ColorScope(),
-                picked
-            )
-
-            lastV233ColorMonitorKey =
-                ""
-
-            refreshV233ColorMonitor()
-            refreshReportSettingsSummary()
-
-            toast(
-                "V233 COLOR • ${v229ColorResolved().statusLabel()}"
-            )
-        }
-    }
-
-    private fun openV233ColorStudio() {
-        startActivity(
-            android.content.Intent(
-                this,
-                DevelopUgandaColorStudioActivity::class.java
-            ).apply {
-                putExtra(
-                    DevelopUgandaColorStudioActivity.EXTRA_SCOPE,
-                    v229ColorScope()
-                )
-                putExtra(
-                    DevelopUgandaColorStudioActivity.EXTRA_HINT,
-                    v229ColorHint()
-                )
-            }
-        )
-    }
-
-    private fun scheduleV233ColorMaster(
-        sourceUri: Uri,
-        packageId: String
-    ) {
-        val selection =
-            v229ColorResolved()
-
-        if (
-            !selection.enabled
-        ) {
-            DevelopUgandaStoryPackager.markColorMasterSkipped(
-                applicationContext,
-                packageId,
-                "ORIGINAL selected • no V233 color master requested"
-            )
-            return
-        }
-
-        val scopeSnapshot =
-            v229ColorScope()
-        val hintSnapshot =
-            v229ColorHint()
-
-        fun waitForSafeStart(
-            attempt: Int
-        ) {
-            val packageEntry =
-                DevelopUgandaStoryPackager.listRegistry(
-                    applicationContext
-                )
-                    .firstOrNull {
-                        it.packageId ==
-                            packageId
-                    }
-
-            val packageBusy =
-                packageEntry ==
-                    null ||
-                    packageEntry.state.contains(
-                        "BUILDING",
-                        ignoreCase = true
-                    )
-
-            val socialBusy =
-                isSocialMediaCamera() &&
-                    automaticSocialExportActive
-
-            if (
-                (packageBusy || socialBusy) &&
-                attempt <
-                    180
-            ) {
-                uiHandler.postDelayed(
-                    {
-                        waitForSafeStart(
-                            attempt +
-                                1
-                        )
-                    },
-                    1000L
-                )
-                return
-            }
-
-            DevelopUgandaStoryPackager.markColorMasterBuilding(
-                applicationContext,
-                packageId,
-                selection.label,
-                selection.strength
-            )
-
-            DevelopUgandaColorEngine.exportVideoMaster(
-                applicationContext,
-                sourceUri,
-                packageId,
-                scopeSnapshot,
-                hintSnapshot
-            ) {
-                    outcome ->
-                if (
-                    outcome.success &&
-                    outcome.uri !=
-                        null
-                ) {
-                    DevelopUgandaStoryPackager.attachColorMaster(
-                        applicationContext,
-                        packageId,
-                        outcome.uri,
-                        outcome.profileLabel,
-                        outcome.strength,
-                        outcome.width,
-                        outcome.height,
-                        outcome.durationMs,
-                        outcome.bitrate
-                    )
-
-                    runOnUiThread {
-                        toast(
-                            "V233 COLOR MASTER READY • ${outcome.profileLabel}"
-                        )
-                    }
-                } else {
-                    DevelopUgandaStoryPackager.markColorMasterFailed(
-                        applicationContext,
-                        packageId,
-                        outcome.message
-                    )
-
-                    runOnUiThread {
-                        toast(
-                            "V233 color master not created • original video is safe"
-                        )
-                    }
-                }
-            }
-        }
-
-        uiHandler.postDelayed(
-            {
-                waitForSafeStart(
-                    0
-                )
-            },
-            if (
-                isSocialMediaCamera()
-            ) {
-                4500L
-            } else {
-                1000L
-            }
-        )
-    }
-
-    private fun refreshV228BrandUi() {
-        if (
-            ::previewBrandView.isInitialized
-        ) {
-            previewBrandView.text =
-                DevelopUgandaBrandMetadataStore.previewTitle(
-                    this,
-                    "V239"
-                )
-        }
-
-        if (
-            ::brandMetadataButton.isInitialized
-        ) {
-            val config =
-                DevelopUgandaBrandMetadataStore.snapshot(
-                    this
-                )
-
-            brandMetadataButton.text =
-                "BRAND\n" +
-                    config.preset
-                        .take(
-                            9
-                        )
-        }
-    }
-
-    private fun openV228BrandMetadataStudio() {
-        startActivity(
-            android.content.Intent(
-                this,
-                DevelopUgandaBrandMetadataActivity::class.java
-            )
-        )
-    }
-
-    private fun openV227CameraHealth() {
-        startActivity(
-            android.content.Intent(
-                this,
-                DevelopUgandaCameraHealthActivity::class.java
-            )
         )
     }
 
@@ -5755,339 +2353,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 text.contains(
                     "CHECK"
                 ) ->
-                0xFFD8B85B.toInt()
+                0xFFFFC21A.toInt()
 
             else ->
-                0xFF83B995.toInt()
-        }
-    }
-
-    private fun loadReportCameraPreferences() {
-        val prefs =
-            getSharedPreferences(
-                reportCameraPrefsName(),
-                Context.MODE_PRIVATE
-            )
-
-        sceneIndex =
-            prefs.getInt(
-                "scene_index",
-                sceneIndex
-            )
-                .coerceIn(
-                    0,
-                    sceneModes.lastIndex
-                )
-
-        lookIndex =
-            prefs.getInt(
-                "look_index",
-                lookIndex
-            )
-                .coerceIn(
-                    0,
-                    lookModes.lastIndex
-                )
-
-        qualityIndex =
-            prefs.getInt(
-                "quality_index",
-                qualityIndex
-            )
-                .coerceIn(
-                    0,
-                    qualityModes.lastIndex
-                )
-
-        captureModeIndex =
-            prefs.getInt(
-                "capture_index",
-                captureModeIndex
-            )
-                .coerceIn(
-                    0,
-                    captureModes.lastIndex
-                )
-
-        reportHudSizeIndex =
-            prefs.getInt(
-                "hud_size",
-                reportHudSizeIndex
-            )
-                .coerceIn(
-                    0,
-                    reportHudLabels.lastIndex
-                )
-
-        reportHudContrastIndex =
-            prefs.getInt(
-                "hud_contrast",
-                reportHudContrastIndex
-            )
-                .coerceIn(
-                    0,
-                    reportHudContrastLabels.lastIndex
-                )
-
-        reportHudBackingIndex =
-            prefs.getInt(
-                "hud_backing",
-                reportHudBackingIndex
-            )
-                .coerceIn(
-                    0,
-                    reportHudBackingLabels.lastIndex
-                )
-
-        reportPresetIndex =
-            prefs.getInt(
-                "preset_index",
-                reportPresetIndex
-            )
-                .coerceIn(
-                    0,
-                    reportPresetLabels.lastIndex
-                )
-
-        autoDirectorEnabled =
-            prefs.getBoolean(
-                "auto_director",
-                autoDirectorEnabled
-            )
-
-        previewGuidesEnabled =
-            prefs.getBoolean(
-                "guides",
-                previewGuidesEnabled
-            )
-
-        autoHideOperatorUi =
-            prefs.getBoolean(
-                "auto_ui",
-                autoHideOperatorUi
-            )
-
-        integrityEnabled =
-            prefs.getBoolean(
-                "integrity",
-                integrityEnabled
-            )
-
-        selectedCameraDeviceId =
-            prefs.getString(
-                "real_camera_id",
-                selectedCameraDeviceId
-            )
-
-        directorEnabled =
-            prefs.getBoolean(
-                "director_enabled",
-                directorEnabled
-            )
-    }
-
-    private fun saveReportCameraPreferences() {
-        getSharedPreferences(
-            reportCameraPrefsName(),
-            Context.MODE_PRIVATE
-        )
-            .edit()
-            .putInt(
-                "scene_index",
-                sceneIndex
-            )
-            .putInt(
-                "look_index",
-                lookIndex
-            )
-            .putInt(
-                "quality_index",
-                qualityIndex
-            )
-            .putInt(
-                "capture_index",
-                captureModeIndex
-            )
-            .putInt(
-                "hud_size",
-                reportHudSizeIndex
-            )
-            .putInt(
-                "hud_contrast",
-                reportHudContrastIndex
-            )
-            .putInt(
-                "hud_backing",
-                reportHudBackingIndex
-            )
-            .putInt(
-                "preset_index",
-                reportPresetIndex
-            )
-            .putBoolean(
-                "auto_director",
-                autoDirectorEnabled
-            )
-            .putBoolean(
-                "guides",
-                previewGuidesEnabled
-            )
-            .putBoolean(
-                "auto_ui",
-                autoHideOperatorUi
-            )
-            .putBoolean(
-                "integrity",
-                integrityEnabled
-            )
-            .putString(
-                "real_camera_id",
-                selectedCameraDeviceId
-            )
-            .putBoolean(
-                "director_enabled",
-                directorEnabled
-            )
-            .apply()
-    }
-
-    private fun reportHudBackingAlpha(): Int {
-        return when (
-            reportHudBackingIndex
-        ) {
-            0 ->
-                0
-
-            2 ->
-                58
-
-            else ->
-                32
-        }
-    }
-
-    private fun drawReportTextBackplate(
-        canvas: Canvas,
-        value: String,
-        x: Float,
-        y: Float,
-        paint: Paint
-    ) {
-        val alpha =
-            reportHudBackingAlpha()
-
-        if (
-            alpha <=
-            0
-        ) {
-            return
-        }
-
-        val metrics =
-            paint.fontMetrics
-
-        val padX =
-            paint.textSize *
-                0.22f
-
-        val padY =
-            paint.textSize *
-                0.12f
-
-        val left =
-            x -
-                padX
-
-        val top =
-            y +
-                metrics.ascent -
-                padY
-
-        val right =
-            x +
-                paint.measureText(
-                    value
-                ) +
-                padX
-
-        val bottom =
-            y +
-                metrics.descent +
-                padY
-
-        val background =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    Color.argb(
-                        alpha,
-                        0,
-                        0,
-                        0
-                    )
-
-                style =
-                    Paint.Style.FILL
-            }
-
-        canvas.drawRoundRect(
-            left,
-            top,
-            right,
-            bottom,
-            paint.textSize *
-                0.22f,
-            paint.textSize *
-                0.22f,
-            background
-        )
-    }
-
-    private fun reportHudOutlineScale(): Float {
-        return when (
-            reportHudContrastIndex
-        ) {
-            0 ->
-                0.014f
-
-            2 ->
-                0.032f
-
-            else ->
-                0.022f
-        }
-    }
-
-    private fun reportHudOutlineColor(): Int {
-        return when (
-            reportHudContrastIndex
-        ) {
-            0 ->
-                0x26000000
-
-            2 ->
-                0x52000000
-
-            else ->
-                0x38000000
-        }
-    }
-
-    private fun reportHudShadowRadius(
-        u: Float
-    ): Float {
-        return when (
-            reportHudContrastIndex
-        ) {
-            0 ->
-                0.39f * u
-
-            2 ->
-                1.0f * u
-
-            else ->
-                0.65f * u
+                0xFF76E39A.toInt()
         }
     }
 
@@ -6127,687 +2396,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             grantResults
         )
         startEverything()
-    }
-
-    private fun showFocusReticle(
-        x: Float,
-        y: Float,
-        locked: Boolean
-    ) {
-        if (
-            !::focusReticleView.isInitialized
-        ) {
-            return
-        }
-
-        val size =
-            dp(76).toFloat()
-
-        val maxX =
-            (
-                previewView.width.toFloat() -
-                    size
-                ).coerceAtLeast(
-                    0f
-                )
-
-        val maxY =
-            (
-                previewView.height.toFloat() -
-                    size
-                ).coerceAtLeast(
-                    0f
-                )
-
-        focusReticleView.x =
-            (
-                x -
-                    size /
-                    2f
-                ).coerceIn(
-                    0f,
-                    maxX
-                )
-
-        focusReticleView.y =
-            (
-                y -
-                    size /
-                    2f
-                ).coerceIn(
-                    0f,
-                    maxY
-                )
-
-        focusReticleView.text =
-            if (locked) {
-                "AF + METER\nLOCK"
-            } else {
-                "AF"
-            }
-
-        focusReticleView.setTextColor(
-            if (locked) {
-                0xFFAEBDEB.toInt()
-            } else {
-                Color.WHITE
-            }
-        )
-
-        focusReticleView.background =
-            GradientDrawable().apply {
-                shape =
-                    GradientDrawable.RECTANGLE
-
-                cornerRadius =
-                    dp(12).toFloat()
-
-                setColor(
-                    if (locked) {
-                        0x3A031829
-                    } else {
-                        0x26031829
-                    }
-                )
-
-                setStroke(
-                    dp(
-                        if (locked) {
-                            3
-                        } else {
-                            2
-                        }
-                    ),
-                    if (locked) {
-                        0xFFAEBDEB.toInt()
-                    } else {
-                        0xFFDCE4F7.toInt()
-                    }
-                )
-            }
-
-        focusReticleView.visibility =
-            View.VISIBLE
-
-        uiHandler.removeCallbacks(
-            hideFocusReticleRunnable
-        )
-
-        if (!locked) {
-            uiHandler.postDelayed(
-                hideFocusReticleRunnable,
-                950L
-            )
-        }
-    }
-
-    private fun togglePersistentFocusLock(
-        x: Float,
-        y: Float
-    ) {
-        val cam =
-            camera
-                ?: run {
-                    toast(
-                        "Camera is not ready"
-                    )
-                    return
-                }
-
-        if (focusLockActive) {
-            try {
-                cam.cameraControl
-                    .cancelFocusAndMetering()
-            } catch (_: Exception) {
-            }
-
-            focusLockActive =
-                false
-
-            if (
-                ::focusReticleView.isInitialized
-            ) {
-                focusReticleView.text =
-                    "AF AUTO"
-
-                focusReticleView.visibility =
-                    View.VISIBLE
-
-                uiHandler.removeCallbacks(
-                    hideFocusReticleRunnable
-                )
-
-                uiHandler.postDelayed(
-                    hideFocusReticleRunnable,
-                    700L
-                )
-            }
-
-            toast(
-                "AF / METER AUTO"
-            )
-
-            refreshHud()
-            return
-        }
-
-        try {
-            val point =
-                previewView
-                    .meteringPointFactory
-                    .createPoint(
-                        x,
-                        y
-                    )
-
-            val action =
-                FocusMeteringAction
-                    .Builder(
-                        point,
-                        FocusMeteringAction.FLAG_AF or
-                            FocusMeteringAction.FLAG_AE or
-                            FocusMeteringAction.FLAG_AWB
-                    )
-                    .disableAutoCancel()
-                    .build()
-
-
-            val focusFuture =
-                cam.cameraControl
-                    .startFocusAndMetering(
-                        action
-                    )
-
-            focusAttempted =
-                true
-
-            focusSuccessful =
-                null
-
-            focusFuture.addListener(
-                {
-                    focusSuccessful =
-                        try {
-                            focusFuture.get()
-                                .isFocusSuccessful
-                        } catch (_: Exception) {
-                            false
-                        }
-
-                    runOnUiThread {
-                        updateShotQualityGuard()
-
-                        if (
-                            focusSuccessful ==
-                                false
-                        ) {
-                            toast(
-                                "Subject focus not confirmed"
-                            )
-                        }
-                    }
-                },
-                ContextCompat.getMainExecutor(
-                    this
-                )
-            )
-
-            focusLockActive =
-                true
-
-            showFocusReticle(
-                x,
-                y,
-                true
-            )
-
-            toast(
-                "AF + METER LOCK • hold again to release"
-            )
-
-            refreshHud()
-        } catch (_: Exception) {
-            focusLockActive =
-                false
-
-            toast(
-                "Focus lock unavailable on this lens"
-            )
-        }
-    }
-
-    private fun releaseFocusLockForTap() {
-        if (!focusLockActive) {
-            return
-        }
-
-        try {
-            camera
-                ?.cameraControl
-                ?.cancelFocusAndMetering()
-        } catch (_: Exception) {
-        }
-
-        focusLockActive =
-            false
-    }
-
-    private fun focusAssistLabel(): String {
-        return if (focusLockActive) {
-            "AF+METER LOCK"
-        } else {
-            "AF AUTO"
-        }
-    }
-
-    private fun audioGuardLabel(): String {
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return "MIC OFF"
-        }
-
-        if (
-            audioStateLabel ==
-                "MIC ERROR"
-        ) {
-            return "MIC ERROR"
-        }
-
-        if (
-            recording ==
-                null
-        ) {
-            return "MIC READY"
-        }
-
-        val level =
-            audioAmplitude.coerceIn(
-                0.0,
-                1.0
-            )
-
-        return when {
-            level <
-                0.015 ->
-                    "LOW"
-
-            level <
-                0.70 ->
-                    "GOOD"
-
-            level <
-                0.90 ->
-                    "HOT"
-
-            else ->
-                "CLIP RISK"
-        }
-    }
-
-    private fun updateAudioGuard() {
-        if (
-            !::audioGuardView.isInitialized
-        ) {
-            return
-        }
-
-        if (
-            operatorControlsHidden ||
-            cleanModeEnabled
-        ) {
-            audioGuardView.visibility =
-                View.GONE
-
-            return
-        }
-
-        audioGuardView.visibility =
-            View.VISIBLE
-
-        val label =
-            audioGuardLabel()
-
-        val percent =
-            (
-                audioAmplitude
-                    .coerceIn(
-                        0.0,
-                        1.0
-                    ) *
-                    100.0
-                ).roundToInt()
-
-        val peakPercent =
-            (
-                audioPeakAmplitude
-                    .coerceIn(
-                        0.0,
-                        1.0
-                    ) *
-                    100.0
-                ).roundToInt()
-
-        audioGuardView.text =
-            when (label) {
-                "MIC READY",
-                "MIC OFF",
-                "MIC ERROR" ->
-                    "AUDIO • $label"
-
-                else ->
-                    "AUDIO • $label • ${percent}% • PEAK ${peakPercent}%"
-            }
-
-        audioGuardView.setTextColor(
-            when (label) {
-                "GOOD" ->
-                    0xFF91B6A0.toInt()
-
-                "HOT" ->
-                    0xFFAEBDEB.toInt()
-
-                "CLIP RISK",
-                "MIC ERROR" ->
-                    0xFFC76D73.toInt()
-
-                "LOW" ->
-                    0xFFAEBDEB.toInt()
-
-                else ->
-                    0xFFAEB7C7.toInt()
-            }
-        )
-    }
-
-    private fun ambientLightLabel(): String {
-        val lux =
-            ambientLux
-                ?: return "LIGHT --"
-
-        return when {
-            lux <
-                25f ->
-                    "DARK"
-
-            lux <
-                100f ->
-                    "DIM"
-
-            lux <
-                500f ->
-                    "NORMAL"
-
-            else ->
-                "BRIGHT"
-        }
-    }
-
-    private fun ambientLightRecommendation(): String {
-        val lux =
-            ambientLux
-                ?: return "SENSOR --"
-
-        val selected =
-            qualityModes[
-                qualityIndex
-            ]
-
-        return when {
-            lux <
-                25f ->
-                    if (
-                        selected ==
-                            "LOW LIGHT"
-                    ) {
-                        "LOW LIGHT ACTIVE"
-                    } else {
-                        "USE LOW LIGHT"
-                    }
-
-            lux <
-                100f &&
-                (
-                    selected ==
-                        "SOCIAL 60" ||
-                    selected ==
-                        "UHD 60" ||
-                    selected ==
-                        "ACTION 60"
-                    ) ->
-                        "30 FPS ADVISED"
-
-            lux >
-                500f &&
-                (
-                    selected ==
-                        "SOCIAL FHD" ||
-                    selected ==
-                        "ACTION STAB"
-                    ) ->
-                        "60 FPS AVAILABLE"
-
-            else ->
-                "EXPOSURE OK"
-        }
-    }
-
-    private fun updateLightAdvisor() {
-        if (
-            !::lightAdvisorView.isInitialized
-        ) {
-            return
-        }
-
-        if (
-            operatorControlsHidden ||
-            cleanModeEnabled
-        ) {
-            lightAdvisorView.visibility =
-                View.GONE
-
-            return
-        }
-
-        lightAdvisorView.visibility =
-            View.VISIBLE
-
-        val lux =
-            ambientLux
-
-        if (
-            lux ==
-                null
-        ) {
-            lightAdvisorView.text =
-                "LIGHT • SENSOR --"
-
-            lightAdvisorView.setTextColor(
-                0xFFAEB7C7.toInt()
-            )
-
-            return
-        }
-
-        val label =
-            ambientLightLabel()
-
-        lightAdvisorView.text =
-            String.format(
-                Locale.US,
-                "LIGHT • %s • %.0f LUX • %s",
-                label,
-                lux,
-                ambientLightRecommendation()
-            )
-
-        lightAdvisorView.setTextColor(
-            when (label) {
-                "BRIGHT" ->
-                    0xFFAEBDEB.toInt()
-
-                "NORMAL" ->
-                    0xFF91B6A0.toInt()
-
-                "DIM" ->
-                    0xFFAEBDEB.toInt()
-
-                else ->
-                    0xFFC76D73.toInt()
-            }
-        )
-    }
-
-    private fun motionGuardLabel(): String {
-        return when {
-            cameraShakeScore <=
-                8f ->
-                    "STEADY"
-
-            cameraShakeScore <=
-                22f ->
-                    "MOVING"
-
-            else ->
-                "SHAKE"
-        }
-    }
-
-    private fun updateMotionGuard() {
-        if (
-            !::motionGuardView.isInitialized
-        ) {
-            return
-        }
-
-        if (
-            operatorControlsHidden ||
-            cleanModeEnabled
-        ) {
-            motionGuardView.visibility =
-                View.GONE
-
-            return
-        }
-
-        motionGuardView.visibility =
-            View.VISIBLE
-
-        val label =
-            motionGuardLabel()
-
-        motionGuardView.text =
-            String.format(
-                Locale.US,
-                "STEADYSHOT • %s • %.0f",
-                label,
-                cameraShakeScore
-            )
-
-        motionGuardView.setTextColor(
-            when (label) {
-                "STEADY" ->
-                    0xFF91B6A0.toInt()
-
-                "MOVING" ->
-                    0xFFAEBDEB.toInt()
-
-                else ->
-                    0xFFC76D73.toInt()
-            }
-        )
-    }
-
-    private fun updateHorizonGuard() {
-        if (
-            !::horizonGuardView.isInitialized
-        ) {
-            return
-        }
-
-        if (
-            operatorControlsHidden ||
-            cleanModeEnabled
-        ) {
-            horizonGuardView.visibility =
-                View.GONE
-
-            return
-        }
-
-        horizonGuardView.visibility =
-            View.VISIBLE
-
-        val roll =
-            phoneRollDeg
-
-        if (roll == null) {
-            horizonGuardView.rotation =
-                0f
-
-            horizonGuardView.text =
-                "━━━━━━━━  HORIZON --  ━━━━━━━━"
-
-            horizonGuardView.setTextColor(
-                0xFFAEB7C7.toInt()
-            )
-
-            return
-        }
-
-        val absRoll =
-            kotlin.math.abs(
-                roll
-            )
-
-        val stateText =
-            when {
-                absRoll <=
-                    1.0f ->
-                        "LEVEL LOCK"
-
-                absRoll <=
-                    3.0f ->
-                        "LEVEL NEAR"
-
-                else ->
-                    "ADJUST"
-            }
-
-        horizonGuardView.rotation =
-            (
-                -roll
-            ).coerceIn(
-                -12f,
-                12f
-            )
-
-        horizonGuardView.text =
-            String.format(
-                Locale.US,
-                "━━━━━━━━  %s  %+.1f°  ━━━━━━━━",
-                stateText,
-                roll
-            )
-
-        horizonGuardView.setTextColor(
-            when {
-                absRoll <=
-                    1.0f ->
-                        0xFF91B6A0.toInt()
-
-                absRoll <=
-                    3.0f ->
-                        0xFFAEBDEB.toInt()
-
-                else ->
-                    0xFFC76D73.toInt()
-            }
-        )
     }
 
     private fun startEverything() {
@@ -6865,8 +2453,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private fun bindCamera() {
         val p = provider ?: return
 
-        applyThermalSafeProfileIfNeeded()
-
         p.unbindAll()
 
         try {
@@ -6875,42 +2461,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
 
         overlayEffect = null
-
-        if (
-            selectedCameraDeviceId != null &&
-            !DevelopUgandaLensIntelligence.hasCamera(
-                p,
-                selectedCameraDeviceId
-            )
-        ) {
-            selectedCameraDeviceId =
-                null
-        }
-
-        val selector =
-            DevelopUgandaLensIntelligence.selectorFor(
-                p,
-                selectedCameraDeviceId,
-                useFront
-            )
-
-        val selectedCameraInfo =
-            try {
-                p.getCameraInfo(selector)
-            } catch (_: Exception) {
-                null
-            }
-
-        activeVideoFpsLabel =
-            if (qualityModes[qualityIndex] == "LOW LIGHT") {
-                "AUTO LOW-LIGHT FPS"
-            } else {
-                "AUTO FPS"
-            }
-        activeVideoStabilizationLabel = "STAB OFF"
-        activeVideoDynamicRangeLabel = "SDR"
-        activeVideoAspectLabel =
-            DevelopUgandaFieldIntelligencePanel.activeFormatLabel(this)
 
         val preview = Preview.Builder()
             .build()
@@ -6932,121 +2482,19 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 .setJpegQuality(100)
                 .build()
         } else {
-            var selectedQualitySelector =
-                buildQualitySelector()
-            var selectedDynamicRange =
-                DynamicRange.SDR
-            var enableVideoStabilization =
-                false
-
-            if (selectedCameraInfo != null) {
-                try {
-                    val capabilities =
-                        Recorder.getVideoCapabilities(
-                            selectedCameraInfo
-                        )
-
-                    if (
-                        wantsVideoHdr() &&
-                        capabilities.supportedDynamicRanges.contains(
-                            DynamicRange.HLG_10_BIT
-                        )
-                    ) {
-                        val hdrQualities =
-                            capabilities.getSupportedQualities(
-                                DynamicRange.HLG_10_BIT
-                            )
-
-                        val orderedHdr =
-                            listOf(
-                                Quality.UHD,
-                                Quality.FHD,
-                                Quality.HD
-                            ).filter {
-                                hdrQualities.contains(it)
-                            }
-
-                        if (orderedHdr.isNotEmpty()) {
-                            selectedQualitySelector =
-                                QualitySelector.fromOrderedList(
-                                    orderedHdr,
-                                    FallbackStrategy
-                                        .lowerQualityOrHigherThan(
-                                            Quality.HD
-                                        )
-                                )
-                            selectedDynamicRange =
-                                DynamicRange.HLG_10_BIT
-                            activeVideoDynamicRangeLabel =
-                                "HLG10 HDR"
-                        } else {
-                            activeVideoDynamicRangeLabel =
-                                "SDR HDR-FALLBACK"
-                        }
-                    } else if (wantsVideoHdr()) {
-                        activeVideoDynamicRangeLabel =
-                            "SDR HDR-FALLBACK"
-                    }
-
-                    enableVideoStabilization =
-                        wantsVideoStabilization() &&
-                            capabilities.isStabilizationSupported
-
-                    activeVideoStabilizationLabel =
-                        if (enableVideoStabilization) {
-                            "STAB ON"
-                        } else if (wantsVideoStabilization()) {
-                            "STAB UNSUPPORTED"
-                        } else {
-                            "STAB OFF"
-                        }
-                } catch (_: Exception) {
-                    activeVideoDynamicRangeLabel =
-                        if (wantsVideoHdr()) {
-                            "SDR HDR-FALLBACK"
-                        } else {
-                            "SDR"
-                        }
-                    activeVideoStabilizationLabel =
-                        "STAB AUTO"
-                }
-            }
-
-            val recorder =
-                Recorder.Builder()
-                    .setQualitySelector(
-                        selectedQualitySelector
-                    )
-                    .setAspectRatio(
-                        AspectRatio.RATIO_16_9
-                    )
-                    .setTargetVideoEncodingBitRate(
-                        targetVideoBitrate()
-                    )
-                    .build()
-
-            val videoBuilder =
-                VideoCapture.Builder(
-                    recorder
+            val recorder = Recorder.Builder()
+                .setQualitySelector(
+                    buildQualitySelector()
                 )
-
-            if (
-                selectedDynamicRange !=
-                DynamicRange.SDR
-            ) {
-                videoBuilder.setDynamicRange(
-                    selectedDynamicRange
+                .setTargetVideoEncodingBitRate(
+                    targetVideoBitrate()
                 )
-            }
-
-            if (enableVideoStabilization) {
-                videoBuilder.setVideoStabilizationEnabled(
-                    true
-                )
-            }
+                .build()
 
             videoCapture =
-                videoBuilder.build()
+                VideoCapture.withOutput(
+                    recorder
+                )
         }
 
         // V187: keep CameraX burn-in graphics off the live PreviewView.
@@ -7074,7 +2522,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             }
         }
 
-        var session =
+        val session =
             if (photoMode) {
                 SessionConfig.Builder(
                     preview,
@@ -7095,67 +2543,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     .build()
             }
 
-        if (!photoMode && selectedCameraInfo != null) {
-            val requestedFps =
-                requestedVideoFps()
-
-            if (requestedFps > 0) {
-                try {
-                    val supportedRanges =
-                        selectedCameraInfo
-                            .getSupportedFrameRateRanges(
-                                session
-                            )
-
-                    val exactRange =
-                        supportedRanges.firstOrNull {
-                            it.lower == requestedFps &&
-                                it.upper == requestedFps
-                        }
-
-                    val compatibleRange =
-                        exactRange
-                            ?: supportedRanges
-                                .filter {
-                                    it.lower <= requestedFps &&
-                                        it.upper >= requestedFps
-                                }
-                                .minByOrNull {
-                                    it.upper - it.lower
-                                }
-
-                    if (compatibleRange != null) {
-                        session =
-                            SessionConfig.Builder(
-                                preview,
-                                videoCapture!!
-                            )
-                                .addEffect(
-                                    overlayEffect!!
-                                )
-                                .setFrameRateRange(
-                                    compatibleRange
-                                )
-                                .build()
-
-                        activeVideoFpsLabel =
-                            if (exactRange != null) {
-                                "${requestedFps} FPS"
-                            } else {
-                                "${compatibleRange.lower}-${compatibleRange.upper} FPS FALLBACK"
-                            }
-                    } else {
-                        activeVideoFpsLabel =
-                            "AUTO FPS FALLBACK"
-                    }
-                } catch (_: Exception) {
-                    activeVideoFpsLabel =
-                        "AUTO FPS"
-                }
-            } else {
-                activeVideoFpsLabel =
-                    "AUTO LOW-LIGHT FPS"
-            }
+        val selector = if (useFront) {
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
         }
 
         try {
@@ -7167,9 +2558,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             torchOn = false
             torchButton.text = "LIGHT\nOFF"
-
-            focusLockActive =
-                false
 
             syncCameraRanges()
             applyScenePreset()
@@ -7190,47 +2578,17 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
             refreshHud()
         } catch (e: Exception) {
-            if (
-                selectedCameraDeviceId !=
-                    null
-            ) {
-                val failedId =
-                    selectedCameraDeviceId
-
-                selectedCameraDeviceId =
-                    null
-
-                saveReportCameraPreferences()
-
-                toast(
-                    "Camera ID $failedId cannot use this capture profile • returning to ${if (useFront) "front" else "back"} camera"
-                )
-
-                uiHandler.post {
-                    bindCamera()
-                }
-            } else {
-                toast(
-                    "Selected camera is unavailable"
-                )
-            }
+            toast("Selected camera is unavailable")
         }
     }
 
-        private fun drawReporterOverlay(
-        frame: Frame
-    ) {
-        val c =
-            frame.overlayCanvas
-
-        val crop =
-            frame.cropRect
+    private fun drawReporterOverlay(frame: Frame) {
+        val c = frame.overlayCanvas
+        val crop = frame.cropRect
 
         if (
-            crop.width() <=
-                0 ||
-            crop.height() <=
-                0
+            crop.width() <= 0 ||
+            crop.height() <= 0
         ) {
             return
         }
@@ -7240,97 +2598,67 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             android.graphics.PorterDuff.Mode.CLEAR
         )
 
-        val rotation =
-            (
-                (
-                    frame.rotationDegrees %
-                        360
-                    ) +
-                    360
-                ) %
-                360
+        val rotation = (
+            (frame.rotationDegrees % 360) + 360
+        ) % 360
 
         val finalWidth =
             if (
-                rotation ==
-                    90 ||
-                rotation ==
-                    270
+                rotation == 90 ||
+                rotation == 270
             ) {
-                crop.height()
-                    .toFloat()
+                crop.height().toFloat()
             } else {
-                crop.width()
-                    .toFloat()
+                crop.width().toFloat()
             }
 
         val finalHeight =
             if (
-                rotation ==
-                    90 ||
-                rotation ==
-                    270
+                rotation == 90 ||
+                rotation == 270
             ) {
-                crop.width()
-                    .toFloat()
+                crop.width().toFloat()
             } else {
-                crop.height()
-                    .toFloat()
+                crop.height().toFloat()
             }
 
-        val l =
-            crop.left.toFloat()
+        val l = crop.left.toFloat()
+        val t = crop.top.toFloat()
+        val r = crop.right.toFloat()
+        val b = crop.bottom.toFloat()
 
-        val t =
-            crop.top.toFloat()
+        val nonMirrored = when (rotation) {
+            90 -> floatArrayOf(
+                l, b,
+                l, t,
+                r, t,
+                r, b
+            )
 
-        val r =
-            crop.right.toFloat()
+            180 -> floatArrayOf(
+                r, b,
+                l, b,
+                l, t,
+                r, t
+            )
 
-        val b =
-            crop.bottom.toFloat()
+            270 -> floatArrayOf(
+                r, t,
+                r, b,
+                l, b,
+                l, t
+            )
 
-        val nonMirrored =
-            when (
-                rotation
-            ) {
-                90 ->
-                    floatArrayOf(
-                        l, b,
-                        l, t,
-                        r, t,
-                        r, b
-                    )
-
-                180 ->
-                    floatArrayOf(
-                        r, b,
-                        l, b,
-                        l, t,
-                        r, t
-                    )
-
-                270 ->
-                    floatArrayOf(
-                        r, t,
-                        r, b,
-                        l, b,
-                        l, t
-                    )
-
-                else ->
-                    floatArrayOf(
-                        l, t,
-                        r, t,
-                        r, b,
-                        l, b
-                    )
-            }
+            else -> floatArrayOf(
+                l, t,
+                r, t,
+                r, b,
+                l, b
+            )
+        }
 
         val destination =
-            if (
-                frame.isMirroring
-            ) {
+            if (frame.isMirroring) {
                 floatArrayOf(
                     nonMirrored[2],
                     nonMirrored[3],
@@ -7345,20 +2673,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 nonMirrored
             }
 
-        val source =
-            floatArrayOf(
-                0f,
-                0f,
-                finalWidth,
-                0f,
-                finalWidth,
-                finalHeight,
-                0f,
-                finalHeight
-            )
+        val source = floatArrayOf(
+            0f,
+            0f,
+            finalWidth,
+            0f,
+            finalWidth,
+            finalHeight,
+            0f,
+            finalHeight
+        )
 
-        val finalToBuffer =
-            Matrix()
+        val finalToBuffer = Matrix()
 
         if (
             !finalToBuffer.setPolyToPoly(
@@ -7373,9 +2699,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
 
         c.save()
-        c.concat(
-            finalToBuffer
-        )
+        c.concat(finalToBuffer)
 
         drawCreativeLook(
             c,
@@ -7383,1119 +2707,415 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             finalHeight
         )
 
-        val u =
-            minOf(
-                finalWidth,
-                finalHeight
-            ) /
-                1000f *
-                reportHudScales[
-                    reportHudSizeIndex
-                ]
+        val u = minOf(
+            finalWidth,
+            finalHeight
+        ) / 1000f
 
-        val brandConfig =
-            DevelopUgandaBrandMetadataStore
-                .snapshot(
-                    this
-                )
-
+        // V177 social-safe broadcast HUD:
+        // all telemetry is retained, but reorganized into deliberate rows.
+        // Values such as LAT/LON/ALT/HDG/SPD/FIX/DIST continue changing live.
+        // V178 uses a deeper social-safe inset. The previous transform
+        // placed the left edge too close to the exported crop on some phones.
+        // V181 WYSIWYG preview + V180 broadcast-safe recorded layout:
+        // identity stays inside social-media safe margins while the
+        // upper-right is reserved for the live compass/level instruments.
+        // V180: deliberately deeper safe margins for both the CameraX
+        // preview crop and the exported 9:16 video. This prevents the brand,
+        // telemetry and instruments from being clipped at the phone edges.
         val safeLeft =
-            finalWidth *
-                0.050f
-
+            finalWidth * 0.19f
         val safeTop =
-            finalHeight *
-                0.100f
-
+            finalHeight * 0.125f
         val maxWidth =
-            finalWidth *
-                0.56f
+            finalWidth * 0.49f
 
-        var y =
-            safeTop
+        var y = safeTop
 
-        val railStartY =
-            y -
-                (
-                    14f *
-                        u
-                    )
+        val text = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
+            typeface = Typeface.create(
+                Typeface.MONOSPACE,
+                Typeface.NORMAL
+            )
 
-        val telemetryPanel =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    0x30000000
+            setShadowLayer(
+                2.8f * u,
+                0.8f * u,
+                0.8f * u,
+                0xED000000.toInt()
+            )
+        }
 
-                style =
-                    Paint.Style.FILL
-            }
+        // Minimal broadcast signature: no black panel, only a brand rail.
+        val rail = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
+            color =
+                if (recording != null) {
+                    0xFFFF4138.toInt()
+                } else {
+                    0xFFFFC21A.toInt()
+                }
+            strokeWidth = 3.2f * u
+        }
 
-        c.drawRoundRect(
-            safeLeft -
-                (
-                    14f *
-                        u
-                    ),
-            safeTop -
-                (
-                    26f *
-                        u
-                    ),
-            safeLeft +
-                maxWidth +
-                (
-                    14f *
-                        u
-                    ),
-            safeTop +
-                (
-                    brandConfig
-                        .reportPanelHeightUnits() *
-                        u
-                    ),
-            16f *
-                u,
-            16f *
-                u,
-            telemetryPanel
+        c.drawLine(
+            safeLeft - (10f * u),
+            y - (4f * u),
+            safeLeft - (10f * u),
+            y + (246f * u),
+            rail
         )
 
-        val text =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                typeface =
-                    Typeface.create(
-                        Typeface.MONOSPACE,
-                        Typeface.BOLD
-                    )
+        // 1. Signature.
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.color =
+            0xFFFFC21A.toInt()
+        text.textSize =
+            33f * u
 
-                setShadowLayer(
-                    reportHudShadowRadius(
-                        u
-                    ),
-                    0.45f *
-                        u,
-                    0.45f *
-                        u,
-                    reportHudOutlineColor()
-                )
-            }
+        val brand = "develop.uganda"
 
-        val rail =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            ).apply {
-                color =
-                    if (
-                        recording !=
-                            null
-                    ) {
-                        0xFFFF4138.toInt()
-                    } else {
-                        0xFFD8B85B.toInt()
-                    }
+        c.drawText(
+            brand,
+            safeLeft,
+            y,
+            text
+        )
 
-                strokeWidth =
-                    2.3f *
-                        u
-            }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .BRAND
-            )
-        ) {
-            text.color =
-                0xFFD8B85B.toInt()
-
-            text.textSize =
-                34f *
-                    u
-
-            drawStrongRecordedText(
-                c,
-                brandConfig.displayName,
-                safeLeft,
-                y,
-                text
-            )
-
-            if (
-                brandConfig.organization
-                    .isNotBlank()
-            ) {
-                y +=
-                    18f *
-                        u
-
-                text.color =
-                    Color.WHITE
-
-                text.textSize =
-                    13.0f *
-                        u
-
-                drawFitText(
-                    c,
-                    brandConfig.organization,
-                    safeLeft,
-                    y,
-                    maxWidth,
-                    text,
-                    10.5f *
-                        u
-                )
-            }
-
-            y +=
-                22f *
-                    u
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .VERSION
-            )
-        ) {
-            text.color =
-                if (
-                    reportDisplayMode ==
-                        "LIVE EFFECT"
-                ) {
-                    0xFFFF5A52.toInt()
-                } else {
-                    Color.WHITE
-                }
-
-            text.textSize =
-                15.8f *
-                    u
-
-            drawFitText(
-                c,
-                "${sceneTag()} • V239",
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                12.4f *
-                    u
-            )
-
-            y +=
-                18f *
-                    u
-        }
-
-        // The V227 instruments remain, but V228 lets the user decide
-        // which of them is permanently burned into new saved media.
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .COMPASS
-            )
-        ) {
-            drawCompassInstrument(
-                c,
-                finalWidth *
-                    0.80f,
-                finalHeight *
-                    0.875f,
-                43f *
-                    u,
-                u
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .AUDIO
-            )
-        ) {
-            drawAudioMeterInstrument(
-                c,
-                finalWidth *
-                    0.705f,
-                finalHeight *
-                    0.815f,
-                finalWidth *
-                    0.15f,
-                10f *
-                    u,
-                u
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .HORIZON
-            )
-        ) {
-            drawLevelInstrument(
-                c,
-                finalWidth *
-                    0.80f,
-                finalHeight *
-                    0.935f,
-                92f *
-                    u,
-                28f *
-                    u,
-                u
-            )
-        }
+        // V182: keep develop.uganda and the report type on one broadcast line.
+        // The WYSIWYG preview now shows the complete 9:16 frame, so both labels
+        // can stay together without being cropped.
+        val brandWidth =
+            text.measureText(brand)
 
         text.color =
-            if (
-                recording !=
-                    null
-            ) {
-                0xFFFF4138.toInt()
+            if (reportDisplayMode == "LIVE EFFECT") {
+                0xFFFF5A52.toInt()
             } else {
                 Color.WHITE
             }
-
         text.textSize =
-            18.0f *
-                u
+            11.5f * u
 
-        val recState =
-            when {
-                recording !=
-                    null ->
-                        "● REC"
+        c.drawText(
+            sceneTag(),
+            safeLeft +
+                brandWidth +
+                (14f * u),
+            y,
+            text
+        )
 
-                captureModes[
-                    captureModeIndex
-                ] ==
-                    "PHOTO" ->
-                        "● PHOTO"
-
-                else ->
-                    "STBY"
-            }
-
-        val stateParts =
-            mutableListOf(
-                recState,
-                "TC ${tc()}"
-            )
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .VERSION
-            )
-        ) {
-            stateParts.add(
-                "V239"
-            )
+        val accent = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
+            color =
+                0xB3FFC21A.toInt()
+            strokeWidth =
+                1.35f * u
         }
 
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .THERMAL
-            )
-        ) {
-            stateParts.add(
-                "THERM ${thermalStateLabel()}"
-            )
-        }
+        c.drawLine(
+            safeLeft,
+            y + (10f * u),
+            safeLeft + maxWidth,
+            y + (10f * u),
+            accent
+        )
+
+        // Real live field instruments. These are part of the recorded HUD.
+        val instrumentCenterX =
+            finalWidth * 0.74f
+        val compassCenterY =
+            safeTop + (61f * u)
+
+        drawCompassInstrument(
+            c,
+            instrumentCenterX,
+            compassCenterY,
+            39f * u,
+            u
+        )
+
+        drawAudioMeterInstrument(
+            c,
+            finalWidth * 0.675f,
+            safeTop + (117f * u),
+            finalWidth * 0.13f,
+            9f * u,
+            u
+        )
+
+        drawLevelInstrument(
+            c,
+            instrumentCenterX,
+            safeTop + (149f * u),
+            78f * u,
+            26f * u,
+            u
+        )
+
+        // 2. Stable report identity rows. Shorter rows keep the full
+        // develop.uganda identity readable instead of shrinking off-screen.
+        y += 28f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.color = Color.WHITE
+        text.textSize = 12.8f * u
 
         drawFitText(
             c,
-            stateParts.joinToString(
-                "   •   "
-            ),
+            "REPORT $reportId • CLIP ${clipSequenceText()}",
             safeLeft,
             y,
             maxWidth,
             text,
-            14.2f *
-                u
+            9.3f * u
         )
 
-        y +=
-            19f *
-                u
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .CAMERA_MODE
-            )
-        ) {
-            text.color =
-                cameraExperienceAccentColor()
-
-            text.textSize =
-                15.3f *
-                    u
-
-            drawFitText(
-                c,
-                "CAMERA • ${cameraExperienceShortLabel()}",
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                13.6f *
-                    u
-            )
-
-            y +=
-                18f *
-                    u
-
-            text.color =
-                reportModeAccentColor()
-
-            text.textSize =
-                15.2f *
-                    u
-
-            drawFitText(
-                c,
-                "MODE • ${qualityModes[qualityIndex]}   •   SCENE ${sceneModes[sceneIndex]}   •   LOOK ${lookModes[lookIndex]}   •   COLOR $v229ColorOverlayLabel",
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                12.8f *
-                    u
-            )
-
-            y +=
-                18f *
-                    u
-
-            text.color =
-                0xFFAEBDEB.toInt()
-
-            text.textSize =
-                14.6f *
-                    u
-
-            drawFitText(
-                c,
-                autoDirectorStateText(),
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                12.6f *
-                    u
-            )
-
-            y +=
-                20f *
-                    u
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .REPORTER
-            ) ||
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .STORY
-            )
-        ) {
-            val identityParts =
-                mutableListOf<String>()
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .REPORTER
-                )
-            ) {
-                identityParts.add(
-                    "REPORTER • $reporterName"
-                )
-            }
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .STORY
-                )
-            ) {
-                identityParts.add(
-                    "STORY • $storyId"
-                )
-            }
-
-            text.color =
-                Color.WHITE
-
-            text.textSize =
-                14.4f *
-                    u
-
-            drawFitText(
-                c,
-                identityParts.joinToString(
-                    "   |   "
-                ),
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                11.8f *
-                    u
-            )
-
-            y +=
-                20f *
-                    u
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .DATE_TIME
-            )
-        ) {
-            text.color =
-                Color.WHITE
-
-            text.textSize =
-                16.0f *
-                    u
-
-            drawFitText(
-                c,
-                "LOCAL ${clock.format(Date())}   |   UTC ${utcClockText()}",
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                13.6f *
-                    u
-            )
-
-            y +=
-                20f *
-                    u
-        }
-
-        fun section(
-            heading: String,
-            value: String,
-            accent: Int =
-                0xFF9FD9FF.toInt(),
-            valueColor: Int =
-                0xFF83C7D4.toInt()
-        ) {
-            text.color =
-                accent
-
-            text.textSize =
-                16.8f *
-                    u
-
-            drawFitText(
-                c,
-                heading,
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                15.0f *
-                    u
-            )
-
-            y +=
-                16f *
-                    u
-
-            text.color =
-                valueColor
-
-            text.textSize =
-                15.2f *
-                    u
-
-            drawFitText(
-                c,
-                value,
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                12.9f *
-                    u
-            )
-
-            y +=
-                20f *
-                    u
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .LOCATION
-            )
-        ) {
-            section(
-                "LOCATION",
-                placeName
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .GPS_COORDS
-            ) ||
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .ALTITUDE
-            )
-        ) {
-            val positionParts =
-                mutableListOf<String>()
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .GPS_COORDS
-                )
-            ) {
-                positionParts.add(
-                    "LAT " +
-                        (
-                            lat?.let {
-                                String.format(
-                                    Locale.US,
-                                    "%.5f",
-                                    it
-                                )
-                            } ?: "--"
-                        )
-                )
-
-                positionParts.add(
-                    "LON " +
-                        (
-                            lon?.let {
-                                String.format(
-                                    Locale.US,
-                                    "%.5f",
-                                    it
-                                )
-                            } ?: "--"
-                        )
-                )
-            }
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .ALTITUDE
-                )
-            ) {
-                positionParts.add(
-                    "ALT " +
-                        (
-                            alt?.let {
-                                String.format(
-                                    Locale.US,
-                                    "%.0fm",
-                                    it
-                                )
-                            } ?: "--"
-                        )
-                )
-            }
-
-            section(
-                "POSITION",
-                positionParts.joinToString(
-                    " • "
-                )
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .GPS_ACCURACY
-            )
-        ) {
-            val fixAge =
-                if (
-                    lastGpsUpdateMs >
-                        0L
-                ) {
-                    (
-                        System.currentTimeMillis() -
-                            lastGpsUpdateMs
-                        ) /
-                        1000f
-                } else {
-                    null
-                }
-
-            section(
-                "GPS STATUS",
-                buildString {
-                    append(
-                        accuracy?.let {
-                            String.format(
-                                Locale.US,
-                                "ACC ±%.0fm",
-                                it
-                            )
-                        } ?: "ACC --"
-                    )
-
-                    append(
-                        " • SAT ${gnssSatellitesUsed}/${gnssSatellitesVisible}"
-                    )
-
-                    append(
-                        " • FIX " +
-                            (
-                                fixAge?.let {
-                                    String.format(
-                                        Locale.US,
-                                        "%.1fs",
-                                        it
-                                    )
-                                } ?: "--"
-                            )
-                    )
-                }
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .COMPASS
-            ) ||
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .SPEED_MOTION
-            )
-        ) {
-            val navParts =
-                mutableListOf<String>()
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .COMPASS
-                )
-            ) {
-                navParts.add(
-                    "COMP " +
-                        (
-                            compassAzimuthDeg?.let {
-                                String.format(
-                                    Locale.US,
-                                    "%.0f°",
-                                    it
-                                )
-                            } ?: "--"
-                        )
-                )
-
-                navParts.add(
-                    "GPS HDG " +
-                        (
-                            heading?.let {
-                                String.format(
-                                    Locale.US,
-                                    "%.0f°",
-                                    it
-                                )
-                            } ?: "--"
-                        )
-                )
-            }
-
-            if (
-                brandConfig.show(
-                    DevelopUgandaBrandMetadataStore
-                        .Tag
-                        .SPEED_MOTION
-                )
-            ) {
-                navParts.add(
-                    "SPD " +
-                        (
-                            speedKmh?.let {
-                                String.format(
-                                    Locale.US,
-                                    "%.1fkm/h",
-                                    it
-                                )
-                            } ?: "--"
-                        )
-                )
-
-                navParts.add(
-                    motionGuardLabel()
-                )
-
-                navParts.add(
-                    String.format(
-                        Locale.US,
-                        "DIST %.0fm",
-                        distanceTravelledM
-                    )
-                )
-            }
-
-            section(
-                "NAVIGATION",
-                navParts.joinToString(
-                    " • "
-                )
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .HORIZON
-            )
-        ) {
-            section(
-                "LEVEL",
-                orientationOverlay(),
-                Color.WHITE,
-                Color.WHITE
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .WEATHER
-            )
-        ) {
-            section(
-                "WEATHER",
-                weatherOverlay()
-                    .removePrefix(
-                        "WX "
-                    )
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .AUDIO
-            )
-        ) {
-            section(
-                "AUDIO",
-                audioLevelOverlay(),
-                0xFF83B995.toInt(),
-                0xFF83B995.toInt()
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .BATTERY_STORAGE
-            )
-        ) {
-            val battery =
-                batteryPct()
-
-            val free =
-                freeStorageGb()
-
-            section(
-                "DEVICE",
-                "BAT " +
-                    (
-                        battery?.let {
-                            "$it%"
-                        } ?: "--"
-                    ) +
-                    " • FREE " +
-                    (
-                        free?.let {
-                            "${it}GB"
-                        } ?: "--"
-                    ),
-                0xFF83B995.toInt(),
-                0xFF83B995.toInt()
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .NETWORK
-            )
-        ) {
-            section(
-                "NETWORK",
-                networkType() +
-                    " • " +
-                    (
-                        estimatedUploadKbps?.let {
-                            "UP~${it}kbps"
-                        } ?: "UP~--"
-                    ),
-                0xFF83B995.toInt(),
-                0xFF83B995.toInt()
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .SHOT_GUARD
-            )
-        ) {
-            val warnings =
-                shotQualityWarnings()
-
-            section(
-                "SHOT GUARD",
-                if (
-                    warnings.isEmpty()
-                ) {
-                    "READY"
-                } else {
-                    warnings.joinToString(
-                        " • "
-                    )
-                },
-                if (
-                    warnings.isEmpty()
-                ) {
-                    0xFF83B995.toInt()
-                } else {
-                    0xFFD8B85B.toInt()
-                },
-                if (
-                    warnings.isEmpty()
-                ) {
-                    0xFF83B995.toInt()
-                } else {
-                    0xFFD8B85B.toInt()
-                }
-            )
-        }
-
-        if (
-            brandConfig.show(
-                DevelopUgandaBrandMetadataStore
-                    .Tag
-                    .INTEGRITY
-            )
-        ) {
-            text.color =
-                0xFFAEBDEB.toInt()
-
-            text.textSize =
-                13.0f *
-                    u
-
-            drawFitText(
-                c,
-                "INTEGRITY • " +
-                    if (
-                        integrityEnabled
-                    ) {
-                        "SHA-256 STORY PACKAGE"
-                    } else {
-                        "OFF"
-                    },
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                10.5f *
-                    u
-            )
-
-            y +=
-                18f *
-                    u
-        }
-
-        val credit =
-            brandConfig.creditLine()
-
-        if (
-            credit.isNotBlank()
-        ) {
-            text.color =
-                0xFFAEB7C7.toInt()
-
-            text.textSize =
-                10.0f *
-                    u
-
-            drawFitText(
-                c,
-                credit,
-                safeLeft,
-                y,
-                maxWidth,
-                text,
-                8.4f *
-                    u
-            )
-
-            y +=
-                14f *
-                    u
-        }
-
-        val railEndY =
-            y +
-                (
-                    6f *
-                        u
-                    )
-
-        c.drawLine(
-            safeLeft -
-                (
-                    8f *
-                        u
-                    ),
-            railStartY,
-            safeLeft -
-                (
-                    8f *
-                        u
-                    ),
-            railEndY,
-            rail
+        y += 15f * u
+        drawFitText(
+            c,
+            "REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            9.2f * u
         )
 
-        c.drawLine(
-            safeLeft -
-                (
-                    8f *
-                        u
-                    ),
-            railEndY,
-            safeLeft +
-                (
-                    7f *
-                        u
-                    ),
-            railEndY,
-            rail
+        // 3. REC / timecode / date and local clock.
+        y += 17f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.textSize = 13.3f * u
+        text.color =
+            if (recording != null) {
+                0xFFFF4138.toInt()
+            } else {
+                0xFFE6EEF0.toInt()
+            }
+
+        val recState =
+            when {
+                recording != null -> "● REC"
+                captureModes[captureModeIndex] == "PHOTO" -> "● PHOTO"
+                else -> "STBY"
+            }
+
+        drawFitText(
+            c,
+            "$recState • TIMECODE ${tc()} • ${clock.format(Date())}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            10.3f * u
+        )
+
+        y += 15f * u
+        text.textSize = 11.4f * u
+        drawFitText(
+            c,
+            "LOCAL ${ZoneId.systemDefault().id} • UTC ${utcClockText()} • START $recordStartUtc",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            8.3f * u
+        )
+
+        // 4. Editorial / camera identity.
+        y += 16f * u
+        text.color =
+            0xFFFFC21A.toInt()
+        text.textSize =
+            11.7f * u
+
+        drawFitText(
+            c,
+            "MODE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]} • FORMAT ${qualityModes[qualityIndex]} • ${captureModes[captureModeIndex]}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            8.3f * u
+        )
+
+        // 5. Place.
+        y += 16f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.NORMAL
+        )
+        text.color = Color.WHITE
+        text.textSize = 12.3f * u
+
+        drawFitText(
+            c,
+            "LOCATION • $placeName",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            8.6f * u
+        )
+
+        // 6. Live changing coordinates.
+        y += 16f * u
+        text.color =
+            0xFF7FE8FF.toInt()
+        text.textSize =
+            11.5f * u
+
+        drawFitText(
+            c,
+            "POSITION • ${coordinatePrimaryOverlay()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            8.2f * u
+        )
+
+        // 7. GPS altitude / accuracy / satellites / fix age.
+        y += 15f * u
+        text.color =
+            0xFF7FE8FF.toInt()
+        text.textSize =
+            11.1f * u
+
+        drawFitText(
+            c,
+            "GPS STATUS • ${gnssOverlay()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.9f * u
+        )
+
+        // 8. Compass / GPS bearing / speed / motion / distance.
+        y += 15f * u
+        text.color =
+            0xFF7FE8FF.toInt()
+        text.textSize =
+            11.0f * u
+
+        drawFitText(
+            c,
+            "NAVIGATION • ${navigationOverlay()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.8f * u
+        )
+
+        // 9. Real phone orientation / horizon angle.
+        y += 15f * u
+        text.color =
+            0xFFDDE8EA.toInt()
+        text.textSize =
+            10.7f * u
+
+        drawFitText(
+            c,
+            "LEVEL • ${orientationOverlay()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.6f * u
+        )
+
+        // 10. Weather.
+        y += 15f * u
+        text.color =
+            0xFF8ECFFF.toInt()
+        text.textSize =
+            10.2f * u
+
+        drawFitText(
+            c,
+            "WEATHER • ${weatherOverlay().removePrefix("WX ")}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.8f * u
+        )
+
+        // 11. Real recording audio amplitude + network / battery / storage.
+        y += 15f * u
+        text.color =
+            0xFF76E39A.toInt()
+        text.textSize =
+            10.9f * u
+
+        drawFitText(
+            c,
+            "${audioLevelOverlay()} • ${systemOverlay()}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.7f * u
+        )
+
+        // 12. Active camera state.
+        y += 16f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.BOLD
+        )
+        text.color =
+            0xFFFFC21A.toInt()
+        text.textSize =
+            10.2f * u
+
+        drawFitText(
+            c,
+            "CAMERA • ${qualityModes[qualityIndex]} • ${if (useFront) "FRONT" else "BACK"} • EXP $sceneExposureTarget • TAP AF • HIGH BITRATE",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.7f * u
+        )
+
+        // 13. Keep all automatic/manual-capability information.
+        y += 15f * u
+        text.typeface = Typeface.create(
+            Typeface.MONOSPACE,
+            Typeface.NORMAL
+        )
+        text.color =
+            0xFFDDE8EA.toInt()
+        text.textSize =
+            9.5f * u
+
+        drawFitText(
+            c,
+            "AUTO ISO • AUTO SHUTTER • AUTO WB • MIC ON • GPS ON • GRID • LEVEL • ${captureModes[captureModeIndex]}",
+            safeLeft,
+            y,
+            maxWidth,
+            text,
+            7.3f * u
         )
 
         c.restore()
-    }
-
-
-
-    private fun drawStrongRecordedText(
-        canvas: Canvas,
-        value: String,
-        x: Float,
-        y: Float,
-        paint: Paint
-    ) {
-        drawReportTextBackplate(
-            canvas,
-            value,
-            x,
-            y,
-            paint
-        )
-
-        val savedStyle =
-            paint.style
-
-        val savedColor =
-            paint.color
-
-        val savedStroke =
-            paint.strokeWidth
-
-        paint.style =
-            Paint.Style.STROKE
-
-        paint.strokeWidth =
-            paint.textSize *
-                reportHudOutlineScale()
-
-        paint.color =
-            reportHudOutlineColor()
-
-        canvas.drawText(
-            value,
-            x,
-            y,
-            paint
-        )
-
-        paint.style =
-            Paint.Style.FILL
-
-        paint.strokeWidth =
-            savedStroke
-
-        paint.color =
-            savedColor
-
-        canvas.drawText(
-            value,
-            x,
-            y,
-            paint
-        )
-
-        paint.style =
-            savedStyle
     }
 
     private fun instrumentStateColor(): Int {
@@ -8506,10 +3126,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 0xFFFF5A52.toInt()
 
             acc <= 8f ->
-                0xFF83B995.toInt()
+                0xFF76E39A.toInt()
 
             acc <= 25f ->
-                0xFFD8B85B.toInt()
+                0xFFFFC21A.toInt()
 
             else ->
                 0xFFFF6B57.toInt()
@@ -8529,16 +3149,16 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         val ring =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFFFFFFFF.toInt()
+                    0xCCFFFFFF.toInt()
                 style =
                     Paint.Style.STROKE
                 strokeWidth =
-                    2.0f * u
+                    1.2f * u
                 setShadowLayer(
-                    1.3f * u,
-                    0.4f * u,
-                    0.4f * u,
-                    0x88000000.toInt()
+                    2.0f * u,
+                    0.6f * u,
+                    0.6f * u,
+                    0xCC000000.toInt()
                 )
             }
 
@@ -8554,9 +3174,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         val tickPaint =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFFFFFFFF.toInt()
+                    0xBFFFFFFF.toInt()
                 strokeWidth =
-                    1.4f * u
+                    1.0f * u
             }
 
         val labelPaint =
@@ -8569,7 +3189,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 textAlign =
                     Paint.Align.CENTER
                 textSize =
-                    11.0f * u
+                    9.2f * u
                 setShadowLayer(
                     2.0f * u,
                     0.5f * u,
@@ -8581,7 +3201,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         val valuePaint =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFF83C7D4.toInt()
+                    0xFF7FE8FF.toInt()
                 typeface = Typeface.create(
                     Typeface.MONOSPACE,
                     Typeface.BOLD
@@ -8708,7 +3328,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         val pointer =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color =
-                    0xFFD8B85B.toInt()
+                    0xFFFFC21A.toInt()
                 style =
                     Paint.Style.FILL
             }
@@ -8756,7 +3376,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         )
 
         valuePaint.textSize =
-            9.4f * u
+            7.6f * u
         valuePaint.color =
             stateColor
 
@@ -8831,10 +3451,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     0xFFFF4138.toInt()
 
                 level >= 0.72f ->
-                    0xFFD8B85B.toInt()
+                    0xFFFFC21A.toInt()
 
                 else ->
-                    0xFF83B995.toInt()
+                    0xFF76E39A.toInt()
             }
 
         val fill =
@@ -8909,10 +3529,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     0xFFFF5A52.toInt()
 
                 kotlin.math.abs(roll) <= 1f ->
-                    0xFF83B995.toInt()
+                    0xFF76E39A.toInt()
 
                 kotlin.math.abs(roll) <= 3f ->
-                    0xFFD8B85B.toInt()
+                    0xFFFFC21A.toInt()
 
                 else ->
                     0xFFFF6B57.toInt()
@@ -9227,10 +3847,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     override fun onResume() {
         super.onResume()
 
-        refreshV228BrandUi()
-        lastV233ColorMonitorKey = ""
-        refreshV233ColorMonitor()
-
         rotationVectorSensor?.let { sensor ->
             sensorManager.registerListener(
                 this,
@@ -9238,57 +3854,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 SensorManager.SENSOR_DELAY_GAME
             )
         }
-
-        ambientLightSensor?.let { sensor ->
-            sensorManager.registerListener(
-                this,
-                sensor,
-                SensorManager.SENSOR_DELAY_NORMAL
-            )
-        }
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q &&
-            !thermalListenerRegistered
-        ) {
-            try {
-                powerManager.addThermalStatusListener(
-                    thermalStatusListener
-                )
-
-                thermalStatus =
-                    powerManager.currentThermalStatus
-
-                thermalListenerRegistered =
-                    true
-            } catch (_: Exception) {
-                thermalListenerRegistered =
-                    false
-            }
-        }
     }
 
     override fun onPause() {
         try {
             sensorManager.unregisterListener(this)
         } catch (_: Exception) {
-        }
-
-        if (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q &&
-            thermalListenerRegistered
-        ) {
-            try {
-                powerManager.removeThermalStatusListener(
-                    thermalStatusListener
-                )
-            } catch (_: Exception) {
-            }
-
-            thermalListenerRegistered =
-                false
         }
 
         super.onPause()
@@ -9304,30 +3875,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         event: SensorEvent?
     ) {
         if (
-            event ==
-                null
-        ) {
-            return
-        }
-
-        if (
-            event.sensor.type ==
-                Sensor.TYPE_LIGHT
-        ) {
-            ambientLux =
-                event.values
-                    .firstOrNull()
-                    ?.coerceAtLeast(
-                        0f
-                    )
-
-            updateLightAdvisor()
-            return
-        }
-
-        if (
+            event == null ||
             event.sensor.type !=
-                Sensor.TYPE_ROTATION_VECTOR
+            Sensor.TYPE_ROTATION_VECTOR
         ) {
             return
         }
@@ -9358,111 +3908,13 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     orientation[2].toDouble()
                 ).toFloat()
 
-            val previousAzimuth =
-                compassAzimuthDeg
-            val previousPitch =
-                phonePitchDeg
-            val previousRoll =
-                phoneRollDeg
-
-            val normalizedAzimuth =
+            compassAzimuthDeg =
                 (
                     (azimuth % 360f) +
                         360f
                     ) % 360f
-
-            compassAzimuthDeg =
-                normalizedAzimuth
-            phonePitchDeg =
-                pitch
-            phoneRollDeg =
-                roll
-
-            val now =
-                SystemClock.elapsedRealtime()
-
-            if (
-                previousAzimuth !=
-                    null &&
-                previousPitch !=
-                    null &&
-                previousRoll !=
-                    null &&
-                lastMotionSampleMs >
-                    0L
-            ) {
-                val dt =
-                    (
-                        now -
-                            lastMotionSampleMs
-                        ).coerceAtLeast(
-                            1L
-                        )
-
-                val azRaw =
-                    kotlin.math.abs(
-                        normalizedAzimuth -
-                            previousAzimuth
-                    )
-
-                val azDelta =
-                    minOf(
-                        azRaw,
-                        360f -
-                            azRaw
-                    )
-
-                val rollDelta =
-                    kotlin.math.abs(
-                        roll -
-                            previousRoll
-                    )
-
-                val pitchDelta =
-                    kotlin.math.abs(
-                        pitch -
-                            previousPitch
-                    )
-
-                val scale =
-                    (
-                        16.67f /
-                            dt.toFloat()
-                        ).coerceIn(
-                            0.35f,
-                            2.5f
-                        )
-
-                val rawScore =
-                    (
-                        (
-                            rollDelta +
-                                pitchDelta +
-                                (
-                                    azDelta *
-                                        0.35f
-                                    )
-                            ) *
-                            4.2f *
-                            scale
-                        ).coerceIn(
-                            0f,
-                            100f
-                        )
-
-                cameraShakeScore =
-                    (
-                        cameraShakeScore *
-                            0.72f
-                        ) +
-                        (
-                            rawScore *
-                                0.28f
-                            )
-            }
-
-            lastMotionSampleMs =
-                now
+            phonePitchDeg = pitch
+            phoneRollDeg = roll
         } catch (_: Exception) {
         }
     }
@@ -9948,61 +4400,12 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             value.substring(0, end) + ellipsis
         }
 
-        drawReportTextBackplate(
-            canvas,
-            textToDraw,
-            x,
-            y,
-            paint
-        )
-
-        val savedStyle =
-            paint.style
-
-        val savedColor =
-            paint.color
-
-        val savedStroke =
-            paint.strokeWidth
-
-        // V192: high-contrast recorded text. A solid black outline sits
-        // behind the chosen text colour so the burn-in stays readable on
-        // white walls, sky, sunlight and other bright video backgrounds.
-        paint.style =
-            Paint.Style.STROKE
-
-        paint.strokeWidth =
-            paint.textSize *
-                reportHudOutlineScale()
-
-        paint.color =
-            reportHudOutlineColor()
-
         canvas.drawText(
             textToDraw,
             x,
             y,
             paint
         )
-
-        paint.style =
-            Paint.Style.FILL
-
-        paint.strokeWidth =
-            savedStroke
-
-        paint.color =
-            savedColor
-
-        canvas.drawText(
-            textToDraw,
-            x,
-            y,
-            paint
-        )
-
-        paint.style =
-            savedStyle
     }
 
     private fun toggleRecording() {
@@ -10024,16 +4427,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             return
         }
 
-        if (
-            !runFieldPreflightBeforeRecording()
-        ) {
-            return
-        }
-
         reportId = newReportId()
         recordStartUtc = "--"
 
-        baseName = "DEVELOP_UGANDA_V236_${cameraExperienceId}_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
+        baseName = "DEVELOP_UGANDA_${reportId}_${sceneModes[sceneIndex]}_${lookModes[lookIndex]}_" +
             SimpleDateFormat(
                 "yyyyMMdd_HHmmss",
                 Locale.US
@@ -10084,19 +4481,13 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         ) { event ->
             when (event) {
                 is VideoRecordEvent.Start -> {
-                    enforceFullFramePreview()
-                    enforceImmersiveCameraWindow()
-
-                    recordingWarningsSeen.clear()
                     recStarted = System.currentTimeMillis()
                     recordStartUtc =
                         Instant.ofEpochMilli(
                             recStarted
                         ).toString()
-                    markRecordingJournalStarted()
                     distanceTravelledM = 0f
                     audioAmplitude = 0.0
-                    audioPeakAmplitude = 0.0
                     audioStateLabel = "MIC REC"
                     previousTrackLat = lat
                     previousTrackLon = lon
@@ -10122,14 +4513,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         event.recordingStats.audioStats
                     audioAmplitude =
                         audioStats.audioAmplitude
-
-                    audioPeakAmplitude =
-                        maxOf(
-                            audioPeakAmplitude *
-                                0.985,
-                            audioAmplitude
-                        )
-
                     audioStateLabel =
                         when {
                             audioStats.hasError() -> "MIC ERROR"
@@ -10144,7 +4527,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     recording = null
                     recStarted = 0L
                     audioAmplitude = 0.0
-                    audioPeakAmplitude = 0.0
                     audioStateLabel =
                         if (
                             ContextCompat.checkSelfPermission(
@@ -10166,10 +4548,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                     }
 
-                    markRecordingJournalFinished(
-                        hadError
-                    )
-
                     if (hadError) {
                         statusView.text = "ERROR"
                         statusView.setTextColor(
@@ -10183,9 +4561,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
                         toast("Recording failed")
                     } else {
-                        statusView.text = "FINALIZED • QC"
+                        statusView.text = "SAVED"
                         statusView.setTextColor(
-                            0xFF83B995.toInt()
+                            0xFF76E39A.toInt()
                         )
                         telemetryRecorder.exportSidecar(
                             baseName
@@ -10197,117 +4575,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             createIntegrityRecord(
                                 event.outputResults.outputUri,
                                 Instant.now().toString()
-                            )
-                        }
-
-                        if (
-                            !hadError
-                        ) {
-                            val packageFinishedUtc =
-                                Instant.now().toString()
-
-                            DevelopUgandaStoryPackager.createVideoPackage(
-                                this@DevelopUgandaCameraActivity,
-                                event.outputResults.outputUri,
-                                DevelopUgandaStoryPackager.StoryMetadata(
-                                    packageId = reportId.ifBlank {
-                                        baseName.ifBlank {
-                                            "DU_${System.currentTimeMillis()}"
-                                        }
-                                    },
-                                    camera = cameraExperienceShortLabel(),
-                                    reporter = reporterDisplayName(),
-                                    storyId = storyDisplayId(),
-                                    title = storyId.ifBlank {
-                                        "FIELD REPORT"
-                                    },
-                                    place = placeName,
-                                    latitude = lat,
-                                    longitude = lon,
-                                    gpsAccuracyM = accuracy,
-                                    startedUtc = recordStartUtc,
-                                    finishedUtc = packageFinishedUtc,
-                                    scene = sceneModes[sceneIndex],
-                                    look = lookModes[lookIndex],
-                                    quality = qualityModes[qualityIndex],
-                                    autoView = autoViewSummary,
-                                    warnings = recordingWarningsSeen.toList(),
-                                    sourceKind = "REPORT",
-                                    autoTranscribe =
-                                        cameraExperienceId == "V211_AUDIO" ||
-                                            sceneModes[sceneIndex] == "INTERVIEW",
-                                    expectSocialMaster = isSocialMediaCamera()
-                                )
-                            )
-                        }
-
-                        val v229ColorPackageId =
-                            reportId.ifBlank {
-                                baseName.ifBlank {
-                                    "DU_${System.currentTimeMillis()}"
-                                }
-                            }
-
-                        scheduleV233ColorMaster(
-                            event.outputResults.outputUri,
-                            v229ColorPackageId
-                        )
-
-                        saveV227ContinuitySnapshot()
-
-                        val reviewPackageId =
-                            reportId.ifBlank {
-                                baseName.ifBlank {
-                                    "DU_${System.currentTimeMillis()}"
-                                }
-                            }
-
-                        DevelopUgandaClipQc.inspect(
-                            this@DevelopUgandaCameraActivity,
-                            event.outputResults.outputUri,
-                            reviewPackageId
-                        ) {
-                                result ->
-                            statusView.text =
-                                if (
-                                    result.playableFrame &&
-                                    result.hasVideo &&
-                                    result.sourceReadable
-                                ) {
-                                    "QC READY"
-                                } else {
-                                    "QC CHECK"
-                                }
-
-                            statusView.setTextColor(
-                                if (
-                                    result.playableFrame &&
-                                    result.hasVideo &&
-                                    result.sourceReadable
-                                ) {
-                                    0xFF83B995.toInt()
-                                } else {
-                                    0xFFD8B85B.toInt()
-                                }
-                            )
-
-                            DevelopUgandaInstantReviewDialog.show(
-                                this@DevelopUgandaCameraActivity,
-                                result,
-                                reviewPackageId,
-                                isSocialMediaCamera()
-                            ) {
-                                matchLastShotContinuity()
-                            }
-                        }
-
-                        if (
-                            !hadError &&
-                            isSocialMediaCamera()
-                        ) {
-                            exportAutomaticSocialMaster(
-                                event.outputResults.outputUri,
-                                reportId
                             )
                         }
 
@@ -10324,16 +4591,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                         )
 
                         uiHandler.postDelayed({
-                            if (
-                                statusView.text.toString() !=
-                                    "QC CHECK"
-                            ) {
-                                statusView.text = "STBY"
-                                statusView.setTextColor(
-                                    0xFFFF5A52.toInt()
-                                )
-                            }
-                        }, 5200L)
+                            statusView.text = "STBY"
+                            statusView.setTextColor(
+                                0xFFFF5A52.toInt()
+                            )
+                        }, 1800L)
                     }
                 }
 
@@ -10402,7 +4664,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 ) {
                     statusView.text = "PHOTO SAVED"
                     statusView.setTextColor(
-                        0xFF83B995.toInt()
+                        0xFF76E39A.toInt()
                     )
                     toast(
                         "Photo saved • develop.uganda"
@@ -10437,21 +4699,21 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         val values =
             listOf(
                 sceneButton to
-                    0xFFD8B85B.toInt(),
+                    0xFFFFC21A.toInt(),
                 lookButton to
-                    0xFF83C7D4.toInt(),
+                    0xFF7FE8FF.toInt(),
                 qualityButton to
                     0xFFE8F1F2.toInt(),
                 captureModeButton to
-                    0xFF83B995.toInt(),
+                    0xFF76E39A.toInt(),
                 viewModeButton to
-                    0xFF83B995.toInt(),
+                    0xFF76E39A.toInt(),
                 settingsButton to
-                    0xFF83C7D4.toInt(),
+                    0xFF7FE8FF.toInt(),
                 guidesButton to
-                    0xFFD8B85B.toInt(),
+                    0xFFFFC21A.toInt(),
                 resetButton to
-                    0xFFB66B67.toInt()
+                    0xFFFF8A84.toInt()
             )
 
         values.forEach {
@@ -10466,22 +4728,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     }
 
     private fun refreshHud() {
-        refreshV233ColorMonitor()
-        applyAutoDirectorIfNeeded()
-        updateReportModePreviewTuning()
-        applyIndependentCameraExperienceUi()
-        updateHorizonGuard()
-        updateMotionGuard()
-        updateLightAdvisor()
-        updateAudioGuard()
-        updateThermalGuard()
-        updateShotQualityGuard()
-
         timecodeView.text =
             "TC ${tc()}"
 
         formatView.text =
-            "${verifiedCameraStateText()} • SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]}"
+            "${qualityModes[qualityIndex]} • DEVICE FPS • SCENE ${sceneModes[sceneIndex]} • LOOK ${lookModes[lookIndex]}"
 
         locationView.text =
             locationOverlay()
@@ -10494,7 +4745,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             ::previewNarrationPanel.isInitialized
         ) {
             previewTagView.text =
-                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • ${autoDirectorStateText()} • V239"
+                sceneTag()
 
             previewIdentityView.text =
                 "REPORT ID $reportId • REPORTER ${reporterDisplayName()} • STORY ${storyDisplayId()}"
@@ -10524,7 +4775,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 "${weatherOverlay()} • ${audioLevelOverlay()} • ${systemOverlay()}"
 
             previewHealthView.text =
-                "${recordingHealthText()} • ${motionGuardLabel()} • ${estimatedRecordingTimeText()}"
+                recordingHealthText()
 
             previewHealthView.setTextColor(
                 recordingHealthColor()
@@ -10574,7 +4825,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
         if (::lensButton.isInitialized) {
             lensButton.text =
-                "LENS ▾\n${currentLensDeckLabel()}"
+                "LENS ▾\n${if (useFront) "FRONT" else "BACK"}"
         }
     }
 
@@ -10640,17 +4891,9 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 qualityIndex
             ]
         ) {
-            "SOCIAL FHD" -> "1080 SOCIAL"
-            "SOCIAL 60" -> "1080 60"
             "MASTER UHD" -> "4K MASTER"
-            "UHD 60" -> "4K 60"
-            "MASTER HDR" -> "4K HDR"
-            "SOCIAL HDR" -> "1080 HDR"
-            "ACTION STAB" -> "ACTION"
-            "ACTION 60" -> "ACTION 60"
-            "LOW LIGHT" -> "NIGHT VIDEO"
             "FAST HD" -> "HD FAST"
-            else -> "AUTO"
+            else -> "SOCIAL"
         }
     }
 
@@ -10660,943 +4903,14 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                 qualityIndex
             ]
         ) {
-            "SOCIAL FHD" -> 24_000_000
-            "SOCIAL 60" -> 42_000_000
-            "MASTER UHD" -> 64_000_000
-            "UHD 60" -> 90_000_000
-            "MASTER HDR" -> 72_000_000
-            "SOCIAL HDR" -> 34_000_000
-            "ACTION STAB" -> 30_000_000
-            "ACTION 60" -> 48_000_000
-            "LOW LIGHT" -> 28_000_000
-            "FAST HD" -> 12_000_000
-            else -> 24_000_000
-        }
-    }
-
-    private fun requestedVideoFps(): Int {
-        return when (
-            qualityModes[
-                qualityIndex
-            ]
-        ) {
-            "SOCIAL 60",
-            "UHD 60",
-            "ACTION 60" -> 60
-            "LOW LIGHT" -> 0
-            else -> 30
-        }
-    }
-
-    private fun wantsVideoHdr(): Boolean {
-        return qualityModes[
-            qualityIndex
-        ] in
-            setOf(
-                "MASTER HDR",
-                "SOCIAL HDR"
-            )
-    }
-
-    private fun wantsVideoStabilization(): Boolean {
-        return when (
-            qualityModes[
-                qualityIndex
-            ]
-        ) {
-            "SOCIAL FHD",
-            "ACTION STAB",
-            "ACTION 60",
-            "LOW LIGHT" -> true
-            else -> false
-        }
-    }
-
-    private fun reportCameraPrefsName(): String {
-        return "develop_uganda_report_camera_" +
-            cameraExperienceId.lowercase(
-                Locale.US
-            )
-    }
-
-    private fun cameraExperienceDisplayName(): String {
-        return when (cameraExperienceId) {
-            "V205_FOCUS" ->
-                "V205 • PEOPLE FOCUS"
-            "V206_METER" ->
-                "V206 • SUBJECT METERING"
-            "V207_HORIZON" ->
-                "V207 • BUILDINGS & LEVEL"
-            "V208_STEADY" ->
-                "V208 • WALK & ACTION STEADY"
-            "V209_NIGHT" ->
-                "V209 • NIGHT & LOW LIGHT"
-            "V210_ALL_PRO" ->
-                "V210 • EVERYDAY PRO"
-            "V211_AUDIO" ->
-                "V211 • INTERVIEW AUDIO"
-            "V212_VERIFIED" ->
-                "V212 • VERIFIED REPORT"
-            "V213_THERMAL" ->
-                "V213 • LONG RECORD SAFE"
-            "V214_SIGNATURE" ->
-                "V214 • CINEMATIC LOOKS"
-            "V215_AUTO" ->
-                "V215 • SMART AUTO"
-            "V222_SOCIAL" ->
-                "V222 • SOCIAL MEDIA CAM"
-            else ->
-                "V210 • EVERYDAY PRO"
-        }
-    }
-
-    private fun cameraExperienceShortLabel(): String {
-        return cameraExperienceDisplayName()
-            .removeSuffix(
-                " CAMERA"
-            )
-    }
-
-    private fun cameraExperienceInstruction(): String {
-        return when (cameraExperienceId) {
-            "V205_FOCUS" ->
-                "PEOPLE • PORTRAITS • INTERVIEWS • TAP AF • HOLD AF LOCK"
-            "V206_METER" ->
-                "BACKLIGHT • WINDOWS • FACES • HOLD AF+AE+AWB METERING"
-            "V207_HORIZON" ->
-                "BUILDINGS • ROOMS • HORIZONS • KEEP LEVEL GUIDE GREEN"
-            "V208_STEADY" ->
-                "WALKING • VEHICLES • ACTION • STABILIZATION WHEN SUPPORTED"
-            "V209_NIGHT" ->
-                "NIGHT • DARK INDOOR • LUX-DRIVEN LOW-LIGHT PROFILE"
-            "V210_ALL_PRO" ->
-                "EVERYDAY • NEWS • TRAVEL • ALL PRO TOOLS TOGETHER"
-            "V211_AUDIO" ->
-                "INTERVIEW • SPEECH • EVENTS • WATCH MIC GOOD/HOT/CLIP RISK"
-            "V212_VERIFIED" ->
-                "EVIDENCE • SITE REPORTS • INCIDENTS • TELEMETRY + INTEGRITY"
-            "V213_THERMAL" ->
-                "LONG RECORDINGS • HOT CONDITIONS • THERMAL SAFE FALLBACK"
-            "V214_SIGNATURE" ->
-                "CINEMATIC • PEOPLE • TRAVEL • HDR/WARM WITH DEVICE FALLBACK"
-            "V215_AUTO" ->
-                "QUICK SHOOTING • AUTO CHOOSES LOW-LIGHT/ACTION/60/BALANCED"
-            "V222_SOCIAL" ->
-                "RECORD → AUTO OPTIMIZE → SM POSTS • 9:16 • SOCIAL FHD • ORIGINAL + SOCIAL COPY"
-            else ->
-                "ALL PRO CAMERA TOOLS"
-        }
-    }
-
-
-    private fun cameraExperienceBestFor(): String {
-        return when (cameraExperienceId) {
-            "V205_FOCUS" ->
-                "PEOPLE / PORTRAITS / INTERVIEWS"
-            "V206_METER" ->
-                "BACKLIT FACES / WINDOWS / MIXED LIGHT"
-            "V207_HORIZON" ->
-                "BUILDINGS / ROOMS / LANDSCAPES"
-            "V208_STEADY" ->
-                "WALKING / VEHICLES / ACTION"
-            "V209_NIGHT" ->
-                "NIGHT / DARK INDOOR / STREETS"
-            "V210_ALL_PRO" ->
-                "EVERYDAY / NEWS / TRAVEL"
-            "V211_AUDIO" ->
-                "INTERVIEWS / SPEECH / EVENTS"
-            "V212_VERIFIED" ->
-                "SITE REPORTS / INCIDENTS / EVIDENCE"
-            "V213_THERMAL" ->
-                "LONG RECORDINGS / HOT CONDITIONS"
-            "V214_SIGNATURE" ->
-                "CINEMATIC / PEOPLE / TRAVEL"
-            "V215_AUTO" ->
-                "QUICK SHOOTING / WHEN UNSURE"
-            "V222_SOCIAL" ->
-                "TIKTOK / REELS / SHORTS / SOCIAL POSTS"
-            else ->
-                "EVERYDAY PROFESSIONAL CAPTURE"
-        }
-    }
-
-    private fun cameraExperienceAccentColor(): Int {
-        return when (cameraExperienceId) {
-            "V205_FOCUS" -> 0xFFAEBDEB.toInt()
-            "V206_METER" -> 0xFFD0B06F.toInt()
-            "V207_HORIZON" -> 0xFF91B6A0.toInt()
-            "V208_STEADY" -> 0xFF71B9A7.toInt()
-            "V209_NIGHT" -> 0xFF8A86B8.toInt()
-            "V210_ALL_PRO" -> 0xFF8FA8E8.toInt()
-            "V211_AUDIO" -> 0xFF83B995.toInt()
-            "V212_VERIFIED" -> 0xFF73B7D9.toInt()
-            "V213_THERMAL" -> 0xFFC76D73.toInt()
-            "V214_SIGNATURE" -> 0xFFA793D8.toInt()
-            "V215_AUTO" -> 0xFF73B7D9.toInt()
-            "V222_SOCIAL" -> 0xFF62D8C9.toInt()
-            else -> 0xFFAEBDEB.toInt()
-        }
-    }
-
-    private fun applyIndependentCameraDefaultsIfNeeded() {
-        val prefs =
-            getSharedPreferences(
-                reportCameraPrefsName(),
-                Context.MODE_PRIVATE
-            )
-
-        if (
-            prefs.getBoolean(
-                "experience_initialized",
-                false
-            )
-        ) {
-            return
-        }
-
-        fun quality(value: String) {
-            val index = qualityModes.indexOf(value)
-            if (index >= 0) qualityIndex = index
-        }
-
-        fun look(value: String) {
-            val index = lookModes.indexOf(value)
-            if (index >= 0) lookIndex = index
-        }
-
-        fun scene(value: String) {
-            val index = sceneModes.indexOf(value)
-            if (index >= 0) sceneIndex = index
-        }
-
-        when (cameraExperienceId) {
-            "V205_FOCUS" -> {
-                quality("SOCIAL FHD")
-                scene("INTERVIEW")
-                look("CLEAN")
-            }
-            "V206_METER" -> {
-                quality("SOCIAL FHD")
-                scene("REPORTER")
-                look("NATURAL")
-            }
-            "V207_HORIZON" -> {
-                quality("SOCIAL FHD")
-                scene("OUTDOOR")
-                look("NATURAL")
-            }
-            "V208_STEADY" -> {
-                quality("ACTION STAB")
-                scene("DOCUMENTARY")
-                look("CLEAN")
-            }
-            "V209_NIGHT" -> {
-                quality("LOW LIGHT")
-                scene("NIGHT")
-                look("NIGHT")
-            }
-            "V210_ALL_PRO" -> {
-                quality("SOCIAL FHD")
-                scene("REPORTER")
-                look("CLEAN")
-            }
-            "V211_AUDIO" -> {
-                quality("SOCIAL FHD")
-                scene("INTERVIEW")
-                look("CLEAN")
-            }
-            "V212_VERIFIED" -> {
-                quality("SOCIAL FHD")
-                scene("NEWS")
-                look("NATURAL")
-            }
-            "V213_THERMAL" -> {
-                quality("SOCIAL FHD")
-                scene("REPORTER")
-                look("CLEAN")
-            }
-            "V214_SIGNATURE" -> {
-                quality("SOCIAL HDR")
-                scene("CINEMA")
-                look("WARM")
-            }
-            "V215_AUTO" -> {
-                quality("SOCIAL FHD")
-                scene("REPORTER")
-                look("CLEAN")
-                autoDirectorEnabled = true
-            }
-            "V222_SOCIAL" -> {
-                quality("SOCIAL FHD")
-                scene("REPORTER")
-                look("CLEAN")
-                reportHudSizeIndex = 0
-                reportHudContrastIndex = 1
-                reportHudBackingIndex = 1
-                reportDisplayMode = "SOCIAL POST"
-                autoDirectorEnabled = false
-            }
-        }
-
-        prefs.edit()
-            .putBoolean(
-                "experience_initialized",
-                true
-            )
-            .apply()
-
-        saveReportCameraPreferences()
-    }
-
-    private fun applyIndependentCameraExperienceUi() {
-        if (::cameraExperienceBannerView.isInitialized) {
-            cameraExperienceBannerView.text =
-                "${cameraExperienceDisplayName()}\nBEST FOR • ${cameraExperienceBestFor()}\n${cameraExperienceInstruction()}"
-            cameraExperienceBannerView.setTextColor(
-                cameraExperienceAccentColor()
-            )
-        }
-
-        val mutedAlpha = 0.36f
-
-        if (::horizonGuardView.isInitialized) {
-            horizonGuardView.alpha =
-                if (
-                    cameraExperienceId in setOf(
-                        "V207_HORIZON",
-                        "V210_ALL_PRO",
-                        "V212_VERIFIED",
-                        "V215_AUTO"
-                    )
-                ) 1f else mutedAlpha
-        }
-
-        if (::motionGuardView.isInitialized) {
-            motionGuardView.alpha =
-                if (
-                    cameraExperienceId in setOf(
-                        "V208_STEADY",
-                        "V210_ALL_PRO",
-                        "V212_VERIFIED",
-                        "V215_AUTO"
-                    )
-                ) 1f else mutedAlpha
-        }
-
-        if (::lightAdvisorView.isInitialized) {
-            lightAdvisorView.alpha =
-                if (
-                    cameraExperienceId in setOf(
-                        "V209_NIGHT",
-                        "V210_ALL_PRO",
-                        "V212_VERIFIED",
-                        "V215_AUTO"
-                    )
-                ) 1f else mutedAlpha
-        }
-
-        if (::audioGuardView.isInitialized) {
-            audioGuardView.alpha =
-                if (
-                    cameraExperienceId in setOf(
-                        "V211_AUDIO",
-                        "V210_ALL_PRO",
-                        "V212_VERIFIED"
-                    )
-                ) 1f else mutedAlpha
-        }
-
-        if (::thermalGuardView.isInitialized) {
-            thermalGuardView.alpha =
-                if (
-                    cameraExperienceId in setOf(
-                        "V213_THERMAL",
-                        "V210_ALL_PRO",
-                        "V212_VERIFIED",
-                        "V215_AUTO"
-                    )
-                ) 1f else mutedAlpha
-        }
-
-        if (::autoDirectorButton.isInitialized) {
-            autoDirectorButton.alpha =
-                if (
-                    cameraExperienceId ==
-                        "V215_AUTO"
-                ) 1f else 0.64f
-        }
-    }
-
-    private fun autoDirectorSuggestedMode(): Pair<String, String> {
-        if (
-            isThermalSevereOrWorse()
-        ) {
-            return Pair(
-                "SOCIAL FHD",
-                "THERMAL SAFE"
-            )
-        }
-
-        val lux =
-            ambientLux
-
-        if (
-            lux != null &&
-            lux < 25f
-        ) {
-            return Pair(
-                "LOW LIGHT",
-                "DARK SCENE"
-            )
-        }
-
-        if (
-            cameraShakeScore > 22f &&
-            (
-                lux == null ||
-                lux >= 100f
-            )
-        ) {
-            return Pair(
-                "ACTION STAB",
-                "HANDHELD MOTION"
-            )
-        }
-
-        if (
-            lux != null &&
-            lux >= 500f &&
-            cameraShakeScore <= 8f
-        ) {
-            return Pair(
-                "SOCIAL 60",
-                "BRIGHT + STEADY"
-            )
-        }
-
-        return Pair(
-            "SOCIAL FHD",
-            "BALANCED"
-        )
-    }
-
-    private fun autoDirectorStateText(): String {
-        if (!autoDirectorEnabled) {
-            return "AUTO MANUAL"
-        }
-
-        val suggestion =
-            autoDirectorSuggestedMode()
-
-        return "AUTO ${suggestion.first} • ${suggestion.second}"
-    }
-
-    private fun toggleAutoDirector() {
-        if (
-            recording != null
-        ) {
-            toast(
-                "Stop recording before changing Auto Director"
-            )
-            return
-        }
-
-        autoDirectorEnabled =
-            !autoDirectorEnabled
-
-        autoDirectorButton.text =
-            "AUTO DIRECTOR ▾\n" +
-                if (
-                    autoDirectorEnabled
-                ) {
-                    "ON"
-                } else {
-                    "OFF"
-                }
-
-        autoDirectorButton.isSelected =
-            autoDirectorEnabled
-
-        autoDirectorReason =
-            if (
-                autoDirectorEnabled
-            ) {
-                autoDirectorSuggestedMode().second
-            } else {
-                "MANUAL"
-            }
-
-        saveReportCameraPreferences()
-
-        toast(
-            if (
-                autoDirectorEnabled
-            ) {
-                "AUTO DIRECTOR ON • ${autoDirectorStateText()}"
-            } else {
-                "AUTO DIRECTOR OFF • manual camera mode"
-            }
-        )
-
-        if (
-            autoDirectorEnabled
-        ) {
-            applyAutoDirectorIfNeeded(
-                force = true
-            )
-        }
-    }
-
-    private fun applyAutoDirectorIfNeeded(
-        force: Boolean = false
-    ) {
-        if (
-            !autoDirectorEnabled ||
-            recording != null
-        ) {
-            return
-        }
-
-        val (targetMode, reason) =
-            autoDirectorSuggestedMode()
-
-        autoDirectorReason =
-            reason
-
-        val now =
-            SystemClock.elapsedRealtime()
-
-        if (
-            !force &&
-            now - autoDirectorLastSwitchMs < 3500L
-        ) {
-            return
-        }
-
-        val targetIndex =
-            qualityModes.indexOf(
-                targetMode
-            )
-
-        if (
-            targetIndex < 0 ||
-            targetIndex == qualityIndex
-        ) {
-            return
-        }
-
-        qualityIndex =
-            targetIndex
-
-        autoDirectorLastSwitchMs =
-            now
-
-        if (
-            ::qualityButton.isInitialized
-        ) {
-            qualityButton.text =
-                "FORMAT ▾\n${qualityDeckLabel()}"
-        }
-
-        saveReportCameraPreferences()
-
-        toast(
-            "AUTO DIRECTOR • $targetMode • $reason"
-        )
-
-        bindCamera()
-    }
-
-    private fun previewLookTintColor(): Int {
-        // Very low alpha on purpose: this is an operator preview cue.
-        // The recorded creative look is still produced by drawCreativeLook().
-        return when (
-            lookModes[
-                lookIndex
-            ]
-        ) {
-            "WARM" ->
-                0x10FF8A3D.toInt()
-
-            "COOL" ->
-                0x10007AFF.toInt()
-
-            "TEAL" ->
-                0x1000A7A0.toInt()
-
-            "GOLD" ->
-                0x10D6A83A.toInt()
-
-            "SOFT" ->
-                0x0CF0D8D0.toInt()
-
-            "SUNSET" ->
-                0x10E06A46.toInt()
-
-            "BLUE HOUR" ->
-                0x102F5FA8.toInt()
-
-            "NIGHT" ->
-                0x12173363.toInt()
-
-            "MONO" ->
-                0x0D707070.toInt()
-
-            "NATURAL" ->
-                0x0600A070.toInt()
-
-            else ->
-                Color.TRANSPARENT
-        }
-    }
-
-    private fun reportModeAccentColor(): Int {
-        return when (
-            qualityModes[
-                qualityIndex
-            ]
-        ) {
-            "SOCIAL FHD" ->
-                0xFF8FA8E8.toInt()
-
-            "SOCIAL 60" ->
-                0xFF73B7D9.toInt()
-
-            "SOCIAL HDR" ->
-                0xFFA793D8.toInt()
-
             "MASTER UHD" ->
-                0xFFAEBDEB.toInt()
-
-            "UHD 60" ->
-                0xFF7FB8CA.toInt()
-
-            "MASTER HDR" ->
-                0xFFD0B06F.toInt()
-
-            "ACTION STAB" ->
-                0xFF91B6A0.toInt()
-
-            "ACTION 60" ->
-                0xFF71B9A7.toInt()
-
-            "LOW LIGHT" ->
-                0xFF8A86B8.toInt()
+                48_000_000
 
             "FAST HD" ->
-                0xFFAEB7C7.toInt()
+                10_000_000
 
             else ->
-                0xFFAEBDEB.toInt()
-        }
-    }
-
-    private fun reportModePurposeLabel(): String {
-        return when (
-            qualityModes[
-                qualityIndex
-            ]
-        ) {
-            "SOCIAL FHD" ->
-                "SOCIAL MASTER"
-
-            "SOCIAL 60" ->
-                "SMOOTH SOCIAL"
-
-            "SOCIAL HDR" ->
-                "SOCIAL HDR"
-
-            "MASTER UHD" ->
-                "4K MASTER"
-
-            "UHD 60" ->
-                "4K MOTION"
-
-            "MASTER HDR" ->
-                "HDR MASTER"
-
-            "ACTION STAB" ->
-                "STABLE ACTION"
-
-            "ACTION 60" ->
-                "FAST ACTION"
-
-            "LOW LIGHT" ->
-                "LOW LIGHT"
-
-            "FAST HD" ->
-                "FAST DELIVERY"
-
-            else ->
-                "CAMERA MODE"
-        }
-    }
-
-    private fun updateReportModePreviewTuning() {
-        if (
-            ::previewModeToneView.isInitialized
-        ) {
-            previewModeToneView.setBackgroundColor(
-                previewLookTintColor()
-            )
-        }
-
-        if (
-            ::previewTagView.isInitialized
-        ) {
-            previewTagView.setTextColor(
-                reportModeAccentColor()
-            )
-
-            previewTagView.text =
-                "${sceneTag()} • ${reportModePurposeLabel()} • ${lookModes[lookIndex]} • V221"
-        }
-    }
-
-    private fun thermalStateLabel(): String {
-        if (
-            Build.VERSION.SDK_INT <
-                Build.VERSION_CODES.Q
-        ) {
-            return "UNAVAILABLE"
-        }
-
-        return when (
-            thermalStatus
-        ) {
-            PowerManager.THERMAL_STATUS_NONE ->
-                "NORMAL"
-
-            PowerManager.THERMAL_STATUS_LIGHT ->
-                "LIGHT"
-
-            PowerManager.THERMAL_STATUS_MODERATE ->
-                "MODERATE"
-
-            PowerManager.THERMAL_STATUS_SEVERE ->
-                "SEVERE"
-
-            PowerManager.THERMAL_STATUS_CRITICAL ->
-                "CRITICAL"
-
-            PowerManager.THERMAL_STATUS_EMERGENCY ->
-                "EMERGENCY"
-
-            PowerManager.THERMAL_STATUS_SHUTDOWN ->
-                "SHUTDOWN"
-
-            else ->
-                "UNKNOWN"
-        }
-    }
-
-    private fun isThermalSevereOrWorse(): Boolean {
-        return (
-            Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.Q &&
-            thermalStatus >=
-                PowerManager.THERMAL_STATUS_SEVERE
-            )
-    }
-
-    private fun updateThermalGuard() {
-        if (
-            !::thermalGuardView.isInitialized
-        ) {
-            return
-        }
-
-        if (
-            operatorControlsHidden ||
-            cleanModeEnabled
-        ) {
-            thermalGuardView.visibility =
-                View.GONE
-
-            return
-        }
-
-        thermalGuardView.visibility =
-            View.VISIBLE
-
-        val label =
-            thermalStateLabel()
-
-        thermalGuardView.text =
-            "THERMAL • $label"
-
-        thermalGuardView.setTextColor(
-            when (label) {
-                "NORMAL",
-                "LIGHT" ->
-                    0xFF91B6A0.toInt()
-
-                "MODERATE" ->
-                    0xFFAEBDEB.toInt()
-
-                "SEVERE",
-                "CRITICAL",
-                "EMERGENCY",
-                "SHUTDOWN" ->
-                    0xFFC76D73.toInt()
-
-                else ->
-                    0xFFAEB7C7.toInt()
-            }
-        )
-    }
-
-    private fun applyThermalSafeProfileIfNeeded() {
-        if (
-            !isThermalSevereOrWorse() ||
-            recording !=
-                null
-        ) {
-            return
-        }
-
-        val current =
-            qualityModes[
-                qualityIndex
-            ]
-
-        val highDemand =
-            current in
-                setOf(
-                    "MASTER UHD",
-                    "UHD 60",
-                    "MASTER HDR",
-                    "SOCIAL HDR",
-                    "ACTION 60"
-                )
-
-        if (!highDemand) {
-            return
-        }
-
-        val safeIndex =
-            qualityModes.indexOf(
-                "SOCIAL FHD"
-            )
-
-        if (
-            safeIndex >=
-                0 &&
-            safeIndex !=
-                qualityIndex
-        ) {
-            qualityIndex =
-                safeIndex
-
-            if (
-                ::qualityButton.isInitialized
-            ) {
-                qualityButton.text =
-                    "FORMAT ▾\n${qualityDeckLabel()}"
-            }
-
-            toast(
-                "THERMAL ${thermalStateLabel()} • switched to SOCIAL FHD"
-            )
-        }
-    }
-
-    private fun verifiedCameraStateText(): String {
-        val rollText =
-            phoneRollDeg?.let {
-                String.format(
-                    Locale.US,
-                    "%+.1f°",
-                    it
-                )
-            } ?: "--"
-
-        val luxText =
-            ambientLux?.let {
-                String.format(
-                    Locale.US,
-                    "%.0fLUX",
-                    it
-                )
-            } ?: "--"
-
-        return buildString {
-            append("V216 VERIFIED")
-            append(" • ")
-            append(qualityDeckLabel())
-            append(" • ")
-            append(
-                reportModePurposeLabel()
-            )
-            append(" • LOOK ")
-            append(
-                lookModes[
-                    lookIndex
-                ]
-            )
-            append(" • ")
-            append(activeVideoFpsLabel)
-            append(" • ")
-            append(activeVideoStabilizationLabel)
-            append(" • ")
-            append(activeVideoDynamicRangeLabel)
-            append(" • ")
-            append(focusAssistLabel())
-            append(" • H ")
-            append(rollText)
-            append(" • ")
-            append(motionGuardLabel())
-            append(" • ")
-            append(ambientLightLabel())
-            append(" ")
-            append(luxText)
-            append(" • AUDIO ")
-            append(audioGuardLabel())
-            append(" • THERMAL ")
-            append(
-                thermalStateLabel()
-            )
-            append(" • ")
-            append(
-                autoDirectorStateText()
-            )
-            append(" • CAMERA ")
-            append(
-                cameraExperienceShortLabel()
-            )
-        }
-    }
-
-    private fun socialCameraStatus(): String {
-        return buildString {
-            append("CREATOR ENGINE • ")
-            append(qualityDeckLabel())
-            append(" • ")
-            append(activeVideoFpsLabel)
-            append(" • ")
-            append(activeVideoStabilizationLabel)
-            append(" • ")
-            append(activeVideoDynamicRangeLabel)
-            append(" • ")
-            append(activeVideoAspectLabel)
-            append(" • ")
-            append(targetVideoBitrate() / 1_000_000)
-            append("Mbps TARGET")
-            append(" • TAP AF")
-            append(" • HOLD AF+AE+AWB METER")
-            append(" • HORIZON GUARD")
-            append(" • STEADYSHOT ")
-            append(
-                motionGuardLabel()
-            )
-            append(" • ")
-            append(
-                ambientLightRecommendation()
-            )
-            append(" • AUDIO ")
-            append(
-                audioGuardLabel()
-            )
+                20_000_000
         }
     }
 
@@ -11631,35 +4945,23 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     qualityIndex
                 ]
             ) {
-                "MASTER UHD",
-                "UHD 60",
-                "MASTER HDR" ->
-                    listOf(
-                        Quality.UHD,
-                        Quality.FHD,
-                        Quality.HD
-                    )
+                "MASTER UHD" -> listOf(
+                    Quality.UHD,
+                    Quality.FHD,
+                    Quality.HD
+                )
 
-                "SOCIAL HDR" ->
-                    listOf(
-                        Quality.FHD,
-                        Quality.UHD,
-                        Quality.HD
-                    )
+                "FAST HD" -> listOf(
+                    Quality.HD,
+                    Quality.FHD,
+                    Quality.UHD
+                )
 
-                "FAST HD" ->
-                    listOf(
-                        Quality.HD,
-                        Quality.FHD,
-                        Quality.UHD
-                    )
-
-                else ->
-                    listOf(
-                        Quality.FHD,
-                        Quality.UHD,
-                        Quality.HD
-                    )
+                else -> listOf(
+                    Quality.FHD,
+                    Quality.UHD,
+                    Quality.HD
+                )
             }
 
         return QualitySelector
@@ -11732,15 +5034,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                 "GOLD" ->
                     0x0EF2B43C
-
-                "SOFT" ->
-                    0x08FFFFFF
-
-                "SUNSET" ->
-                    0x10FF7040
-
-                "BLUE HOUR" ->
-                    0x102D62C7
 
                 "NIGHT" ->
                     0x14092346
@@ -12120,48 +5413,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     )
                     .build()
 
+            cam.cameraControl
+                .startFocusAndMetering(action)
 
-            val focusFuture =
-                cam.cameraControl
-                    .startFocusAndMetering(
-                        action
-                    )
-
-            focusAttempted =
-                true
-
-            focusSuccessful =
-                null
-
-            focusFuture.addListener(
-                {
-                    focusSuccessful =
-                        try {
-                            focusFuture.get()
-                                .isFocusSuccessful
-                        } catch (_: Exception) {
-                            false
-                        }
-
-                    runOnUiThread {
-                        updateShotQualityGuard()
-
-                        toast(
-                            if (
-                                focusSuccessful ==
-                                    true
-                            ) {
-                                "Focus confirmed"
-                            } else {
-                                "Subject focus not confirmed"
-                            }
-                        )
-                    }
-                },
-                ContextCompat.getMainExecutor(
-                    this
-                )
-            )
+            toast("Focus")
         } catch (_: Exception) {
         }
     }
@@ -12256,54 +5511,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                             )
 
                         ACTION_CAPABILITIES ->
-                            openV227CameraHealth()
+                            showCameraCapabilities()
 
                         ACTION_CLEAN ->
                             showReportCleanDropdown(
                                 v ?: cleanModeButton
-                            )
-
-                        ACTION_HUD_SIZE ->
-                            showReportHudSizeDropdown(
-                                v ?: hudSizeButton
-                            )
-
-                        ACTION_HUD_CONTRAST ->
-                            showReportHudContrastDropdown(
-                                v ?: hudContrastButton
-                            )
-
-                        ACTION_HUD_BACKING ->
-                            showReportHudBackingDropdown(
-                                v ?: hudBackingButton
-                            )
-
-                        ACTION_REPORT_PRESET ->
-                            showReportPresetDropdown(
-                                v ?: reportPresetButton
-                            )
-
-                        ACTION_AUTO_DIRECTOR ->
-                            toggleAutoDirector()
-
-                        ACTION_SHOT_ASSIST ->
-                            cycleShotAssist()
-
-                        ACTION_DIRECTOR ->
-                            toggleDirectorGuidance()
-
-                        ACTION_CONTINUITY ->
-                            matchLastShotContinuity()
-
-                        ACTION_HEALTH ->
-                            openV227CameraHealth()
-
-                        ACTION_BRAND_METADATA ->
-                            openV228BrandMetadataStudio()
-
-                        ACTION_COLOR_ENGINE ->
-                            showV233ColorDropdown(
-                                colorButton
                             )
 
                         ACTION_LENS ->
@@ -12384,10 +5596,10 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             )
 
             setShadowLayer(
-                2.0f,
+                2f,
                 0.7f,
                 0.7f,
-                0xA6000000.toInt()
+                0xCC000000.toInt()
             )
 
             setPadding(
@@ -12495,18 +5707,16 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
     private fun reportOptionAccent(
         index: Int
     ): Int {
-        // V193: same family as the Home/Control Room, but deliberately
-        // softened so the camera deck does not look neon.
         val colors =
             intArrayOf(
-                0xFFD9DEE8.toInt(), // soft white
-                0xFFAEBDEB.toInt(), // lavender
-                0xFF9CAEC5.toInt(), // blue grey
-                0xFFB5BECC.toInt(), // silver
-                0xFFA9A1BF.toInt(), // muted violet
-                0xFF9EB4B7.toInt(), // muted teal
-                0xFFB8B3AA.toInt(), // warm grey
-                0xFFD9DEE8.toInt()  // soft white
+                0xFFFFC21A.toInt(), // gold
+                0xFF4EA7FF.toInt(), // blue
+                0xFF62E889.toInt(), // green
+                0xFFFF5AA5.toInt(), // pink
+                0xFF8F7CFF.toInt(), // purple
+                0xFF00C9B7.toInt(), // teal
+                0xFFFF8A3D.toInt(), // orange
+                0xFFB7C1C8.toInt()  // silver
             )
 
         return colors[
@@ -12701,9 +5911,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
             sceneIndex =
                 picked
 
-            markReportPresetCustom()
             applyScenePreset()
-            saveReportCameraPreferences()
             refreshHud()
         }
     }
@@ -12719,8 +5927,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         ) { picked ->
             lookIndex =
                 picked
-            markReportPresetCustom()
-            saveReportCameraPreferences()
             refreshHud()
         }
     }
@@ -12743,8 +5949,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         ) { picked ->
             qualityIndex =
                 picked
-            markReportPresetCustom()
-            saveReportCameraPreferences()
             refreshHud()
             bindCamera()
         }
@@ -12768,8 +5972,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         ) { picked ->
             captureModeIndex =
                 picked
-            markReportPresetCustom()
-            saveReportCameraPreferences()
             refreshHud()
             bindCamera()
         }
@@ -12939,520 +6141,45 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         }
     }
 
-    private fun showReportHudSizeDropdown(
-        anchor: View
-    ) {
-        showReportPillDropdown(
-            anchor,
-            "RECORDED HUD SIZE",
-            reportHudLabels,
-            reportHudSizeIndex
-        ) { picked ->
-            reportHudSizeIndex =
-                picked
-
-            markReportPresetCustom()
-
-            hudSizeButton.text =
-                "HUD SIZE ▾\n${reportHudLabels[reportHudSizeIndex]}"
-
-            hudSizeButton.isSelected =
-                true
-
-            applyAdaptiveReportPreviewTypography()
-            saveReportCameraPreferences()
-            refreshHud()
-
-            toast(
-                "HUD ${reportHudLabels[reportHudSizeIndex]}"
-            )
-        }
-    }
-
-    private fun showReportHudBackingDropdown(
-        anchor: View
-    ) {
-        showReportPillDropdown(
-            anchor,
-            "RECORDED HUD BACKING",
-            reportHudBackingLabels,
-            reportHudBackingIndex
-        ) { picked ->
-            reportHudBackingIndex =
-                picked
-
-            markReportPresetCustom()
-
-            hudBackingButton.text =
-                "HUD BACKING ▾\n${reportHudBackingLabels[reportHudBackingIndex]}"
-
-            hudBackingButton.isSelected =
-                reportHudBackingIndex !=
-                    0
-
-            saveReportCameraPreferences()
-            refreshHud()
-
-            toast(
-                "HUD backing ${reportHudBackingLabels[reportHudBackingIndex]}"
-            )
-        }
-    }
-
-    private fun markReportPresetCustom() {
-        if (
-            reportPresetIndex !=
-            0
-        ) {
-            reportPresetIndex =
-                0
-
-            if (
-                ::reportPresetButton.isInitialized
-            ) {
-                reportPresetButton.text =
-                    "PRESET ▾\nCUSTOM"
-
-                reportPresetButton.isSelected =
-                    false
-            }
-        }
-    }
-
-    private fun reportIndexOf(
-        values: List<String>,
-        wanted: String,
-        fallback: Int = 0
-    ): Int {
-        val index =
-            values.indexOf(
-                wanted
-            )
-
-        return if (
-            index >=
-            0
-        ) {
-            index
-        } else {
-            fallback.coerceIn(
-                0,
-                values.lastIndex
-            )
-        }
-    }
-
-    private fun applyReportPreset(
-        picked: Int
-    ) {
-        reportPresetIndex =
-            picked.coerceIn(
-                0,
-                reportPresetLabels.lastIndex
-            )
-
-        when (
-            reportPresetLabels[
-                reportPresetIndex
-            ]
-        ) {
-            "FIELD" -> {
-                sceneIndex =
-                    reportIndexOf(
-                        sceneModes,
-                        "REPORTER"
-                    )
-
-                lookIndex =
-                    reportIndexOf(
-                        lookModes,
-                        "CLEAN"
-                    )
-
-                qualityIndex =
-                    reportIndexOf(
-                        qualityModes,
-                        "SOCIAL FHD"
-                    )
-
-                captureModeIndex =
-                    reportIndexOf(
-                        captureModes,
-                        "VIDEO"
-                    )
-
-                reportHudSizeIndex =
-                    1
-
-                reportHudContrastIndex =
-                    1
-
-                previewGuidesEnabled =
-                    true
-
-                integrityEnabled =
-                    true
-
-                reportHudBackingIndex =
-                    1
-            }
-
-            "OUTDOOR" -> {
-                sceneIndex =
-                    reportIndexOf(
-                        sceneModes,
-                        "OUTDOOR"
-                    )
-
-                lookIndex =
-                    reportIndexOf(
-                        lookModes,
-                        "NATURAL"
-                    )
-
-                qualityIndex =
-                    reportIndexOf(
-                        qualityModes,
-                        "SOCIAL FHD"
-                    )
-
-                captureModeIndex =
-                    reportIndexOf(
-                        captureModes,
-                        "VIDEO"
-                    )
-
-                reportHudSizeIndex =
-                    1
-
-                reportHudContrastIndex =
-                    2
-
-                previewGuidesEnabled =
-                    true
-
-                integrityEnabled =
-                    true
-
-                reportHudBackingIndex =
-                    1
-            }
-
-            "NIGHT" -> {
-                sceneIndex =
-                    reportIndexOf(
-                        sceneModes,
-                        "NIGHT"
-                    )
-
-                lookIndex =
-                    reportIndexOf(
-                        lookModes,
-                        "NIGHT"
-                    )
-
-                qualityIndex =
-                    reportIndexOf(
-                        qualityModes,
-                        "SOCIAL FHD"
-                    )
-
-                captureModeIndex =
-                    reportIndexOf(
-                        captureModes,
-                        "VIDEO"
-                    )
-
-                reportHudSizeIndex =
-                    1
-
-                reportHudContrastIndex =
-                    2
-
-                previewGuidesEnabled =
-                    true
-
-                integrityEnabled =
-                    true
-
-                reportHudBackingIndex =
-                    1
-            }
-
-            "INTERVIEW" -> {
-                sceneIndex =
-                    reportIndexOf(
-                        sceneModes,
-                        "INTERVIEW"
-                    )
-
-                lookIndex =
-                    reportIndexOf(
-                        lookModes,
-                        "NATURAL"
-                    )
-
-                qualityIndex =
-                    reportIndexOf(
-                        qualityModes,
-                        "SOCIAL FHD"
-                    )
-
-                captureModeIndex =
-                    reportIndexOf(
-                        captureModes,
-                        "VIDEO"
-                    )
-
-                reportHudSizeIndex =
-                    0
-
-                reportHudContrastIndex =
-                    1
-
-                previewGuidesEnabled =
-                    true
-
-                integrityEnabled =
-                    true
-
-                reportHudBackingIndex =
-                    1
-            }
-
-            "CINEMA" -> {
-                sceneIndex =
-                    reportIndexOf(
-                        sceneModes,
-                        "CINEMA"
-                    )
-
-                lookIndex =
-                    reportIndexOf(
-                        lookModes,
-                        "TEAL"
-                    )
-
-                qualityIndex =
-                    reportIndexOf(
-                        qualityModes,
-                        "MASTER UHD"
-                    )
-
-                captureModeIndex =
-                    reportIndexOf(
-                        captureModes,
-                        "VIDEO"
-                    )
-
-                reportHudSizeIndex =
-                    0
-
-                reportHudContrastIndex =
-                    0
-
-                previewGuidesEnabled =
-                    true
-
-                integrityEnabled =
-                    false
-            }
-
-            else -> {
-                // CUSTOM keeps the current manual values.
-
-                reportHudBackingIndex =
-                    1
-            }
-        }
-
-        reportPresetButton.text =
-            "PRESET ▾\n${reportPresetLabels[reportPresetIndex]}"
-
-        reportPresetButton.isSelected =
-            reportPresetIndex !=
-                0
-
-        hudSizeButton.text =
-            "HUD SIZE ▾\n${reportHudLabels[reportHudSizeIndex]}"
-
-        hudContrastButton.text =
-            "HUD CONTRAST ▾\n${reportHudContrastLabels[reportHudContrastIndex]}"
-
-        hudBackingButton.text =
-            "HUD BACKING ▾\n${reportHudBackingLabels[reportHudBackingIndex]}"
-
-        hudBackingButton.isSelected =
-            reportHudBackingIndex !=
-                0
-
-        guidesButton.text =
-            "GUIDES ▾\n" +
-                if (
-                    previewGuidesEnabled
-                ) {
-                    "ON"
-                } else {
-                    "OFF"
-                }
-
-        integrityButton.text =
-            "VERIFY ▾\n" +
-                if (
-                    integrityEnabled
-                ) {
-                    "SHA-256"
-                } else {
-                    "OFF"
-                }
-
-        sceneButton.text =
-            "SCENE ▾\n${sceneModes[sceneIndex]}"
-
-        lookButton.text =
-            "LOOK ▾\n${lookModes[lookIndex]}"
-
-        qualityButton.text =
-            "FORMAT ▾\n${qualityDeckLabel()}"
-
-        captureModeButton.text =
-            "CAPTURE ▾\n${captureModes[captureModeIndex]}"
-
-        applyScenePreset()
-        applyAdaptiveReportPreviewTypography()
-        saveReportCameraPreferences()
-        refreshHud()
-
-        if (
-            recording ==
-            null
-        ) {
-            bindCamera()
-        }
-
-        toast(
-            "Preset ${reportPresetLabels[reportPresetIndex]}"
-        )
-    }
-
-    private fun showReportPresetDropdown(
-        anchor: View
-    ) {
-        if (
-            recording !=
-            null
-        ) {
-            toast(
-                "Stop recording before changing preset"
-            )
-            return
-        }
-
-        showReportPillDropdown(
-            anchor,
-            "REPORT PRESET",
-            reportPresetLabels,
-            reportPresetIndex
-        ) { picked ->
-            applyReportPreset(
-                picked
-            )
-        }
-    }
-
-    private fun showReportHudContrastDropdown(
-        anchor: View
-    ) {
-        showReportPillDropdown(
-            anchor,
-            "RECORDED HUD CONTRAST",
-            reportHudContrastLabels,
-            reportHudContrastIndex
-        ) { picked ->
-            reportHudContrastIndex =
-                picked
-
-            markReportPresetCustom()
-
-            hudContrastButton.text =
-                "HUD CONTRAST ▾\n${reportHudContrastLabels[reportHudContrastIndex]}"
-
-            hudContrastButton.isSelected =
-                true
-
-            saveReportCameraPreferences()
-            refreshHud()
-
-            toast(
-                "HUD contrast ${reportHudContrastLabels[reportHudContrastIndex]}"
-            )
-        }
-    }
-
     private fun showReportLensDropdown(
         anchor: View
     ) {
-        if (
-            recording !=
-                null
-        ) {
+        if (recording != null) {
             toast(
                 "Stop recording before changing lens"
             )
             return
         }
 
-        val selected =
-            when {
-                selectedCameraDeviceId !=
-                    null ->
-                        2
-
-                useFront ->
-                    1
-
-                else ->
-                    0
-            }
-
         showReportPillDropdown(
             anchor,
-            "REAL LENS INTELLIGENCE",
+            "LENS",
             arrayOf(
-                "AUTO BACK",
-                "AUTO FRONT",
-                "REAL CAMERAS"
+                "BACK",
+                "FRONT"
             ),
-            selected
-        ) {
-                picked ->
-            when (
-                picked
+            if (useFront) 1 else 0
+        ) { picked ->
+            val wantFront =
+                picked ==
+                    1
+
+            if (
+                wantFront !=
+                useFront
             ) {
-                0 -> {
-                    selectedCameraDeviceId =
-                        null
+                useFront =
+                    wantFront
 
-                    useFront =
-                        false
+                lensButton.text =
+                    "LENS ▾\n" +
+                        if (useFront) {
+                            "FRONT"
+                        } else {
+                            "BACK"
+                        }
 
-                    saveReportCameraPreferences()
-                    bindCamera()
-                }
-
-                1 -> {
-                    selectedCameraDeviceId =
-                        null
-
-                    useFront =
-                        true
-
-                    saveReportCameraPreferences()
-                    bindCamera()
-                }
-
-                else ->
-                    showRealCameraDevicePicker()
+                bindCamera()
             }
         }
     }
@@ -13526,7 +6253,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
 
                     setStroke(
                         dp(1),
-                        0xFFB66B67.toInt()
+                        0xFFFF8A84.toInt()
                     )
                 }
         }
@@ -13590,11 +6317,11 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    3.8f *
+                    4.2f *
                         density
 
                 color =
-                    0xFFD9DEE8.toInt()
+                    accent
             }
 
         private val idleFillPaint =
@@ -13605,7 +6332,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     Paint.Style.FILL
 
                 color =
-                    0x52000000
+                    0x26000000
             }
 
         private val pressedFillPaint =
@@ -13616,7 +6343,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     Paint.Style.FILL
 
                 color =
-                    0x4FAEBDEB
+                    Color.argb(
+                        78,
+                        Color.red(
+                            accent
+                        ),
+                        Color.green(
+                            accent
+                        ),
+                        Color.blue(
+                            accent
+                        )
+                    )
             }
 
         private val selectedFillPaint =
@@ -13627,7 +6365,7 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     Paint.Style.FILL
 
                 color =
-                    0xFFAEBDEB.toInt()
+                    accent
             }
 
         private val glowPaint =
@@ -13638,18 +6376,18 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
                     Paint.Style.STROKE
 
                 strokeWidth =
-                    4.8f *
+                    5.5f *
                         density
 
                 color =
-                    0xFFAEBDEB.toInt()
+                    accent
 
                 setShadowLayer(
-                    3.0f *
+                    7f *
                         density,
                     0f,
                     0f,
-                    0x66AEBDEB
+                    accent
                 )
             }
 
@@ -14151,15 +6889,6 @@ open class DevelopUgandaCameraActivity : AppCompatActivity(), SensorEventListene
         uiHandler.removeCallbacksAndMessages(
             null
         )
-
-        if (
-            ::autoViewLabeler.isInitialized
-        ) {
-            try {
-                autoViewLabeler.close()
-            } catch (_: Exception) {
-            }
-        }
 
         try {
             fused.removeLocationUpdates(
