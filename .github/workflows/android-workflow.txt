@@ -1,0 +1,37 @@
+# Builds an installable APK in the cloud, so you do not need a laptop powerful
+# enough to run Android Studio. Push to main, wait a few minutes, then download
+# the APK from the run's Artifacts section and open it on the phone.
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      # Uploaded even when the build fails, so the compiler output is readable
+      # from the run page rather than only in the log.
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporter-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
