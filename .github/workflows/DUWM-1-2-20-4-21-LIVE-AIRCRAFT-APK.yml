@@ -1,0 +1,44 @@
+name: DUWM 4.21 Live Aircraft APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/DUWM-1-2-20-4-21-LIVE-AIRCRAFT-APK.yml', 'DUWM-1-2-20-4-21-LIVE-AIRCRAFT-SOURCE.tar.gz']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source
+        run: echo '0401cf0eeeb030fee4523cd140d5df6c8f02b9e117324521904fa28eb8e623a2  DUWM-1-2-20-4-21-LIVE-AIRCRAFT-SOURCE.tar.gz' | sha256sum -c -
+      - name: Extract
+        run: |
+          mkdir -p "$RUNNER_TEMP/duwm"
+          tar -xzf DUWM-1-2-20-4-21-LIVE-AIRCRAFT-SOURCE.tar.gz -C "$RUNNER_TEMP/duwm"
+          echo "DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT_DIR=$RUNNER_TEMP/duwm/DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT" >> "$GITHUB_ENV"
+      - name: Frozen globe gate
+        run: bash "$DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT_DIR/scripts/verify-4-21-air.sh" "$DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT_DIR"
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13', cache-disabled: true}
+      - name: Compile
+        run: cd "$DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT_DIR" && gradle --no-daemon :app:compileDebugJavaWithJavac
+      - name: Lint
+        run: cd "$DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT_DIR" && gradle --no-daemon :app:lintDebug
+      - name: Assemble
+        run: cd "$DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT_DIR" && gradle --no-daemon :app:assembleDebug
+      - name: Package APK
+        run: |
+          mapfile -t A < <(find "$DUWM-1-2-20-4-21-LIVE-AIRCRAFT-PROJECT_DIR/app/build/outputs/apk" -type f -name '*.apk')
+          test "${#A[@]}" -eq 1 && test -s "${A[0]}"
+          mkdir -p "$RUNNER_TEMP/release"
+          cp "${A[0]}" "$RUNNER_TEMP/release/DUWM-4-21.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DUWM-4-21-APK
+          path: ${{ runner.temp }}/release/DUWM-4-21.apk
+          if-no-files-found: error
