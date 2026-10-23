@@ -1,0 +1,70 @@
+name: DUWM 4.21 FIX3 SDK Setup Repair APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/DUWM-1-2-20-4-21-FIX3-SDK-SETUP-REPAIR-APK.yml"
+      - "DUWM-1-2-20-4-21-FIX2-SOURCE.tar.gz"
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify exact FIX2 source
+        run: echo "e6c0222d1d7fc12cae1f939af349aefddb86e44cfc76ffcd2e00169d5ac813d2  DUWM-1-2-20-4-21-FIX2-SOURCE.tar.gz" | sha256sum -c -
+      - name: Extract existing aircraft project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/duwm"
+          tar -xzf "DUWM-1-2-20-4-21-FIX2-SOURCE.tar.gz" -C "$RUNNER_TEMP/duwm"
+          echo "PROJECT_DIR=$RUNNER_TEMP/duwm/DUWM-1-2-20-4-21-FIX2-PROJECT" >> "$GITHUB_ENV"
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+          cache-disabled: true
+      - name: Check Android SDK without obsolete tools package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "${ANDROID_HOME}" || test -d "${ANDROID_SDK_ROOT}"
+          echo "Android SDK from hosted runner; no android-actions/setup-android or obsolete tools package requested."
+      - name: Frozen globe and aircraft verification
+        shell: bash
+        run: bash "$PROJECT_DIR/scripts/verify-4-21-air.sh" "$PROJECT_DIR"
+      - name: Compile
+        shell: bash
+        run: cd "$PROJECT_DIR" && gradle --no-daemon --no-configuration-cache :app:compileDebugJavaWithJavac --stacktrace
+      - name: Lint
+        shell: bash
+        run: cd "$PROJECT_DIR" && gradle --no-daemon --no-configuration-cache :app:lintDebug --stacktrace
+      - name: Assemble
+        shell: bash
+        run: cd "$PROJECT_DIR" && gradle --no-daemon --no-configuration-cache :app:assembleDebug --stacktrace
+      - name: Verify and stage one APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t APKS < <(find "$PROJECT_DIR/app/build/outputs/apk" -type f -name '*.apk')
+          test "${#APKS[@]}" -eq 1
+          test -s "${APKS[0]}"
+          mkdir -p "$RUNNER_TEMP/release"
+          cp "${APKS[0]}" "$RUNNER_TEMP/release/DUWM-4-21-FIX3-APK.apk"
+          sha256sum "$RUNNER_TEMP/release/DUWM-4-21-FIX3-APK.apk"
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DUWM-4-21-FIX3-SDK-REPAIR-APK
+          path: ${{ runner.temp }}/release/DUWM-4-21-FIX3-APK.apk
+          if-no-files-found: error
