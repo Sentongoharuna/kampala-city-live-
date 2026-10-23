@@ -1,0 +1,100 @@
+name: DUWM 4.21 FIX4 CLEAN ANDROID SDK APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/DUWM-1-2-20-4-21-FIX4-CLEAN-ANDROID-SDK-APK.yml'
+      - 'DUWM-1-2-20-4-21-FIX2-SOURCE.tar.gz'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify exact existing aircraft source
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'e6c0222d1d7fc12cae1f939af349aefddb86e44cfc76ffcd2e00169d5ac813d2  DUWM-1-2-20-4-21-FIX2-SOURCE.tar.gz' | sha256sum -c -
+
+      - name: Extract unmodified 4.21 FIX2 project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/duwm"
+          tar -xzf 'DUWM-1-2-20-4-21-FIX2-SOURCE.tar.gz' -C "$RUNNER_TEMP/duwm"
+          echo 'PROJECT_DIR='"$RUNNER_TEMP/duwm/DUWM-1-2-20-4-21-FIX2-PROJECT" >> "$GITHUB_ENV"
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+          cache-disabled: true
+
+      - name: Ensure only supported SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$SDK_ROOT" && test -d "$SDK_ROOT"
+          echo "SDK root: $SDK_ROOT"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager || true)"
+          fi
+          test -n "$SDKMANAGER" && test -x "$SDKMANAGER"
+          # Never install obsolete 'tools' (the precise prior failure).
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;36.0.0'
+          test -d "$SDK_ROOT/platforms/android-36"
+          echo 'API 36 ready; obsolete tools package not requested.'
+
+      - name: Frozen working globe and aircraft checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash "$PROJECT_DIR/scripts/verify-4-21-air.sh" "$PROJECT_DIR"
+
+      - name: Compile Java
+        shell: bash
+        run: cd "$PROJECT_DIR" && gradle --no-daemon --no-configuration-cache :app:compileDebugJavaWithJavac --stacktrace
+
+      - name: Lint
+        shell: bash
+        run: cd "$PROJECT_DIR" && gradle --no-daemon --no-configuration-cache :app:lintDebug --stacktrace
+
+      - name: Assemble APK
+        shell: bash
+        run: cd "$PROJECT_DIR" && gradle --no-daemon --no-configuration-cache :app:assembleDebug --stacktrace
+
+      - name: Verify and stage exactly one APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find "$PROJECT_DIR/app/build/outputs/apk" -type f -name '*.apk')
+          test "${#apks[@]}" -eq 1
+          test -s "${apks[0]}"
+          test "$(head -c 2 "${apks[0]}")" = 'PK'
+          mkdir -p "$RUNNER_TEMP/release"
+          cp "${apks[0]}" "$RUNNER_TEMP/release/DUWM-4-21-FIX4-LIVE-AIRCRAFT.apk"
+          sha256sum "$RUNNER_TEMP/release/DUWM-4-21-FIX4-LIVE-AIRCRAFT.apk"
+
+      - name: Upload verified APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DUWM-4-21-FIX4-LIVE-AIRCRAFT-APK
+          path: ${{ runner.temp }}/release/DUWM-4-21-FIX4-LIVE-AIRCRAFT.apk
+          if-no-files-found: error
